@@ -242,6 +242,20 @@ def yf_ticker(symbol):
                         'fiftyTwoWeekLow': meta.get('fiftyTwoWeekLow'),
                     }
 
+                    # Enrich with search API (no crumb needed — sector/industry)
+                    try:
+                        sr = _yahoo_get_with_retry(
+                            f'https://query1.finance.yahoo.com/v1/finance/search?q={self.ticker}&quotesCount=1&newsCount=0',
+                            headers=_YF_HEADERS, timeout=10)
+                        if sr and sr.status_code == 200:
+                            sq = sr.json().get('quotes', [{}])[0]
+                            self._info['sector'] = sq.get('sector', '')
+                            self._info['industry'] = sq.get('industry', '')
+                            if sq.get('longname'):
+                                self._info['longName'] = sq['longname']
+                    except Exception:
+                        pass
+
                     # Try to enrich with v10 quoteSummary (needs crumb, may fail)
                     try:
                         quote = _raw_yahoo_quote(self.ticker)
@@ -1482,6 +1496,33 @@ def podcast_status(ticker):
     except Exception as e:
         return jsonify({'exists': False, 'error': str(e)})
 
+
+# Background crumb refresher — retries every 5 min if crumb is missing
+def _crumb_refresh_loop():
+    import time as _t
+    _t.sleep(10)  # wait for startup
+    while True:
+        try:
+            if not _yahoo_crumb:
+                print("[crumb-refresher] Attempting to get Yahoo crumb...")
+                _init_yahoo_session(force_refresh=True)
+                if _yahoo_crumb:
+                    print(f"[crumb-refresher] Success! Crumb: {_yahoo_crumb[:8]}...")
+                else:
+                    print("[crumb-refresher] Failed, will retry in 5 min")
+        except Exception as e:
+            print(f"[crumb-refresher] Error: {e}")
+        _t.sleep(300)  # retry every 5 min
+
+import threading
+_crumb_thread = threading.Thread(target=_crumb_refresh_loop, daemon=True)
+_crumb_thread.start()
+
+# Also try to init crumb at startup
+try:
+    _init_yahoo_session()
+except Exception:
+    pass
 
 if __name__ == '__main__':
     import os
