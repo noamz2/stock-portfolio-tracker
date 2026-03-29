@@ -32,7 +32,58 @@ header h1{font-size:1.3rem;color:var(--accent);white-space:nowrap}
 /* Grid */
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-@media(max-width:768px){.grid-2,.grid-3{grid-template-columns:1fr}}
+@media(max-width:768px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  html,body{max-width:100vw;overflow-x:hidden}
+  body{font-size:13px}
+  .container{padding:8px;max-width:100vw;overflow-x:hidden}
+  header{padding:8px 12px;gap:8px;flex-wrap:wrap}
+  header h1{font-size:1rem;order:-1;width:100%;text-align:center;margin-bottom:4px}
+  .input-group{min-width:unset;flex:1;order:0}
+  .input-group input{padding:8px 10px;font-size:14px}
+  .btn{padding:8px 14px;font-size:13px}
+  .card{padding:12px;margin-bottom:10px;border-radius:8px;overflow-x:auto}
+  table{font-size:11px;min-width:500px}
+  th,td{padding:6px 8px;white-space:nowrap}
+  .tabs{gap:0;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .tab{padding:8px 10px;font-size:11px}
+  .metric-grid{grid-template-columns:repeat(3,1fr);gap:6px}
+  .metric{padding:8px}
+  .metric .val{font-size:0.9rem}
+  .metric .lbl{font-size:9px}
+  .chart-container{height:220px}
+  .stat .value{font-size:1.1rem}
+  .stat .label{font-size:10px}
+  .slider-group{flex-wrap:wrap;gap:6px}
+  .slider-group label{min-width:unset;font-size:11px;flex:1}
+  .slider-group input[type=range]{flex:2;min-width:100px}
+  .slider-group .slider-val{min-width:35px;font-size:12px}
+  .sens-table{font-size:9px;overflow-x:auto;display:block}
+  .sens-table th,.sens-table td{padding:3px 5px}
+  .iv-row{font-size:12px;padding:6px 0}
+  .news-title{font-size:12px}
+  .news-meta{font-size:10px}
+  #portfolioValue{font-size:1.2rem}
+  .verdict-box{padding:10px}
+  /* Detail view */
+  #detailView .card{overflow-x:auto}
+  #detailPrice{font-size:1.5rem!important}
+  #priceHeader>div{flex-direction:column!important}
+  #quickMetrics{max-width:100%!important}
+  /* Macro dashboard mobile */
+  #macroPanel{padding:10px!important;overflow:hidden}
+  #macroTopRow{grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
+  #macroTopRow .stat-card{padding:8px}
+  #fgScore{font-size:22px!important}
+  #macroContent .grid-2{grid-template-columns:1fr!important}
+  /* Remove button smaller */
+  .remove-btn{font-size:10px;padding:2px 6px}
+  /* Scenario cards */
+  .grid-3{grid-template-columns:1fr!important}
+  /* IV results */
+  [style*="grid-template-columns: repeat(4"]{grid-template-columns:repeat(2,1fr)!important}
+  [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,1fr)!important}
+}
 
 /* Table */
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -158,7 +209,7 @@ tr:hover{background:rgba(99,102,241,0.05)}
       </div>
       <div id="macroContent">
         <!-- Top Row: Key Indicators -->
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px">
+        <div id="macroTopRow" style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px">
           <!-- Fear & Greed -->
           <div class="stat-card" style="text-align:center;position:relative">
             <div style="font-size:11px;color:#8b8fa3;margin-bottom:6px">Fear & Greed</div>
