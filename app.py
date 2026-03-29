@@ -7,8 +7,27 @@ from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 import yfinance as yf
 import numpy as np
+import os
 import warnings
 warnings.filterwarnings("ignore")
+
+# yfinance wrapper with retry for cloud servers
+import pandas as pd
+
+def yf_ticker(symbol):
+    """Create a yfinance Ticker — let yfinance handle its own session."""
+    return yf.Ticker(symbol)
+
+def yf_safe_history(ticker_obj, **kwargs):
+    """Safely get history with retry for flaky connections."""
+    for attempt in range(3):
+        try:
+            h = ticker_obj.history(**kwargs)
+            if h is not None and not h.empty:
+                return h
+        except Exception:
+            _time.sleep(1 + attempt)
+    return pd.DataFrame()
 
 app = Flask(__name__)
 CORS(app)
@@ -17,7 +36,7 @@ CORS(app)
 import time as _time
 
 _server_cache = {}
-_CACHE_TTL = 300  # 5 minutes — fresh enough, avoids hammering APIs
+_CACHE_TTL = int(os.environ.get('CACHE_TTL', 600))  # 10 min default, configurable
 
 def _get_cached(key):
     entry = _server_cache.get(key)
@@ -215,7 +234,7 @@ def search_ticker(query):
     for alias, symbol in TICKER_ALIASES.items():
         if query.upper() in alias.upper() or query in alias:
             try:
-                t = yf.Ticker(symbol)
+                t = yf_ticker(symbol)
                 info = t.info
                 name = info.get('shortName', info.get('longName', alias))
                 price = info.get('currentPrice', info.get('regularMarketPrice'))
@@ -266,7 +285,7 @@ def get_stock(ticker):
     try:
         original_ticker = ticker.upper().strip()
         resolved = resolve_ticker(original_ticker)
-        t = yf.Ticker(resolved)
+        t = yf_ticker(resolved)
         info = t.info
 
         if not info or info.get('regularMarketPrice') is None and info.get('currentPrice') is None:
@@ -284,7 +303,7 @@ def get_stock(ticker):
         change_pct = (change / prev_close * 100) if prev_close else 0
 
         # Historical data — full 5-year daily for ALL charts
-        hist5y = t.history(period="5y", interval="1d")
+        hist5y = yf_safe_history(t, period="5y", interval="1d")
         dates = [d.strftime('%Y-%m-%d') for d in hist5y.index]
         closes = hist5y['Close'].tolist()
         volumes = hist5y['Volume'].tolist()
@@ -618,7 +637,7 @@ def get_macro_data():
         for future in futures:
             key = futures[future]
             try:
-                result[key] = future.result(timeout=25)
+                result[key] = future.result(timeout=45)
             except Exception as e:
                 result[key] = {'error': str(e)}
 
@@ -650,8 +669,8 @@ def _fetch_fg_inner():
 
 def _fetch_vix_inner():
     try:
-        vix = yf.Ticker('^VIX')
-        vix_hist = vix.history(period='10y', interval='1mo')
+        vix = yf_ticker('^VIX')
+        vix_hist = yf_safe_history(vix, period='10y', interval='1mo')
         vix_price = float(vix_hist['Close'].iloc[-1]) if not vix_hist.empty else None
         vix_dates = [d.strftime('%Y-%m') for d in vix_hist.index]
         vix_closes = [round(float(c), 2) for c in vix_hist['Close'].tolist()]
@@ -667,8 +686,8 @@ def _fetch_vix_inner():
 
 def _fetch_ils_inner():
     try:
-        usdils = yf.Ticker('ILS=X')
-        ils_hist = usdils.history(period='10y', interval='1mo')
+        usdils = yf_ticker('ILS=X')
+        ils_hist = yf_safe_history(usdils, period='10y', interval='1mo')
         ils_price = float(ils_hist['Close'].iloc[-1]) if not ils_hist.empty else None
         ils_dates = [d.strftime('%Y-%m') for d in ils_hist.index]
         ils_closes = [round(float(c), 4) for c in ils_hist['Close'].tolist()]
@@ -684,14 +703,14 @@ def _fetch_ils_inner():
 
 def _fetch_sp_inner():
     try:
-        sp = yf.Ticker('^GSPC')
-        sp_hist = sp.history(period='10y', interval='1mo')
+        sp = yf_ticker('^GSPC')
+        sp_hist = yf_safe_history(sp, period='10y', interval='1mo')
         sp_price = float(sp_hist['Close'].iloc[-1]) if not sp_hist.empty else None
         sp_dates = [d.strftime('%Y-%m') for d in sp_hist.index]
         sp_closes = [round(float(c), 2) for c in sp_hist['Close'].tolist()]
 
         # RSI from daily
-        sp_daily = sp.history(period='3mo', interval='1d')
+        sp_daily = yf_safe_history(sp, period='3mo', interval='1d')
         closes_arr = sp_daily['Close'].values
         sp_rsi = None
         if len(closes_arr) > 15:
@@ -778,8 +797,8 @@ def _fetch_sp_inner():
 
 def _fetch_ta35_inner():
     try:
-        ta35 = yf.Ticker('TA35.TA')
-        ta35_hist = ta35.history(period='5d', interval='1d')
+        ta35 = yf_ticker('TA35.TA')
+        ta35_hist = yf_safe_history(ta35, period='5d', interval='1d')
         if not ta35_hist.empty and len(ta35_hist) >= 2:
             ta35_price = float(ta35_hist['Close'].iloc[-1])
             ta35_prev = float(ta35_hist['Close'].iloc[-2])
@@ -797,7 +816,7 @@ def get_pe_model_data(ticker):
     """Get data for P/E model — uses analyst consensus estimates for conservative projections."""
     try:
         resolved = resolve_ticker(ticker.upper().strip())
-        t = yf.Ticker(resolved)
+        t = yf_ticker(resolved)
         info = t.info
 
         revenue = info.get('totalRevenue', 0) or 0
@@ -954,7 +973,7 @@ def get_intrinsic_data(ticker):
     """Get financial data needed for intrinsic value calculation."""
     try:
         resolved = resolve_ticker(ticker.upper().strip())
-        t = yf.Ticker(resolved)
+        t = yf_ticker(resolved)
         info = t.info
 
         net_income = info.get('netIncomeToCommon', 0) or 0
@@ -1063,7 +1082,7 @@ def create_podcast(ticker):
 
         # Get company name from yfinance
         try:
-            company = yf.Ticker(resolved).info.get('longName', ticker)
+            company = yf_ticker(resolved).info.get('longName', ticker)
         except:
             company = ticker
 
@@ -1119,7 +1138,7 @@ def podcast_status(ticker):
 
         company = ticker
         try:
-            company = yf.Ticker(ticker_resolved).info.get('longName', ticker)
+            company = yf_ticker(ticker_resolved).info.get('longName', ticker)
         except:
             pass
 
