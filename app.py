@@ -32,8 +32,9 @@ else:
     print("_YF_WORKS=False set — using raw Yahoo Finance API fallback")
 
 _YF_HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'application/json',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': '*/*',
+    'Accept-Language': 'en-US,en;q=0.9',
 }
 
 # Yahoo session with crumb for v10 API
@@ -48,23 +49,45 @@ def _init_yahoo_session(force_refresh=False):
     if not force_refresh and _yahoo_session and _yahoo_crumb and (_t.time() - _yahoo_crumb_ts) < 1800:
         return
     _yahoo_session = http_requests.Session()
-    _yahoo_session.headers['User-Agent'] = _YF_HEADERS['User-Agent']
+    # Rotate user agents to reduce blocking
+    _agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    ]
+    import random
+    _yahoo_session.headers['User-Agent'] = random.choice(_agents)
+    _yahoo_session.headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    _yahoo_session.headers['Accept-Language'] = 'en-US,en;q=0.9'
     try:
-        _yahoo_session.get('https://fc.yahoo.com', timeout=10, allow_redirects=True)
-        # Retry crumb fetch on 429
-        for _attempt in range(3):
-            r = _yahoo_session.get('https://query2.finance.yahoo.com/v1/test/getcrumb', timeout=10)
-            if r.status_code == 429:
-                _t.sleep(2 ** _attempt + 1)
-                continue
-            break
-        if r.status_code == 200 and r.text and len(r.text) < 100:
-            _yahoo_crumb = r.text
-            _yahoo_crumb_ts = _t.time()
-            print(f"Yahoo crumb obtained: {_yahoo_crumb[:8]}...")
-        else:
-            print(f"Failed to get Yahoo crumb: status={r.status_code}")
-            _yahoo_crumb = None
+        # Get cookies from Yahoo
+        try:
+            _yahoo_session.get('https://fc.yahoo.com', timeout=10, allow_redirects=True)
+        except Exception:
+            pass  # fc.yahoo.com returns 404 but sets cookies — that's fine
+
+        # Try multiple crumb endpoints
+        crumb_urls = [
+            'https://query2.finance.yahoo.com/v1/test/getcrumb',
+            'https://query1.finance.yahoo.com/v1/test/getcrumb',
+        ]
+        for crumb_url in crumb_urls:
+            for _attempt in range(3):
+                try:
+                    r = _yahoo_session.get(crumb_url, timeout=10)
+                    if r.status_code == 429:
+                        _t.sleep(2 ** _attempt + 1)
+                        continue
+                    if r.status_code == 200 and r.text and len(r.text) < 100:
+                        _yahoo_crumb = r.text
+                        _yahoo_crumb_ts = _t.time()
+                        print(f"Yahoo crumb obtained from {crumb_url}: {_yahoo_crumb[:8]}...")
+                        return
+                except Exception:
+                    _t.sleep(1)
+                    continue
+        print("Failed to get Yahoo crumb from any endpoint")
+        _yahoo_crumb = None
     except Exception as e:
         print(f"Failed to get Yahoo crumb: {e}")
         _yahoo_crumb = None
@@ -73,35 +96,47 @@ def _yahoo_get_with_retry(url, headers=None, session=None, params=None, timeout=
     """GET with retry on 429 rate-limit errors."""
     import time as _t
     requester = session or http_requests
+    last_r = None
     for attempt in range(max_retries):
         try:
             r = requester.get(url, headers=headers, params=params, timeout=timeout)
+            last_r = r
             if r.status_code == 429:
-                wait = 2 ** attempt + 1
+                wait = 2 ** attempt + 2
                 print(f"Rate limited (429), waiting {wait}s before retry {attempt+1}/{max_retries}")
                 _t.sleep(wait)
                 continue
             return r
         except Exception as e:
+            print(f"_yahoo_get_with_retry attempt {attempt+1}/{max_retries}: {e}")
             if attempt < max_retries - 1:
-                _t.sleep(2 ** attempt)
+                _t.sleep(2 ** attempt + 1)
                 continue
-            raise
+            return last_r  # return last response (or None)
     return r  # return last response even if 429
 
 def _raw_yahoo_info(symbol):
     """Fallback: fetch stock info directly from Yahoo Finance v8 chart API."""
     import urllib.parse
     encoded = urllib.parse.quote(symbol, safe='')
-    url = f'https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?interval=1d&range=5d'
-    r = _yahoo_get_with_retry(url, headers=_YF_HEADERS, timeout=15)
-    if r.status_code != 200:
-        print(f"_raw_yahoo_info({symbol}): HTTP {r.status_code}")
-        return {}
-    data = r.json()
-    result = data.get('chart', {}).get('result', [{}])[0]
-    meta = result.get('meta', {})
-    return meta
+    # Try both query1 and query2
+    for host in ['query1', 'query2']:
+        url = f'https://{host}.finance.yahoo.com/v8/finance/chart/{encoded}?interval=1d&range=5d'
+        try:
+            r = _yahoo_get_with_retry(url, headers=_YF_HEADERS, timeout=15)
+            if r is None or r.status_code != 200:
+                continue
+            data = r.json()
+            result = data.get('chart', {}).get('result', [])
+            if result:
+                meta = result[0].get('meta', {})
+                if meta.get('regularMarketPrice'):
+                    return meta
+        except Exception as e:
+            print(f"_raw_yahoo_info({symbol}) via {host}: {e}")
+            continue
+    print(f"_raw_yahoo_info({symbol}): all endpoints failed")
+    return {}
 
 def _raw_yahoo_quote(symbol):
     """Fallback: fetch quote summary from Yahoo Finance v10 with crumb."""
@@ -140,31 +175,37 @@ def _raw_yahoo_history(symbol, period='5y', interval='1d'):
     r_range = range_map.get(period, '5y')
     encoded = urllib.parse.quote(symbol, safe='')
     url = f'https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?interval={interval}&range={r_range}'
-    r = _yahoo_get_with_retry(url, headers=_YF_HEADERS, timeout=20)
-    if r.status_code != 200:
-        print(f"_raw_yahoo_history({symbol}): HTTP {r.status_code}")
-        return pd.DataFrame()
-    data = r.json()
-    result = data.get('chart', {}).get('result', [{}])[0]
-    timestamps = result.get('timestamp', [])
-    indicators = result.get('indicators', {}).get('quote', [{}])[0]
-    closes = indicators.get('close', [])
-    volumes = indicators.get('volume', [])
-    highs = indicators.get('high', [])
-    lows = indicators.get('low', [])
-    opens = indicators.get('open', [])
+    try:
+        r = _yahoo_get_with_retry(url, headers=_YF_HEADERS, timeout=20)
+        if r is None or r.status_code != 200:
+            print(f"_raw_yahoo_history({symbol}): HTTP {r.status_code if r else 'None'}")
+            return pd.DataFrame()
+        data = r.json()
+        result = data.get('chart', {}).get('result', [])
+        if not result:
+            return pd.DataFrame()
+        timestamps = result[0].get('timestamp', [])
+        indicators = result[0].get('indicators', {}).get('quote', [{}])[0]
+        closes = indicators.get('close', [])
+        volumes = indicators.get('volume', [])
+        highs = indicators.get('high', [])
+        lows = indicators.get('low', [])
+        opens = indicators.get('open', [])
 
-    if not timestamps:
-        return pd.DataFrame()
+        if not timestamps:
+            return pd.DataFrame()
 
-    from datetime import datetime as _dt
-    dates = [_dt.fromtimestamp(ts) for ts in timestamps]
-    df = pd.DataFrame({
-        'Open': opens, 'High': highs, 'Low': lows,
-        'Close': closes, 'Volume': volumes,
-    }, index=pd.DatetimeIndex(dates))
-    df = df.dropna(subset=['Close'])
-    return df
+        from datetime import datetime as _dt
+        dates = [_dt.fromtimestamp(ts) for ts in timestamps]
+        df = pd.DataFrame({
+            'Open': opens, 'High': highs, 'Low': lows,
+            'Close': closes, 'Volume': volumes,
+        }, index=pd.DatetimeIndex(dates))
+        df = df.dropna(subset=['Close'])
+        return df
+    except Exception as e:
+        print(f"_raw_yahoo_history({symbol}): {e}")
+        return pd.DataFrame()
 
 def yf_ticker(symbol):
     """Create a yfinance Ticker — or return a fallback wrapper."""
@@ -179,48 +220,70 @@ def yf_ticker(symbol):
         def info(self):
             if self._info is None:
                 try:
+                    # v8 chart API always works (no crumb needed)
                     meta = _raw_yahoo_info(self.ticker)
-                    quote = _raw_yahoo_quote(self.ticker)
-                    price_data = quote.get('price', {})
-                    summary = quote.get('summaryDetail', {})
-                    financial = quote.get('financialData', {})
-                    stats = quote.get('defaultKeyStatistics', {})
+                    if not meta or not meta.get('regularMarketPrice'):
+                        print(f"_FallbackTicker({self.ticker}): v8 chart returned no data")
+                        self._info = {'regularMarketPrice': None}
+                        return self._info
+
+                    # Start with v8 data (always available)
                     self._info = {
-                        'shortName': price_data.get('shortName', {}).get('raw', meta.get('shortName', self.ticker)) if isinstance(price_data.get('shortName'), dict) else price_data.get('shortName', meta.get('shortName', self.ticker)),
-                        'longName': price_data.get('longName', {}).get('raw', meta.get('longName', '')) if isinstance(price_data.get('longName'), dict) else price_data.get('longName', meta.get('longName', '')),
+                        'shortName': meta.get('shortName', self.ticker),
+                        'longName': meta.get('longName', meta.get('shortName', self.ticker)),
                         'currentPrice': meta.get('regularMarketPrice', 0),
                         'regularMarketPrice': meta.get('regularMarketPrice', 0),
                         'previousClose': meta.get('previousClose', meta.get('chartPreviousClose', 0)),
                         'currency': meta.get('currency', 'USD'),
                         'financialCurrency': meta.get('currency', 'USD'),
                         'exchangeName': meta.get('exchangeName', ''),
-                        'marketCap': self._raw_val(price_data.get('marketCap')),
-                        'regularMarketVolume': self._raw_val(price_data.get('regularMarketVolume')),
-                        'fiftyTwoWeekHigh': self._raw_val(summary.get('fiftyTwoWeekHigh')),
-                        'fiftyTwoWeekLow': self._raw_val(summary.get('fiftyTwoWeekLow')),
-                        'trailingPE': self._raw_val(summary.get('trailingPE')),
-                        'forwardPE': self._raw_val(summary.get('forwardPE')),
-                        'trailingEps': self._raw_val(stats.get('trailingEps')),
-                        'forwardEps': self._raw_val(stats.get('forwardEps')),
-                        'sharesOutstanding': self._raw_val(stats.get('sharesOutstanding')),
-                        'totalRevenue': self._raw_val(financial.get('totalRevenue')),
-                        'netIncomeToCommon': self._raw_val(financial.get('netIncomeToCommon', stats.get('netIncomeToCommon'))),
-                        'totalDebt': self._raw_val(financial.get('totalDebt')),
-                        'totalCash': self._raw_val(financial.get('totalCash')),
-                        'revenueGrowth': self._raw_val(financial.get('revenueGrowth')),
-                        'earningsGrowth': self._raw_val(financial.get('earningsGrowth')),
-                        'profitMargins': self._raw_val(financial.get('profitMargins')),
-                        'grossMargins': self._raw_val(financial.get('grossMargins')),
-                        'operatingMargins': self._raw_val(financial.get('operatingMargins')),
-                        'sector': self._raw_val(price_data.get('sector')) or '',
-                        'targetMeanPrice': self._raw_val(financial.get('targetMeanPrice')),
-                        'targetMedianPrice': self._raw_val(financial.get('targetMedianPrice')),
-                        'targetHighPrice': self._raw_val(financial.get('targetHighPrice')),
-                        'targetLowPrice': self._raw_val(financial.get('targetLowPrice')),
-                        'numberOfAnalystOpinions': self._raw_val(financial.get('numberOfAnalystOpinions')),
-                        'recommendationKey': self._raw_val(financial.get('recommendationKey')),
+                        'regularMarketVolume': meta.get('regularMarketVolume'),
+                        'fiftyTwoWeekHigh': meta.get('fiftyTwoWeekHigh'),
+                        'fiftyTwoWeekLow': meta.get('fiftyTwoWeekLow'),
                     }
+
+                    # Try to enrich with v10 quoteSummary (needs crumb, may fail)
+                    try:
+                        quote = _raw_yahoo_quote(self.ticker)
+                        if quote:
+                            price_data = quote.get('price', {})
+                            summary = quote.get('summaryDetail', {})
+                            financial = quote.get('financialData', {})
+                            stats = quote.get('defaultKeyStatistics', {})
+                            enriched = {
+                                'marketCap': self._raw_val(price_data.get('marketCap')),
+                                'trailingPE': self._raw_val(summary.get('trailingPE')),
+                                'forwardPE': self._raw_val(summary.get('forwardPE')),
+                                'trailingEps': self._raw_val(stats.get('trailingEps')),
+                                'forwardEps': self._raw_val(stats.get('forwardEps')),
+                                'sharesOutstanding': self._raw_val(stats.get('sharesOutstanding')),
+                                'totalRevenue': self._raw_val(financial.get('totalRevenue')),
+                                'netIncomeToCommon': self._raw_val(financial.get('netIncomeToCommon', stats.get('netIncomeToCommon'))),
+                                'totalDebt': self._raw_val(financial.get('totalDebt')),
+                                'totalCash': self._raw_val(financial.get('totalCash')),
+                                'revenueGrowth': self._raw_val(financial.get('revenueGrowth')),
+                                'earningsGrowth': self._raw_val(financial.get('earningsGrowth')),
+                                'profitMargins': self._raw_val(financial.get('profitMargins')),
+                                'grossMargins': self._raw_val(financial.get('grossMargins')),
+                                'operatingMargins': self._raw_val(financial.get('operatingMargins')),
+                                'sector': self._raw_val(price_data.get('sector')) or '',
+                                'targetMeanPrice': self._raw_val(financial.get('targetMeanPrice')),
+                                'targetMedianPrice': self._raw_val(financial.get('targetMedianPrice')),
+                                'targetHighPrice': self._raw_val(financial.get('targetHighPrice')),
+                                'targetLowPrice': self._raw_val(financial.get('targetLowPrice')),
+                                'numberOfAnalystOpinions': self._raw_val(financial.get('numberOfAnalystOpinions')),
+                                'recommendationKey': self._raw_val(financial.get('recommendationKey')),
+                            }
+                            # Only add non-None values
+                            for k, v in enriched.items():
+                                if v is not None:
+                                    self._info[k] = v
+                            print(f"_FallbackTicker({self.ticker}): enriched with v10 data")
+                    except Exception as e2:
+                        print(f"_FallbackTicker({self.ticker}): v10 enrichment failed ({e2}), using v8 only")
+
                 except Exception as e:
+                    print(f"_FallbackTicker({self.ticker}): error: {e}")
                     self._info = {'error': str(e)}
             return self._info
         def _raw_val(self, v):
@@ -457,11 +520,21 @@ def index():
 
 @app.route('/api/health')
 def health():
+    # Quick live test of v8 chart API
+    v8_ok = False
+    try:
+        r = http_requests.get(
+            'https://query1.finance.yahoo.com/v8/finance/chart/AAPL?interval=1d&range=1d',
+            headers=_YF_HEADERS, timeout=10)
+        v8_ok = r.status_code == 200 and 'chart' in r.text
+    except Exception:
+        pass
     return jsonify({
         'status': 'ok',
         'yfinance_works': _YF_WORKS,
         'fallback_mode': not _YF_WORKS,
         'yahoo_crumb_ok': _yahoo_crumb is not None and len(_yahoo_crumb or '') < 100,
+        'v8_chart_api_ok': v8_ok,
     })
 
 
