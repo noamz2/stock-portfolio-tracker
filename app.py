@@ -1145,4 +1145,5 @@ if __name__ == '__main__':
     print(f"  Stock Portfolio Tracker")
     print(f"  Open: http://localhost:{port}")
     print("="*50 + "\n")
-    app.run(debug=True, port=port)
+    app.run(host='0.0.0.0', debug=True, port=port)
+
