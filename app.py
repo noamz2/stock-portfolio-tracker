@@ -1120,6 +1120,56 @@ def _fetch_sp_inner():
         pe_dates = [p['date'] for p in pe_history]
         pe_values = [p['pe'] for p in pe_history]
 
+        # PEG Ratio = PE / YoY Earnings Growth
+        peg_current = None
+        peg_dates = []
+        peg_values = []
+        try:
+            from bs4 import BeautifulSoup as _BS
+            from datetime import datetime as _dt
+            re = http_requests.get('https://www.multpl.com/s-p-500-earnings/table/by-month',
+                                   headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'},
+                                   timeout=10)
+            earn_dict = {}
+            if re.status_code == 200:
+                soup_e = _BS(re.text, 'html.parser')
+                table_e = soup_e.find('table', {'id': 'datatable'})
+                if table_e:
+                    for row in table_e.find_all('tr')[1:]:
+                        cols = row.find_all('td')
+                        if len(cols) >= 2:
+                            try:
+                                d = _dt.strptime(cols[0].text.strip().replace(',', ''), '%b %d %Y')
+                                val = float(cols[1].text.strip().replace('†\n', '').replace('$', '').strip())
+                                earn_dict[d.strftime('%Y-%m')] = val
+                            except:
+                                pass
+
+            # Build PE dict
+            pe_dict = {}
+            for p in pe_history:
+                try:
+                    d = _dt.strptime(p['date'].replace(',', ''), '%b %d %Y')
+                    pe_dict[d.strftime('%Y-%m')] = p['pe']
+                except:
+                    pass
+
+            # Calculate PEG for each month
+            for ym in sorted(pe_dict.keys(), reverse=True)[:120]:
+                yr, mo = int(ym[:4]), ym[5:]
+                prev_ym = f'{yr-1}-{mo}'
+                if ym in earn_dict and prev_ym in earn_dict and earn_dict[prev_ym] > 0:
+                    growth = ((earn_dict[ym] - earn_dict[prev_ym]) / earn_dict[prev_ym]) * 100
+                    if growth > 0.5:  # avoid near-zero growth distortion
+                        peg = round(pe_dict[ym] / growth, 2)
+                        if 0 < peg < 20:  # filter extreme values
+                            peg_dates.append(ym)
+                            peg_values.append(peg)
+            if peg_values:
+                peg_current = peg_values[0]
+        except Exception as e:
+            print(f"PEG calculation failed: {e}")
+
         return {
             'price': round(sp_price, 2) if sp_price else None,
             'change_pct': change_pct,
@@ -1127,6 +1177,8 @@ def _fetch_sp_inner():
             'pe': sp_pe,
             'forwardPE': sp_fwd_pe,
             'peHistory': {'dates': pe_dates, 'values': pe_values},
+            'peg': peg_current,
+            'pegHistory': {'dates': peg_dates, 'values': peg_values},
             'ma200': ma200,
             'dates': sp_dates,
             'closes': sp_closes,

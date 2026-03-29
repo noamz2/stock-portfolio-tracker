@@ -215,6 +215,7 @@ tr:hover{background:rgba(99,102,241,0.05)}
             <div class="iv-row"><span>Above/Below MA200</span><span id="spVsMA" class="iv-val">—</span></div>
             <div class="iv-row"><span>P/E (trailing)</span><span id="spPE" class="iv-val">—</span></div>
             <div class="iv-row"><span>P/E (forward)</span><span id="spFwdPE" class="iv-val">—</span></div>
+            <div class="iv-row"><span>PEG Ratio</span><span id="spPEG" class="iv-val" style="color:#a78bfa">—</span></div>
           </div>
         </div>
 
@@ -237,6 +238,10 @@ tr:hover{background:rgba(99,102,241,0.05)}
           <div style="background:#1a1c2e;border-radius:8px;padding:12px">
             <div style="font-size:12px;color:#f59e0b;margin-bottom:4px;text-align:center;font-weight:600">S&P 500 P/E Ratio — 10 Years <span style="color:#8b8fa3;font-weight:400">(multpl.com)</span></div>
             <div style="height:200px"><canvas id="macroPeChart"></canvas></div>
+          </div>
+          <div style="background:#1a1c2e;border-radius:8px;padding:12px">
+            <div style="font-size:12px;color:#a78bfa;margin-bottom:4px;text-align:center;font-weight:600">S&P 500 PEG Ratio — 10 Years <span style="color:#8b8fa3;font-weight:400">(PE / YoY Earnings Growth)</span></div>
+            <div style="height:200px"><canvas id="macroPegChart"></canvas></div>
           </div>
         </div>
       </div>
@@ -1232,6 +1237,7 @@ async function loadMacroData(force = false) {
       }
       document.getElementById('spPE').textContent = sp.pe ? sp.pe.toFixed(1) + 'x' : 'N/A';
       document.getElementById('spFwdPE').textContent = sp.forwardPE ? sp.forwardPE.toFixed(1) + 'x' : 'N/A';
+      document.getElementById('spPEG').textContent = sp.peg ? sp.peg.toFixed(2) : 'N/A';
     }
 
     // TA-35
@@ -1330,6 +1336,27 @@ function renderMacroCharts(d) {
           { label: 'P/E', data: values, borderColor: '#f59e0b', borderWidth: 1.5, fill: { target: 'origin', above: 'rgba(245,158,11,0.08)' } },
           { label: `Avg (${avg.toFixed(1)}x)`, data: Array(dates.length).fill(avg), borderColor: 'rgba(99,102,241,0.5)', borderWidth: 1.5, borderDash: [5,3] },
           { label: '15x', data: Array(dates.length).fill(15), borderColor: 'rgba(34,197,94,0.3)', borderWidth: 1, borderDash: [3,3] },
+        ]
+      },
+      options: macroOpts,
+    });
+  }
+
+  // PEG Chart
+  const pegH = d.sp500?.pegHistory;
+  if (pegH?.dates?.length) {
+    if (macroCharts.peg) macroCharts.peg.destroy();
+    const pegDates = pegH.dates.slice().reverse();
+    const pegVals = pegH.values.slice().reverse();
+    const pegAvg = pegVals.reduce((a,b) => a+b, 0) / pegVals.length;
+    macroCharts.peg = new Chart(document.getElementById('macroPegChart'), {
+      type: 'line',
+      data: {
+        labels: pegDates,
+        datasets: [
+          { label: 'PEG', data: pegVals, borderColor: '#a78bfa', borderWidth: 1.5, fill: { target: 'origin', above: 'rgba(167,139,250,0.08)' } },
+          { label: `Avg (${pegAvg.toFixed(2)})`, data: Array(pegDates.length).fill(pegAvg), borderColor: 'rgba(99,102,241,0.5)', borderWidth: 1.5, borderDash: [5,3] },
+          { label: 'Fair (1.0)', data: Array(pegDates.length).fill(1.0), borderColor: 'rgba(34,197,94,0.5)', borderWidth: 1.5, borderDash: [3,3] },
         ]
       },
       options: macroOpts,
