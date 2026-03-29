@@ -11,12 +11,171 @@ import os
 import warnings
 warnings.filterwarnings("ignore")
 
-# yfinance wrapper with retry for cloud servers
+# yfinance wrapper with fallback for cloud servers
 import pandas as pd
+import requests as http_requests
+
+# Try to create yfinance with curl_cffi; fall back to raw Yahoo API if unavailable
+_YF_WORKS = True
+try:
+    _test = yf.Ticker('AAPL')
+    _test.info  # force a call to check if curl_cffi works
+except Exception:
+    _YF_WORKS = False
+    print("⚠️  yfinance curl_cffi unavailable — using raw Yahoo Finance API fallback")
+
+_YF_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    'Accept': 'application/json',
+}
+
+# Yahoo session with crumb for v10 API
+_yahoo_session = None
+_yahoo_crumb = None
+
+def _init_yahoo_session():
+    global _yahoo_session, _yahoo_crumb
+    if _yahoo_session and _yahoo_crumb:
+        return
+    _yahoo_session = http_requests.Session()
+    _yahoo_session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    try:
+        _yahoo_session.get('https://fc.yahoo.com', timeout=10, allow_redirects=True)
+        r = _yahoo_session.get('https://query2.finance.yahoo.com/v1/test/getcrumb', timeout=10)
+        _yahoo_crumb = r.text
+        print(f"✅ Yahoo crumb obtained: {_yahoo_crumb[:8]}...")
+    except Exception as e:
+        print(f"⚠️  Failed to get Yahoo crumb: {e}")
+        _yahoo_crumb = None
+
+def _raw_yahoo_info(symbol):
+    """Fallback: fetch stock info directly from Yahoo Finance v8 chart API."""
+    url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d'
+    r = http_requests.get(url, headers=_YF_HEADERS, timeout=15)
+    data = r.json()
+    result = data.get('chart', {}).get('result', [{}])[0]
+    meta = result.get('meta', {})
+    return meta
+
+def _raw_yahoo_quote(symbol):
+    """Fallback: fetch quote summary from Yahoo Finance v10 with crumb."""
+    _init_yahoo_session()
+    if not _yahoo_crumb:
+        return {}
+    url = f'https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}'
+    params = {
+        'modules': 'price,summaryDetail,financialData,defaultKeyStatistics',
+        'crumb': _yahoo_crumb,
+    }
+    r = _yahoo_session.get(url, params=params, timeout=15)
+    data = r.json()
+    result = data.get('quoteSummary', {}).get('result', [{}])[0]
+    return result
+
+def _raw_yahoo_history(symbol, period='5y', interval='1d'):
+    """Fallback: fetch price history from Yahoo Finance chart API."""
+    range_map = {'1mo': '1mo', '3mo': '3mo', '6mo': '6mo', '1y': '1y', '2y': '2y', '5y': '5y', '10y': '10y', '5d': '5d'}
+    r_range = range_map.get(period, '5y')
+    url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval={interval}&range={r_range}'
+    r = http_requests.get(url, headers=_YF_HEADERS, timeout=20)
+    data = r.json()
+    result = data.get('chart', {}).get('result', [{}])[0]
+    timestamps = result.get('timestamp', [])
+    indicators = result.get('indicators', {}).get('quote', [{}])[0]
+    closes = indicators.get('close', [])
+    volumes = indicators.get('volume', [])
+    highs = indicators.get('high', [])
+    lows = indicators.get('low', [])
+    opens = indicators.get('open', [])
+
+    if not timestamps:
+        return pd.DataFrame()
+
+    from datetime import datetime as _dt
+    dates = [_dt.fromtimestamp(ts) for ts in timestamps]
+    df = pd.DataFrame({
+        'Open': opens, 'High': highs, 'Low': lows,
+        'Close': closes, 'Volume': volumes,
+    }, index=pd.DatetimeIndex(dates))
+    df = df.dropna(subset=['Close'])
+    return df
 
 def yf_ticker(symbol):
-    """Create a yfinance Ticker — let yfinance handle its own session."""
-    return yf.Ticker(symbol)
+    """Create a yfinance Ticker — or return a fallback wrapper."""
+    if _YF_WORKS:
+        return yf.Ticker(symbol)
+    # Return a simple wrapper that uses raw API
+    class _FallbackTicker:
+        def __init__(self, sym):
+            self.ticker = sym
+            self._info = None
+        @property
+        def info(self):
+            if self._info is None:
+                try:
+                    meta = _raw_yahoo_info(self.ticker)
+                    quote = _raw_yahoo_quote(self.ticker)
+                    price_data = quote.get('price', {})
+                    summary = quote.get('summaryDetail', {})
+                    financial = quote.get('financialData', {})
+                    stats = quote.get('defaultKeyStatistics', {})
+                    self._info = {
+                        'shortName': price_data.get('shortName', {}).get('raw', meta.get('shortName', self.ticker)) if isinstance(price_data.get('shortName'), dict) else price_data.get('shortName', meta.get('shortName', self.ticker)),
+                        'longName': price_data.get('longName', {}).get('raw', meta.get('longName', '')) if isinstance(price_data.get('longName'), dict) else price_data.get('longName', meta.get('longName', '')),
+                        'currentPrice': meta.get('regularMarketPrice', 0),
+                        'regularMarketPrice': meta.get('regularMarketPrice', 0),
+                        'previousClose': meta.get('previousClose', meta.get('chartPreviousClose', 0)),
+                        'currency': meta.get('currency', 'USD'),
+                        'financialCurrency': meta.get('currency', 'USD'),
+                        'exchangeName': meta.get('exchangeName', ''),
+                        'marketCap': self._raw_val(price_data.get('marketCap')),
+                        'regularMarketVolume': self._raw_val(price_data.get('regularMarketVolume')),
+                        'fiftyTwoWeekHigh': self._raw_val(summary.get('fiftyTwoWeekHigh')),
+                        'fiftyTwoWeekLow': self._raw_val(summary.get('fiftyTwoWeekLow')),
+                        'trailingPE': self._raw_val(summary.get('trailingPE')),
+                        'forwardPE': self._raw_val(summary.get('forwardPE')),
+                        'trailingEps': self._raw_val(stats.get('trailingEps')),
+                        'forwardEps': self._raw_val(stats.get('forwardEps')),
+                        'sharesOutstanding': self._raw_val(stats.get('sharesOutstanding')),
+                        'totalRevenue': self._raw_val(financial.get('totalRevenue')),
+                        'netIncomeToCommon': self._raw_val(financial.get('netIncomeToCommon', stats.get('netIncomeToCommon'))),
+                        'totalDebt': self._raw_val(financial.get('totalDebt')),
+                        'totalCash': self._raw_val(financial.get('totalCash')),
+                        'revenueGrowth': self._raw_val(financial.get('revenueGrowth')),
+                        'earningsGrowth': self._raw_val(financial.get('earningsGrowth')),
+                        'profitMargins': self._raw_val(financial.get('profitMargins')),
+                        'grossMargins': self._raw_val(financial.get('grossMargins')),
+                        'operatingMargins': self._raw_val(financial.get('operatingMargins')),
+                        'sector': self._raw_val(price_data.get('sector')) or '',
+                        'targetMeanPrice': self._raw_val(financial.get('targetMeanPrice')),
+                        'targetMedianPrice': self._raw_val(financial.get('targetMedianPrice')),
+                        'targetHighPrice': self._raw_val(financial.get('targetHighPrice')),
+                        'targetLowPrice': self._raw_val(financial.get('targetLowPrice')),
+                        'numberOfAnalystOpinions': self._raw_val(financial.get('numberOfAnalystOpinions')),
+                        'recommendationKey': self._raw_val(financial.get('recommendationKey')),
+                    }
+                except Exception as e:
+                    self._info = {'error': str(e)}
+            return self._info
+        def _raw_val(self, v):
+            if v is None: return None
+            if isinstance(v, dict): return v.get('raw')
+            return v
+        def history(self, **kwargs):
+            return _raw_yahoo_history(self.ticker, **kwargs)
+        @property
+        def income_stmt(self): return pd.DataFrame()
+        @property
+        def balance_sheet(self): return pd.DataFrame()
+        @property
+        def revenue_estimate(self): return None
+        @property
+        def earnings_estimate(self): return None
+        @property
+        def growth_estimates(self): return None
+        @property
+        def analyst_price_targets(self): return None
+    return _FallbackTicker(symbol)
 
 def yf_safe_history(ticker_obj, **kwargs):
     """Safely get history with retry for flaky connections."""
@@ -598,8 +757,6 @@ def calculate_dcf():
 
 
 # ─── Macro Dashboard Endpoint ───
-
-import requests as http_requests
 
 @app.route('/api/macro')
 def get_macro_data():
