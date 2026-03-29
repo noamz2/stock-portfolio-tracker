@@ -71,11 +71,19 @@ header h1{font-size:1.3rem;color:var(--accent);white-space:nowrap}
   #priceHeader>div{flex-direction:column!important}
   #quickMetrics{max-width:100%!important}
   /* Macro dashboard mobile */
-  #macroPanel{padding:10px!important;overflow:hidden}
-  #macroTopRow{grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
-  #macroTopRow .stat-card{padding:8px}
-  #fgScore{font-size:22px!important}
+  #macroPanel{padding:8px!important;overflow:hidden;margin-top:8px!important}
+  #macroPanel h2{font-size:1rem!important}
+  #macroTopRow{grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:12px!important}
+  #macroTopRow .stat-card{padding:4px 2px}
+  #macroTopRow [style*="font-size:28px"],#macroTopRow [style*="font-size:24px"],#macroTopRow [style*="font-size:22px"]{font-size:16px!important}
+  #macroTopRow [style*="font-size:11px"]{font-size:9px!important}
+  #macroTopRow [style*="font-size:12px"]{font-size:9px!important}
+  #fgScore{font-size:16px!important}
+  #fgBar{margin-top:4px!important}
   #macroContent .grid-2{grid-template-columns:1fr!important}
+  #macroDetailsRow,#macroChartsRow1,#macroChartsRow2{grid-template-columns:1fr!important;gap:8px!important}
+  #macroContent canvas{max-height:150px}
+  #macroContent [style*="height:200px"]{height:150px!important}
   /* Remove button smaller */
   .remove-btn{font-size:10px;padding:2px 6px}
   /* Scenario cards */
@@ -252,7 +260,7 @@ tr:hover{background:rgba(99,102,241,0.05)}
         </div>
 
         <!-- Fear & Greed History -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div id="macroDetailsRow" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
           <div style="background:#1a1c2e;border-radius:8px;padding:12px">
             <div style="font-size:12px;color:#8b8fa3;margin-bottom:8px">📊 Fear & Greed Timeline</div>
             <div class="iv-row"><span>Previous Close</span><span id="fgPrev" class="iv-val">—</span></div>
@@ -271,7 +279,7 @@ tr:hover{background:rgba(99,102,241,0.05)}
         </div>
 
         <!-- Charts — 10 Year History -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div id="macroChartsRow1" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
           <div style="background:#1a1c2e;border-radius:8px;padding:12px">
             <div style="font-size:12px;color:#ef4444;margin-bottom:4px;text-align:center;font-weight:600">VIX — 10 Years <span id="vixAvgLabel" style="color:#8b8fa3;font-weight:400"></span></div>
             <div style="height:200px"><canvas id="macroVixChart"></canvas></div>
@@ -281,7 +289,7 @@ tr:hover{background:rgba(99,102,241,0.05)}
             <div style="height:200px"><canvas id="macroSpChart"></canvas></div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div id="macroChartsRow2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div style="background:#1a1c2e;border-radius:8px;padding:12px">
             <div style="font-size:12px;color:#22c55e;margin-bottom:4px;text-align:center;font-weight:600">USD/ILS ₪ — 10 Years</div>
             <div style="height:200px"><canvas id="macroIlsChart"></canvas></div>
