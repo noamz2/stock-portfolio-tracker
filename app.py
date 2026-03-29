@@ -16,42 +16,88 @@ import pandas as pd
 import requests as http_requests
 
 # Try to create yfinance with curl_cffi; fall back to raw Yahoo API if unavailable
-_YF_WORKS = True
-try:
-    _test = yf.Ticker('AAPL')
-    _test.info  # force a call to check if curl_cffi works
-except Exception:
-    _YF_WORKS = False
-    print("⚠️  yfinance curl_cffi unavailable — using raw Yahoo Finance API fallback")
+# Environment override: set _YF_WORKS=False to force fallback (for testing)
+_YF_WORKS = os.environ.get('_YF_WORKS', '').lower() != 'false'
+if _YF_WORKS:
+    try:
+        _test = yf.Ticker('AAPL')
+        _hist = _test.history(period='5d')
+        if _hist is None or _hist.empty:
+            raise RuntimeError("yfinance returned empty data")
+        print("yfinance works OK")
+    except Exception as e:
+        _YF_WORKS = False
+        print(f"yfinance unavailable ({e}) — using raw Yahoo Finance API fallback")
+else:
+    print("_YF_WORKS=False set — using raw Yahoo Finance API fallback")
 
 _YF_HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'application/json',
 }
 
 # Yahoo session with crumb for v10 API
 _yahoo_session = None
 _yahoo_crumb = None
+_yahoo_crumb_ts = 0  # timestamp of last crumb fetch
 
-def _init_yahoo_session():
-    global _yahoo_session, _yahoo_crumb
-    if _yahoo_session and _yahoo_crumb:
+def _init_yahoo_session(force_refresh=False):
+    """Initialize Yahoo session and get crumb. Refreshes if older than 30 min."""
+    global _yahoo_session, _yahoo_crumb, _yahoo_crumb_ts
+    import time as _t
+    if not force_refresh and _yahoo_session and _yahoo_crumb and (_t.time() - _yahoo_crumb_ts) < 1800:
         return
     _yahoo_session = http_requests.Session()
-    _yahoo_session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    _yahoo_session.headers['User-Agent'] = _YF_HEADERS['User-Agent']
     try:
         _yahoo_session.get('https://fc.yahoo.com', timeout=10, allow_redirects=True)
-        r = _yahoo_session.get('https://query2.finance.yahoo.com/v1/test/getcrumb', timeout=10)
-        _yahoo_crumb = r.text
-        print(f"✅ Yahoo crumb obtained: {_yahoo_crumb[:8]}...")
+        # Retry crumb fetch on 429
+        for _attempt in range(3):
+            r = _yahoo_session.get('https://query2.finance.yahoo.com/v1/test/getcrumb', timeout=10)
+            if r.status_code == 429:
+                _t.sleep(2 ** _attempt + 1)
+                continue
+            break
+        if r.status_code == 200 and r.text and len(r.text) < 100:
+            _yahoo_crumb = r.text
+            _yahoo_crumb_ts = _t.time()
+            print(f"Yahoo crumb obtained: {_yahoo_crumb[:8]}...")
+        else:
+            print(f"Failed to get Yahoo crumb: status={r.status_code}")
+            _yahoo_crumb = None
     except Exception as e:
-        print(f"⚠️  Failed to get Yahoo crumb: {e}")
+        print(f"Failed to get Yahoo crumb: {e}")
         _yahoo_crumb = None
+
+def _yahoo_get_with_retry(url, headers=None, session=None, params=None, timeout=15, max_retries=3):
+    """GET with retry on 429 rate-limit errors."""
+    import time as _t
+    requester = session or http_requests
+    for attempt in range(max_retries):
+        try:
+            r = requester.get(url, headers=headers, params=params, timeout=timeout)
+            if r.status_code == 429:
+                wait = 2 ** attempt + 1
+                print(f"Rate limited (429), waiting {wait}s before retry {attempt+1}/{max_retries}")
+                _t.sleep(wait)
+                continue
+            return r
+        except Exception as e:
+            if attempt < max_retries - 1:
+                _t.sleep(2 ** attempt)
+                continue
+            raise
+    return r  # return last response even if 429
 
 def _raw_yahoo_info(symbol):
     """Fallback: fetch stock info directly from Yahoo Finance v8 chart API."""
-    url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d'
-    r = http_requests.get(url, headers=_YF_HEADERS, timeout=15)
+    import urllib.parse
+    encoded = urllib.parse.quote(symbol, safe='')
+    url = f'https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?interval=1d&range=5d'
+    r = _yahoo_get_with_retry(url, headers=_YF_HEADERS, timeout=15)
+    if r.status_code != 200:
+        print(f"_raw_yahoo_info({symbol}): HTTP {r.status_code}")
+        return {}
     data = r.json()
     result = data.get('chart', {}).get('result', [{}])[0]
     meta = result.get('meta', {})
@@ -59,25 +105,45 @@ def _raw_yahoo_info(symbol):
 
 def _raw_yahoo_quote(symbol):
     """Fallback: fetch quote summary from Yahoo Finance v10 with crumb."""
-    _init_yahoo_session()
-    if not _yahoo_crumb:
-        return {}
-    url = f'https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}'
-    params = {
-        'modules': 'price,summaryDetail,financialData,defaultKeyStatistics',
-        'crumb': _yahoo_crumb,
-    }
-    r = _yahoo_session.get(url, params=params, timeout=15)
-    data = r.json()
-    result = data.get('quoteSummary', {}).get('result', [{}])[0]
-    return result
+    import urllib.parse
+    encoded = urllib.parse.quote(symbol, safe='')
+    for attempt in range(2):
+        _init_yahoo_session(force_refresh=(attempt > 0))
+        if not _yahoo_crumb:
+            return {}
+        url = f'https://query2.finance.yahoo.com/v10/finance/quoteSummary/{encoded}'
+        params = {
+            'modules': 'price,summaryDetail,financialData,defaultKeyStatistics',
+            'crumb': _yahoo_crumb,
+        }
+        try:
+            r = _yahoo_get_with_retry(url, session=_yahoo_session, params=params, timeout=15)
+            if r.status_code in (401, 403):
+                # Crumb expired, refresh and retry
+                continue
+            if r.status_code != 200:
+                print(f"_raw_yahoo_quote({symbol}): HTTP {r.status_code}")
+                return {}
+            data = r.json()
+            result = data.get('quoteSummary', {}).get('result', [{}])[0]
+            return result
+        except Exception as e:
+            print(f"_raw_yahoo_quote({symbol}) attempt {attempt}: {e}")
+            if attempt == 0:
+                continue
+    return {}
 
 def _raw_yahoo_history(symbol, period='5y', interval='1d'):
     """Fallback: fetch price history from Yahoo Finance chart API."""
+    import urllib.parse
     range_map = {'1mo': '1mo', '3mo': '3mo', '6mo': '6mo', '1y': '1y', '2y': '2y', '5y': '5y', '10y': '10y', '5d': '5d'}
     r_range = range_map.get(period, '5y')
-    url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval={interval}&range={r_range}'
-    r = http_requests.get(url, headers=_YF_HEADERS, timeout=20)
+    encoded = urllib.parse.quote(symbol, safe='')
+    url = f'https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?interval={interval}&range={r_range}'
+    r = _yahoo_get_with_retry(url, headers=_YF_HEADERS, timeout=20)
+    if r.status_code != 200:
+        print(f"_raw_yahoo_history({symbol}): HTTP {r.status_code}")
+        return pd.DataFrame()
     data = r.json()
     result = data.get('chart', {}).get('result', [{}])[0]
     timestamps = result.get('timestamp', [])
@@ -168,13 +234,19 @@ def yf_ticker(symbol):
         @property
         def balance_sheet(self): return pd.DataFrame()
         @property
+        def cashflow(self): return pd.DataFrame()
+        @property
         def revenue_estimate(self): return None
         @property
         def earnings_estimate(self): return None
         @property
+        def earnings_history(self): return None
+        @property
         def growth_estimates(self): return None
         @property
         def analyst_price_targets(self): return None
+        @property
+        def news(self): return []
     return _FallbackTicker(symbol)
 
 def yf_safe_history(ticker_obj, **kwargs):
@@ -357,7 +429,7 @@ def get_historical_pe(ticker_obj, info, years=5):
     """Calculate historical P/E over time using price history and annual EPS."""
     try:
         hist = ticker_obj.history(period=f"{years}y", interval="1mo")
-        if hist.empty:
+        if hist.empty or 'Close' not in hist.columns:
             return [], []
 
         earnings = ticker_obj.earnings_history
@@ -381,6 +453,16 @@ def get_historical_pe(ticker_obj, info, years=5):
 @app.route('/')
 def index():
     return send_file('index.html')
+
+
+@app.route('/api/health')
+def health():
+    return jsonify({
+        'status': 'ok',
+        'yfinance_works': _YF_WORKS,
+        'fallback_mode': not _YF_WORKS,
+        'yahoo_crumb_ok': _yahoo_crumb is not None and len(_yahoo_crumb or '') < 100,
+    })
 
 
 @app.route('/api/search/<query>')
@@ -463,13 +545,20 @@ def get_stock(ticker):
 
         # Historical data — full 5-year daily for ALL charts
         hist5y = yf_safe_history(t, period="5y", interval="1d")
-        dates = [d.strftime('%Y-%m-%d') for d in hist5y.index]
-        closes = hist5y['Close'].tolist()
-        volumes = hist5y['Volume'].tolist()
+        if hist5y.empty or 'Close' not in hist5y.columns:
+            dates, closes, volumes = [], [], []
+        else:
+            dates = [d.strftime('%Y-%m-%d') for d in hist5y.index]
+            closes = hist5y['Close'].tolist()
+            volumes = hist5y['Volume'].tolist() if 'Volume' in hist5y.columns else []
 
         # Technical indicators — RSI 200 period, MA 200 period
-        rsi_values = compute_rsi(np.array(closes), period=200)
-        ma200 = compute_ma(closes, 200)
+        if closes:
+            rsi_values = compute_rsi(np.array(closes), period=200)
+            ma200 = compute_ma(closes, 200)
+        else:
+            rsi_values = []
+            ma200 = []
 
         current_rsi = rsi_values[-1] if rsi_values and rsi_values[-1] is not None else 50
 
@@ -828,7 +917,9 @@ def _fetch_vix_inner():
     try:
         vix = yf_ticker('^VIX')
         vix_hist = yf_safe_history(vix, period='10y', interval='1mo')
-        vix_price = float(vix_hist['Close'].iloc[-1]) if not vix_hist.empty else None
+        if vix_hist.empty or 'Close' not in vix_hist.columns:
+            return {'current': None, 'error': 'No VIX data returned'}
+        vix_price = float(vix_hist['Close'].iloc[-1])
         vix_dates = [d.strftime('%Y-%m') for d in vix_hist.index]
         vix_closes = [round(float(c), 2) for c in vix_hist['Close'].tolist()]
         vix_avg = round(float(np.mean(vix_closes)), 2)
@@ -845,7 +936,9 @@ def _fetch_ils_inner():
     try:
         usdils = yf_ticker('ILS=X')
         ils_hist = yf_safe_history(usdils, period='10y', interval='1mo')
-        ils_price = float(ils_hist['Close'].iloc[-1]) if not ils_hist.empty else None
+        if ils_hist.empty or 'Close' not in ils_hist.columns:
+            return {'current': None, 'error': 'No ILS data returned'}
+        ils_price = float(ils_hist['Close'].iloc[-1])
         ils_dates = [d.strftime('%Y-%m') for d in ils_hist.index]
         ils_closes = [round(float(c), 4) for c in ils_hist['Close'].tolist()]
         return {
@@ -862,32 +955,35 @@ def _fetch_sp_inner():
     try:
         sp = yf_ticker('^GSPC')
         sp_hist = yf_safe_history(sp, period='10y', interval='1mo')
-        sp_price = float(sp_hist['Close'].iloc[-1]) if not sp_hist.empty else None
+        if sp_hist.empty or 'Close' not in sp_hist.columns:
+            return {'price': None, 'error': 'No S&P 500 data returned'}
+        sp_price = float(sp_hist['Close'].iloc[-1])
         sp_dates = [d.strftime('%Y-%m') for d in sp_hist.index]
         sp_closes = [round(float(c), 2) for c in sp_hist['Close'].tolist()]
 
         # RSI from daily
         sp_daily = yf_safe_history(sp, period='3mo', interval='1d')
-        closes_arr = sp_daily['Close'].values
         sp_rsi = None
-        if len(closes_arr) > 15:
-            deltas = np.diff(closes_arr)
-            gains = np.where(deltas > 0, deltas, 0)
-            losses = np.where(deltas < 0, -deltas, 0)
-            avg_gain = np.mean(gains[-14:])
-            avg_loss = np.mean(losses[-14:])
-            if avg_loss > 0:
-                rs = avg_gain / avg_loss
-                sp_rsi = round(100 - (100 / (1 + rs)), 1)
+        if not sp_daily.empty and 'Close' in sp_daily.columns:
+            closes_arr = sp_daily['Close'].values
+            if len(closes_arr) > 15:
+                deltas = np.diff(closes_arr)
+                gains = np.where(deltas > 0, deltas, 0)
+                losses = np.where(deltas < 0, -deltas, 0)
+                avg_gain = np.mean(gains[-14:])
+                avg_loss = np.mean(losses[-14:])
+                if avg_loss > 0:
+                    rs = avg_gain / avg_loss
+                    sp_rsi = round(100 - (100 / (1 + rs)), 1)
 
         # MA200 from daily
         ma200 = None
-        sp_daily_1y = sp.history(period='1y', interval='1d')
-        if len(sp_daily_1y) >= 200:
+        sp_daily_1y = yf_safe_history(sp, period='1y', interval='1d')
+        if not sp_daily_1y.empty and 'Close' in sp_daily_1y.columns and len(sp_daily_1y) >= 200:
             ma200 = round(float(sp_daily_1y['Close'].rolling(200).mean().iloc[-1]), 2)
 
         # Change
-        if len(sp_daily) > 1:
+        if not sp_daily.empty and 'Close' in sp_daily.columns and len(sp_daily) > 1:
             prev = float(sp_daily['Close'].iloc[-2])
             change_pct = round((float(sp_daily['Close'].iloc[-1]) - prev) / prev * 100, 2)
         else:
@@ -956,7 +1052,7 @@ def _fetch_ta35_inner():
     try:
         ta35 = yf_ticker('TA35.TA')
         ta35_hist = yf_safe_history(ta35, period='5d', interval='1d')
-        if not ta35_hist.empty and len(ta35_hist) >= 2:
+        if not ta35_hist.empty and 'Close' in ta35_hist.columns and len(ta35_hist) >= 2:
             ta35_price = float(ta35_hist['Close'].iloc[-1])
             ta35_prev = float(ta35_hist['Close'].iloc[-2])
             ta35_change = round((ta35_price - ta35_prev) / ta35_prev * 100, 2)
