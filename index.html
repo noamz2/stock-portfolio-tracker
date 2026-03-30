@@ -205,6 +205,48 @@ tr:hover{background:rgba(99,102,241,0.05)}
       <p style="color:var(--muted);margin-top:4px;font-size:13px">Example: AAPL, MSFT, GOOGL, META, AMZN</p>
     </div>
 
+    <!-- Daily Briefing Panel -->
+    <div class="card" id="briefingPanel" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;cursor:pointer" onclick="toggleBriefing()">
+        <h2>📊 סיכום יומי לתיק</h2>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span id="briefingStatus" style="color:#6b6f8a;font-size:11px"></span>
+          <button id="briefingGenBtn" onclick="event.stopPropagation();generateBriefing()" style="background:#6366f1;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">🎙️ צור סיכום</button>
+          <span id="briefingToggle" style="color:var(--muted);font-size:20px">▼</span>
+        </div>
+      </div>
+      <div id="briefingContent" style="display:none">
+        <!-- Audio Player -->
+        <div id="briefingAudioSection" style="display:none;margin-bottom:16px">
+          <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:12px;padding:16px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+              <span style="font-size:24px">🎧</span>
+              <div>
+                <div style="font-weight:700;color:#c4b5fd">פודקאסט יומי</div>
+                <div id="briefingAudioDate" style="font-size:11px;color:#8b8fa3"></div>
+              </div>
+              <div style="margin-right:auto;display:flex;gap:6px">
+                <button onclick="setBriefingSpeed(0.75)" class="speed-btn" data-speed="0.75" style="background:#374151;color:#8b8fa3;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:10px">0.75x</button>
+                <button onclick="setBriefingSpeed(1)" class="speed-btn" data-speed="1" style="background:#6366f1;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:10px">1x</button>
+                <button onclick="setBriefingSpeed(1.25)" class="speed-btn" data-speed="1.25" style="background:#374151;color:#8b8fa3;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:10px">1.25x</button>
+                <button onclick="setBriefingSpeed(1.5)" class="speed-btn" data-speed="1.5" style="background:#374151;color:#8b8fa3;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:10px">1.5x</button>
+                <button onclick="setBriefingSpeed(2)" class="speed-btn" data-speed="2" style="background:#374151;color:#8b8fa3;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:10px">2x</button>
+              </div>
+            </div>
+            <audio id="briefingAudio" controls style="width:100%;height:40px;border-radius:8px"></audio>
+          </div>
+        </div>
+        <!-- Loading -->
+        <div id="briefingLoading" style="display:none;text-align:center;padding:40px">
+          <div class="spinner" style="margin:0 auto 12px"></div>
+          <div style="color:#8b8fa3">מייצר סיכום יומי... זה יכול לקחת כ-2 דקות</div>
+          <div id="briefingLoadingProgress" style="color:#6366f1;font-size:12px;margin-top:8px"></div>
+        </div>
+        <!-- Text Report -->
+        <div id="briefingReport" style="display:none;background:#0d1025;border-radius:8px;padding:16px;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;direction:rtl;text-align:right;max-height:600px;overflow-y:auto;color:#c4c8e0"></div>
+      </div>
+    </div>
+
     <!-- Macro Dashboard -->
     <div class="card" id="macroPanel" style="margin-top:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;cursor:pointer" onclick="toggleMacro()">
@@ -1434,6 +1476,104 @@ setInterval(() => {
   if (Object.keys(portfolio).length) loadPortfolio();
   loadMacroData(true);
 }, REFRESH_INTERVAL);
+
+// ─── Daily Briefing ───
+
+let briefingOpen = false;
+
+function toggleBriefing() {
+  briefingOpen = !briefingOpen;
+  document.getElementById('briefingContent').style.display = briefingOpen ? 'block' : 'none';
+  document.getElementById('briefingToggle').textContent = briefingOpen ? '▲' : '▼';
+  if (briefingOpen) loadLatestBriefing();
+}
+
+async function loadLatestBriefing() {
+  try {
+    const resp = await fetch(`${API}/api/briefing/latest`);
+    const d = await resp.json();
+    if (d.exists) {
+      showBriefingResult(d);
+    }
+  } catch(e) { console.error('briefing load error:', e); }
+}
+
+async function generateBriefing() {
+  const tickers = Object.keys(portfolio);
+  if (!tickers.length) { alert('הוסף מניות לפורטפוליו קודם'); return; }
+
+  // Open panel
+  briefingOpen = true;
+  document.getElementById('briefingContent').style.display = 'block';
+  document.getElementById('briefingToggle').textContent = '▲';
+
+  // Show loading
+  document.getElementById('briefingLoading').style.display = 'block';
+  document.getElementById('briefingReport').style.display = 'none';
+  document.getElementById('briefingAudioSection').style.display = 'none';
+  document.getElementById('briefingGenBtn').disabled = true;
+  document.getElementById('briefingGenBtn').textContent = '⏳ מייצר...';
+
+  // Progress animation
+  let step = 0;
+  const steps = ['📊 אוסף נתוני מאקרו...', '📈 מנתח מניות...', '✍️ כותב סיכום...', '🎙️ מייצר פודקאסט...'];
+  const progressEl = document.getElementById('briefingLoadingProgress');
+  const progInterval = setInterval(() => {
+    progressEl.textContent = steps[step % steps.length];
+    step++;
+  }, 8000);
+
+  try {
+    const resp = await fetch(`${API}/api/briefing/generate`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tickers}),
+    });
+    const d = await resp.json();
+    clearInterval(progInterval);
+
+    if (d.error) {
+      alert('שגיאה: ' + d.error);
+      return;
+    }
+    showBriefingResult(d);
+  } catch(e) {
+    clearInterval(progInterval);
+    alert('שגיאה ביצירת סיכום: ' + e.message);
+  } finally {
+    document.getElementById('briefingLoading').style.display = 'none';
+    document.getElementById('briefingGenBtn').disabled = false;
+    document.getElementById('briefingGenBtn').textContent = '🎙️ צור סיכום';
+  }
+}
+
+function showBriefingResult(d) {
+  // Show report
+  document.getElementById('briefingReport').style.display = 'block';
+  document.getElementById('briefingReport').textContent = d.report;
+  document.getElementById('briefingStatus').textContent = `סיכום מ-${d.date}`;
+
+  // Show audio player
+  if (d.hasAudio) {
+    document.getElementById('briefingAudioSection').style.display = 'block';
+    const audio = document.getElementById('briefingAudio');
+    audio.src = `${API}/api/briefing/audio?date=${d.date}&t=${Date.now()}`;
+    document.getElementById('briefingAudioDate').textContent = d.date;
+  }
+}
+
+function setBriefingSpeed(speed) {
+  const audio = document.getElementById('briefingAudio');
+  audio.playbackRate = speed;
+  document.querySelectorAll('#briefingAudioSection .speed-btn').forEach(btn => {
+    const s = parseFloat(btn.dataset.speed);
+    btn.style.background = s === speed ? '#6366f1' : '#374151';
+    btn.style.color = s === speed ? '#fff' : '#8b8fa3';
+  });
+}
+
+// Auto-load latest briefing on page load
+setTimeout(() => loadLatestBriefing(), 3000);
 
 // ─── P/E Model ───
 

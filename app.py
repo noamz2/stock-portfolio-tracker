@@ -1576,6 +1576,95 @@ try:
 except Exception:
     pass
 
+# ─── Daily Briefing API ───
+
+@app.route('/api/briefing/generate', methods=['POST'])
+def generate_briefing():
+    """Generate a new daily briefing for given tickers."""
+    try:
+        data = request.get_json() or {}
+        tickers = data.get('tickers', [])
+        if not tickers:
+            return jsonify({'error': 'No tickers provided'}), 400
+
+        from daily_briefing import collect_all, generate_text_report, generate_podcast_script, text_to_speech, TICKER_MAP, HEBREW_NAMES
+        import daily_briefing
+        daily_briefing.PORTFOLIO = tickers
+
+        all_data = collect_all()
+        report = generate_text_report(all_data)
+        script = generate_podcast_script(all_data)
+
+        today = datetime.now().strftime('%Y-%m-%d')
+        briefings_dir = os.path.join(os.path.dirname(__file__), 'briefings')
+        os.makedirs(briefings_dir, exist_ok=True)
+
+        # Save files
+        report_path = os.path.join(briefings_dir, f'briefing_{today}.txt')
+        script_path = os.path.join(briefings_dir, f'briefing_{today}_script.txt')
+        audio_path = os.path.join(briefings_dir, f'briefing_{today}.mp3')
+        data_path = os.path.join(briefings_dir, f'briefing_{today}_data.json')
+
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write(report)
+        with open(script_path, 'w', encoding='utf-8') as f:
+            f.write(script)
+        with open(data_path, 'w', encoding='utf-8') as f:
+            json.dump(all_data, f, ensure_ascii=False, indent=2, default=str)
+
+        text_to_speech(script, audio_path)
+
+        return jsonify({
+            'date': today,
+            'report': report,
+            'script': script,
+            'hasAudio': os.path.exists(audio_path),
+            'stocks': len([s for s in all_data['stocks'] if 'error' not in s]),
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/briefing/latest')
+def get_latest_briefing():
+    """Get the latest briefing if it exists."""
+    briefings_dir = os.path.join(os.path.dirname(__file__), 'briefings')
+    today = datetime.now().strftime('%Y-%m-%d')
+    report_path = os.path.join(briefings_dir, f'briefing_{today}.txt')
+    script_path = os.path.join(briefings_dir, f'briefing_{today}_script.txt')
+    audio_path = os.path.join(briefings_dir, f'briefing_{today}.mp3')
+
+    if not os.path.exists(report_path):
+        return jsonify({'exists': False})
+
+    with open(report_path, 'r', encoding='utf-8') as f:
+        report = f.read()
+
+    script = ''
+    if os.path.exists(script_path):
+        with open(script_path, 'r', encoding='utf-8') as f:
+            script = f.read()
+
+    return jsonify({
+        'exists': True,
+        'date': today,
+        'report': report,
+        'script': script,
+        'hasAudio': os.path.exists(audio_path),
+    })
+
+
+@app.route('/api/briefing/audio')
+def serve_briefing_audio():
+    """Serve the latest briefing audio file."""
+    date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    audio_path = os.path.join(os.path.dirname(__file__), 'briefings', f'briefing_{date}.mp3')
+    if os.path.exists(audio_path):
+        return send_file(audio_path, mimetype='audio/mpeg')
+    return jsonify({'error': 'No audio found'}), 404
+
+
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5050))
