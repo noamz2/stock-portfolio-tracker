@@ -1,0 +1,580 @@
+{
+  "macro": {
+    "fear_greed": {
+      "score": null
+    },
+    "vix": 30.6,
+    "sp500": {
+      "price": 6343.72,
+      "change_pct": -0.39,
+      "rsi": 23.5
+    },
+    "usd_ils": 3.1724,
+    "ta35": 4022.57
+  },
+  "stocks": [
+    {
+      "ticker": "META",
+      "resolved": "META",
+      "name": "Meta Platforms, Inc.",
+      "hebrew": "מטא",
+      "price": 536.38,
+      "change_pct": 2.03,
+      "currency": "$",
+      "pe": 22.8,
+      "forward_pe": 14.9,
+      "eps": 23.5,
+      "forward_eps": 35.88,
+      "revenue_growth": 23.8,
+      "earnings_growth": 10.7,
+      "profit_margin": 30.1,
+      "market_cap": 1356802949120,
+      "rsi": 19.7,
+      "w52_high": 796.25,
+      "w52_low": 479.8,
+      "pct_from_high": -32.6,
+      "target_mean": 861.76,
+      "target_low": 614.0,
+      "target_high": 1144.0,
+      "recommendation": "strong_buy",
+      "news": [
+        {
+          "title": "Another Day, Another Massive AI Infrastructure Deal",
+          "link": "https://www.fool.com/investing/2026/03/30/another-day-another-massive-ai-infrastructure-deal/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 20:57:38 +0000"
+        },
+        {
+          "title": "Meta Named Morgan Stanley's New Top Pick Following Sell-Off",
+          "link": "https://finance.yahoo.com/m/89923ca2-8fc7-34ed-9b99-ebb38f80e47c/meta-named-morgan-stanley%27s.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 20:36:46 +0000"
+        },
+        {
+          "title": "Sector Update: Tech Stocks Fall Late Afternoon",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/sector-tech-stocks-fall-afternoon-194915411.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 19:49:15 +0000"
+        },
+        {
+          "title": "Ross Stores Beat Earnings and Gained 68% in a Year. Reddit Is Still Betting Against It.",
+          "link": "https://247wallst.com/investing/2026/03/30/ross-stores-beat-earnings-and-gained-68-in-a-year-reddit-is-still-betting-against-it/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 19:32:31 +0000"
+        },
+        {
+          "title": "Meta faces regulatory risks but Jefferies sees buying opportunity",
+          "link": "https://www.proactiveinvestors.com/companies/news/1089773/meta-faces-regulatory-risks-but-jefferie-sees-buying-opportunity-1089773.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 19:31:00 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "MSFT",
+      "resolved": "MSFT",
+      "name": "Microsoft Corporation",
+      "hebrew": "מייקרוסופט",
+      "price": 358.96,
+      "change_pct": 0.61,
+      "currency": "$",
+      "pe": 22.5,
+      "forward_pe": 19.0,
+      "eps": 15.98,
+      "forward_eps": 18.85,
+      "revenue_growth": 16.7,
+      "earnings_growth": 59.8,
+      "profit_margin": 39.0,
+      "market_cap": 2667926257664,
+      "rsi": 12.4,
+      "w52_high": 555.45,
+      "w52_low": 344.79,
+      "pct_from_high": -35.4,
+      "target_mean": 589.9,
+      "target_low": 392.0,
+      "target_high": 730.0,
+      "recommendation": "strong_buy",
+      "news": [
+        {
+          "title": "Dow Tests 45,000 as War Sends Oil to $110+ and the VIX Surges 50% in a Month",
+          "link": "https://247wallst.com/investing/2026/03/30/dow-tests-45000-as-war-sends-oil-to-110-and-the-vix-surges-50-in-a-month/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 19:59:21 +0000"
+        },
+        {
+          "title": "Sector Update: Tech Stocks Fall Late Afternoon",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/sector-tech-stocks-fall-afternoon-194915411.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 19:49:15 +0000"
+        },
+        {
+          "title": "Ross Stores Beat Earnings and Gained 68% in a Year. Reddit Is Still Betting Against It.",
+          "link": "https://247wallst.com/investing/2026/03/30/ross-stores-beat-earnings-and-gained-68-in-a-year-reddit-is-still-betting-against-it/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 19:32:31 +0000"
+        },
+        {
+          "title": "Microsoft Stock Rises After Unveiling Game-Changing Multi-Model AI Strategy",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/microsoft-stock-rises-unveiling-game-184413324.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 18:44:13 +0000"
+        },
+        {
+          "title": "Orderfox Schweiz AG Introduces Gieni ABX in collaboration with Microsoft: A Frontier AI Solution That Executes Work to Completion",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/orderfox-schweiz-ag-introduces-gieni-183500214.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 18:35:00 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "SOFI",
+      "resolved": "SOFI",
+      "name": "SoFi Technologies, Inc.",
+      "hebrew": "סופי",
+      "price": 15.15,
+      "change_pct": -0.53,
+      "currency": "$",
+      "pe": 38.8,
+      "forward_pe": 18.7,
+      "eps": 0.39,
+      "forward_eps": 0.81,
+      "revenue_growth": 40.2,
+      "earnings_growth": -57.0,
+      "profit_margin": 13.4,
+      "market_cap": 19320246272,
+      "rsi": 13.0,
+      "w52_high": 32.73,
+      "w52_low": 8.6,
+      "pct_from_high": -53.7,
+      "target_mean": 25.32,
+      "target_low": 12.0,
+      "target_high": 38.0,
+      "recommendation": "hold",
+      "news": [
+        {
+          "title": "OpenAI, Anthropic, SpaceX: Where the most anticipated IPOs stand",
+          "link": "https://finance.yahoo.com/video/openai-anthropic-spacex-where-the-most-anticipated-ipos-stand-202351059.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 20:23:51 +0000"
+        },
+        {
+          "title": "Robinhood reportedly cut out of blockbuster SpaceX IPO",
+          "link": "https://www.thestreet.com/crypto/markets/robinhood-reportedly-cut-out-of-blockbuster-spacex-ipo?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 20:07:11 +0000"
+        },
+        {
+          "title": "Treasuries Climb as Powell Eases Fed-Hike Jitters: Markets Wrap",
+          "link": "https://finance.yahoo.com/markets/commodities/articles/investor-unease-builds-entering-war-193125656.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 20:01:02 +0000"
+        },
+        {
+          "title": "Up 32% in 2026, How High Can SOFI Stock Go This Year?",
+          "link": "https://247wallst.com/investing/2026/03/30/up-32-in-2026-how-high-can-sofi-stock-go-this-year/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 17:37:40 +0000"
+        },
+        {
+          "title": "This Week In Digital Payment - Revolutionizing Healthcare Transactions Through Digital Innovation",
+          "link": "https://finance.yahoo.com/sectors/healthcare/articles/week-digital-payment-revolutionizing-healthcare-123828896.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 12:38:28 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "ADBE",
+      "resolved": "ADBE",
+      "name": "Adobe Inc.",
+      "hebrew": "אדובי",
+      "price": 241.13,
+      "change_pct": 2.68,
+      "currency": "$",
+      "pe": 14.0,
+      "forward_pe": 9.1,
+      "eps": 17.17,
+      "forward_eps": 26.36,
+      "revenue_growth": 12.0,
+      "earnings_growth": 11.1,
+      "profit_margin": 29.5,
+      "market_cap": 98293497856,
+      "rsi": 25.0,
+      "w52_high": 422.95,
+      "w52_low": 233.16,
+      "pct_from_high": -43.0,
+      "target_mean": 328.19,
+      "target_low": 220.0,
+      "target_high": 487.0,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "Adobe Faces CMA Probe As Subscription Model And Valuation Come Into Focus",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/adobe-faces-cma-probe-subscription-160651207.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 16:06:51 +0000"
+        },
+        {
+          "title": "Figma Rides on Strong MCP Server Demand: A Sign for More Upside?",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/figma-rides-strong-mcp-server-151200699.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 15:12:00 +0000"
+        },
+        {
+          "title": "HubSpot Pivoting Toward Margin Expansion: Is the Growth Sustainable?",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/hubspot-pivoting-toward-margin-expansion-143600878.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 14:36:00 +0000"
+        },
+        {
+          "title": "Adobe Inc. (ADBE) is Attracting Investor Attention: Here is What You Should Know",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/adobe-inc-adbe-attracting-investor-130006616.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 13:00:06 +0000"
+        },
+        {
+          "title": "Is This What the Start of an AI Bubble Bust Looks Like?",
+          "link": "https://247wallst.com/investing/2026/03/30/is-this-what-the-start-of-an-ai-bubble-bust-looks-like/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 12:54:45 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "AMZN",
+      "resolved": "AMZN",
+      "name": "Amazon.com, Inc.",
+      "hebrew": "אמזון",
+      "price": 200.95,
+      "change_pct": 0.81,
+      "currency": "$",
+      "pe": 28.0,
+      "forward_pe": 21.4,
+      "eps": 7.18,
+      "forward_eps": 9.39,
+      "revenue_growth": 13.6,
+      "earnings_growth": 5.0,
+      "profit_margin": 10.8,
+      "market_cap": 2157182320640,
+      "rsi": 36.7,
+      "w52_high": 258.6,
+      "w52_low": 161.38,
+      "pct_from_high": -22.3,
+      "target_mean": 281.34,
+      "target_low": 175.0,
+      "target_high": 360.0,
+      "recommendation": "strong_buy",
+      "news": [
+        {
+          "title": "Stock Market Today: Dow Up As Powell Says This; Micron Dives, Alternative Asset Plays Get A Lift (Live Coverage)",
+          "link": "https://finance.yahoo.com/m/905d7fa9-c2e1-35ed-bad2-3f12b77e9c4c/stock-market-today%3A-dow-up-as.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 20:25:49 +0000"
+        },
+        {
+          "title": "Ross Stores Beat Earnings and Gained 68% in a Year. Reddit Is Still Betting Against It.",
+          "link": "https://247wallst.com/investing/2026/03/30/ross-stores-beat-earnings-and-gained-68-in-a-year-reddit-is-still-betting-against-it/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 19:32:31 +0000"
+        },
+        {
+          "title": "AI Shopping Shift Puts Amazon, Walmart in Focus",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/ai-shopping-shift-puts-amazon-182012788.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 18:20:12 +0000"
+        },
+        {
+          "title": "Persona AI Announces Brian Davis as Head of Global Manufacturing",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/persona-ai-announces-brian-davis-174700885.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 17:47:00 +0000"
+        },
+        {
+          "title": "Roku Brings Howdy to Prime Video: Will the Move Boost Subscriber Base?",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/roku-brings-howdy-prime-video-174300250.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 17:43:00 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "PANW",
+      "resolved": "PANW",
+      "name": "Palo Alto Networks, Inc.",
+      "hebrew": "פאלו אלטו",
+      "price": 154.35,
+      "change_pct": 4.99,
+      "currency": "$",
+      "pe": 86.2,
+      "forward_pe": 38.9,
+      "eps": 1.79,
+      "forward_eps": 3.97,
+      "revenue_growth": 14.9,
+      "earnings_growth": 60.5,
+      "profit_margin": 13.0,
+      "market_cap": 125949607936,
+      "rsi": 38.0,
+      "w52_high": 223.61,
+      "w52_low": 139.57,
+      "pct_from_high": -31.0,
+      "target_mean": 206.97,
+      "target_low": 114.0,
+      "target_high": 265.0,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "Stock Market Today: Dow Up As Powell Says This; Micron Dives, Alternative Asset Plays Get A Lift (Live Coverage)",
+          "link": "https://finance.yahoo.com/m/905d7fa9-c2e1-35ed-bad2-3f12b77e9c4c/stock-market-today%3A-dow-up-as.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 20:25:49 +0000"
+        },
+        {
+          "title": "Cybersecurity Stocks Should Be Winning. ‘It’s Like the Upside-Down World.’",
+          "link": "https://finance.yahoo.com/m/a4dc3227-e0e5-34bf-8db5-3f79afa5a173/cybersecurity-stocks-should.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 20:10:00 +0000"
+        },
+        {
+          "title": "Palo Alto Stock Rises. Its CEO Made a $10 Million Purchase.",
+          "link": "https://finance.yahoo.com/m/9f637930-c629-3341-ad20-13b3f6df7e00/palo-alto-stock-rises.-its.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 20:00:00 +0000"
+        },
+        {
+          "title": "Palo Alto Networks CEO Drops $10M on His Own Stock After Saying AI “Expands the Attack Surface Area”",
+          "link": "https://247wallst.com/investing/2026/03/30/palo-alto-networks-ceo-drops-10m-on-his-own-stock-after-saying-ai-expands-the-attack-surface-area/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 19:54:15 +0000"
+        },
+        {
+          "title": "These Stocks Are Today’s Movers: Nvidia, Palo Alto, Alcoa, Boston Scientific, Sysco, CrowdStrike, Micron, and More",
+          "link": "https://finance.yahoo.com/m/0dba3715-9c3b-3547-a8cf-eb6dd4b82e75/these-stocks-are-today%E2%80%99s.html?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 18:54:00 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "ONON",
+      "resolved": "ONON",
+      "name": "On Holding AG",
+      "hebrew": "און",
+      "price": 31.88,
+      "change_pct": -1.57,
+      "currency": "$",
+      "pe": 41.4,
+      "forward_pe": 15.8,
+      "eps": 0.77,
+      "forward_eps": 2.01,
+      "revenue_growth": 22.6,
+      "earnings_growth": -24.0,
+      "profit_margin": 6.8,
+      "market_cap": 10552201216,
+      "rsi": 24.3,
+      "w52_high": 61.29,
+      "w52_low": 31.41,
+      "pct_from_high": -48.0,
+      "target_mean": 56.28,
+      "target_low": 29.71,
+      "target_high": 84.35,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "Shuffle Board: On Names Co-CEOs, Kornit Digital Taps Asos Chief Exec",
+          "link": "https://sourcingjournal.com/topics/business-news/shuffle-board-executive-moves-on-ebay-1234818392/?.tsrc=rss",
+          "published": "Fri, 27 Mar 2026 20:00:00 +0000"
+        },
+        {
+          "title": "On Holding (ONON) Valuation Check After Co CEO Transition And New CFO Announcement",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/holding-onon-valuation-check-co-180511425.html?.tsrc=rss",
+          "published": "Thu, 26 Mar 2026 18:05:11 +0000"
+        },
+        {
+          "title": "On Holding (ONON) Stock Sinks As Market Gains: What You Should Know",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/holding-onon-stock-sinks-market-215004337.html?.tsrc=rss",
+          "published": "Wed, 25 Mar 2026 21:50:04 +0000"
+        },
+        {
+          "title": "On Holding shakes up leadership team in response to rising pressure, says Jefferies",
+          "link": "https://www.proactiveinvestors.com/companies/news/1089529/on-holding-shakes-up-leadership-team-in-response-to-rising-pressure-says-jefferies-1089529.html?.tsrc=rss",
+          "published": "Wed, 25 Mar 2026 19:51:00 +0000"
+        },
+        {
+          "title": "On’s Second CEO Change in a Year Could Indicate Bigger Issues at the Company",
+          "link": "https://wwd.com/footwear-news/shoe-industry-news/on-running-ceo-analyst-reaction-stock-market-1238689220/?.tsrc=rss",
+          "published": "Wed, 25 Mar 2026 18:40:16 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "IREN",
+      "resolved": "IREN",
+      "name": "IREN Limited",
+      "hebrew": "אירן",
+      "price": 31.62,
+      "change_pct": -9.89,
+      "currency": "$",
+      "pe": 22.0,
+      "forward_pe": 25.0,
+      "eps": 1.44,
+      "forward_eps": 1.26,
+      "revenue_growth": 59.0,
+      "earnings_growth": null,
+      "profit_margin": 51.5,
+      "market_cap": 10490225664,
+      "rsi": 36.3,
+      "w52_high": 76.87,
+      "w52_low": 5.12,
+      "pct_from_high": -58.9,
+      "target_mean": 76.14,
+      "target_low": 26.0,
+      "target_high": 125.0,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "IREN CEO: AI Buildout Is 'Permanent Whack-A-Mole' — And That's The Real Bottleneck",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/iren-ceo-ai-buildout-permanent-220128921.html?.tsrc=rss",
+          "published": "Thu, 26 Mar 2026 22:01:28 +0000"
+        },
+        {
+          "title": "Bitcoin Miners, Now AI Compute Leaders, Face Profitability Concerns",
+          "link": "https://finance.yahoo.com/m/cdacd08b-dfb4-3e57-bfb1-f81078172913/bitcoin-miners%2C-now-ai.html?.tsrc=rss",
+          "published": "Thu, 26 Mar 2026 20:33:00 +0000"
+        },
+        {
+          "title": "Investis Holding SA (XSWX:IREN) Full Year 2025 Earnings Call Highlights: Strong Rental Income ...",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/investis-holding-sa-xswx-iren-010025059.html?.tsrc=rss",
+          "published": "Thu, 26 Mar 2026 01:00:25 +0000"
+        },
+        {
+          "title": "IREN vs. CRCL: Which Crypto-Exposure Stock Has an Edge Right Now?",
+          "link": "https://finance.yahoo.com/markets/crypto/articles/iren-vs-crcl-crypto-exposure-132000863.html?.tsrc=rss",
+          "published": "Tue, 24 Mar 2026 13:20:00 +0000"
+        },
+        {
+          "title": "Zacks Investment Ideas feature highlights: NVIDIA, Tesla, Micron, Nebius and IREN",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/zacks-investment-ideas-feature-highlights-125100328.html?.tsrc=rss",
+          "published": "Tue, 24 Mar 2026 12:51:00 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "MELI",
+      "resolved": "MELI",
+      "name": "MercadoLibre, Inc.",
+      "hebrew": "מרקדו ליברה",
+      "price": 1619.2,
+      "change_pct": 1.23,
+      "currency": "$",
+      "pe": 41.1,
+      "forward_pe": 22.0,
+      "eps": 39.35,
+      "forward_eps": 73.44,
+      "revenue_growth": 44.6,
+      "earnings_growth": -12.5,
+      "profit_margin": 6.9,
+      "market_cap": 82088878080,
+      "rsi": 36.4,
+      "w52_high": 2645.22,
+      "w52_low": 1593.21,
+      "pct_from_high": -38.8,
+      "target_mean": 2565.65,
+      "target_low": 1827.0,
+      "target_high": 3500.0,
+      "recommendation": "strong_buy",
+      "news": [
+        {
+          "title": "MercadoLibre Stock Is on Sale. Here's What $5,000 Invested Today Could Do for Your Portfolio.",
+          "link": "https://www.fool.com/investing/2026/03/28/hot-ticker-is-on-sale-heres-what-x-invested-today/?.tsrc=rss",
+          "published": "Sat, 28 Mar 2026 18:05:00 +0000"
+        },
+        {
+          "title": "MercadoLibre (MELI) Valuation Check After Recent Share Price Weakness",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/mercadolibre-meli-valuation-check-recent-060546874.html?.tsrc=rss",
+          "published": "Sat, 28 Mar 2026 06:05:46 +0000"
+        },
+        {
+          "title": "The U.S. Market Is in Turmoil. Here's 1 Reason MercadoLibre Looks Better Than Ever.",
+          "link": "https://www.fool.com/investing/2026/03/27/the-us-market-is-in-turmoil-heres-1-reason-mercado/?.tsrc=rss",
+          "published": "Fri, 27 Mar 2026 14:05:00 +0000"
+        },
+        {
+          "title": "MELI vs. SE: Which E-Commerce Stock Offers Better Growth Opportunity?",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/meli-vs-se-e-commerce-154700809.html?.tsrc=rss",
+          "published": "Thu, 26 Mar 2026 15:47:00 +0000"
+        },
+        {
+          "title": "MercadoLibre (MELI) Down 7.3% Since Last Earnings Report: Can It Rebound?",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/mercadolibre-meli-down-7-3-153008835.html?.tsrc=rss",
+          "published": "Thu, 26 Mar 2026 15:30:08 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "LEUMI",
+      "resolved": "LUMI.TA",
+      "name": "Bank Leumi le-Israel B.M.",
+      "hebrew": "בנק לאומי",
+      "price": 67.69,
+      "change_pct": -4.09,
+      "currency": "₪",
+      "pe": 9.9,
+      "forward_pe": 12.5,
+      "eps": 6.86,
+      "forward_eps": 5.41,
+      "revenue_growth": -2.7,
+      "earnings_growth": 4.8,
+      "profit_margin": 46.2,
+      "market_cap": 100136239104,
+      "rsi": 22.5,
+      "w52_high": 80.98,
+      "w52_low": 46.75,
+      "pct_from_high": -16.4,
+      "target_mean": 82.2,
+      "target_low": 67.0,
+      "target_high": 90.0,
+      "recommendation": "strong_buy",
+      "news": [
+        {
+          "title": "A Look At Bank Leumi Le-Israel B.M (TASE:LUMI) Valuation After Recent Share Price Weakness",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/look-bank-leumi-le-israel-080707004.html?.tsrc=rss",
+          "published": "Fri, 20 Mar 2026 08:07:07 +0000"
+        },
+        {
+          "title": "NewMed Energy LP (DKDRF) Q4 2025 Earnings Call Highlights: Navigating Challenges with Strategic ...",
+          "link": "https://finance.yahoo.com/sectors/energy/articles/newmed-energy-lp-dkdrf-q4-010201934.html?.tsrc=rss",
+          "published": "Thu, 19 Mar 2026 01:02:01 +0000"
+        },
+        {
+          "title": "Bank Leumi Le-Israel BM (BLMIF) Q4 2025 Earnings Call Highlights: Record Profits and Strategic ...",
+          "link": "https://finance.yahoo.com/news/bank-leumi-le-israel-bm-210329353.html?.tsrc=rss",
+          "published": "Wed, 04 Mar 2026 21:03:29 +0000"
+        },
+        {
+          "title": "Bank Leumi met the challenging targets it set for 2025: Record Net income - NIS 10.3 billion ($3.2 billion); High double-digit ROE - 15.8%; An unprecedented dividend of approx. NIS 6 billion ($1.9 billion)",
+          "link": "https://finance.yahoo.com/news/bank-leumi-met-challenging-targets-064100288.html?.tsrc=rss",
+          "published": "Wed, 04 Mar 2026 06:41:00 +0000"
+        },
+        {
+          "title": "Bank Leumi to Report 4Q and Full Year 2025 Financial Results on March 4, 2026",
+          "link": "https://finance.yahoo.com/news/bank-leumi-report-4q-full-111400606.html?.tsrc=rss",
+          "published": "Thu, 12 Feb 2026 11:14:00 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "BEZEQ",
+      "resolved": "BEZQ.TA",
+      "name": "Bezeq The Israel Telecommunication Corp. Ltd",
+      "hebrew": "בזק",
+      "price": 7.43,
+      "change_pct": -2.02,
+      "currency": "₪",
+      "pe": 14.6,
+      "forward_pe": 16.2,
+      "eps": 0.51,
+      "forward_eps": 0.46,
+      "revenue_growth": -0.8,
+      "earnings_growth": 16.7,
+      "profit_margin": 16.3,
+      "market_cap": 20640851968,
+      "rsi": 28.1,
+      "w52_high": 9.14,
+      "w52_low": 5.15,
+      "pct_from_high": -18.7,
+      "target_mean": 7.66,
+      "target_low": 6.6,
+      "target_high": 8.8,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "Can Bezeq’s Strong 57% Rally Continue After Israel’s New Spectrum Auction?",
+          "link": "https://finance.yahoo.com/news/bezeq-strong-57-rally-continue-103803703.html?.tsrc=rss",
+          "published": "Mon, 15 Sep 2025 10:38:03 +0000"
+        },
+        {
+          "title": "Israel's Bezeq Telecom raises 2025 profit amid regulatory shaekeup on fibre costs",
+          "link": "https://finance.yahoo.com/news/israels-bezeq-telecom-raises-2025-081517909.html?.tsrc=rss",
+          "published": "Wed, 30 Jul 2025 08:15:17 +0000"
+        },
+        {
+          "title": "Israel's Bezeq to buy local telecoms firm for $160 million",
+          "link": "https://finance.yahoo.com/news/israels-bezeq-buy-local-telecoms-152938042.html?.tsrc=rss",
+          "published": "Mon, 14 Jul 2025 15:29:38 +0000"
+        }
+      ]
+    }
+  ],
+  "date": "2026-03-31T00:50:24.219629"
+}

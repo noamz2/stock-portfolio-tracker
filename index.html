@@ -411,17 +411,17 @@ tr:hover{background:rgba(99,102,241,0.05)}
           <h3>DCF Parameters</h3>
           <div class="slider-group">
             <label>WACC:</label>
-            <input type="range" id="waccSlider" min="5" max="20" value="10" step="0.5" oninput="updateDCF()">
+            <input type="range" id="waccSlider" min="5" max="20" value="10" step="0.5" oninput="debouncedUpdateDCF()">
             <span class="slider-val" id="waccVal">10.0%</span>
           </div>
           <div class="slider-group">
             <label>Terminal Growth:</label>
-            <input type="range" id="termGrowthSlider" min="1" max="4" value="2.5" step="0.25" oninput="updateDCF()">
+            <input type="range" id="termGrowthSlider" min="1" max="4" value="2.5" step="0.25" oninput="debouncedUpdateDCF()">
             <span class="slider-val" id="termGrowthVal">2.5%</span>
           </div>
           <div class="slider-group">
             <label>Growth Rate:</label>
-            <input type="range" id="growthSlider" min="0" max="40" value="10" step="1" oninput="updateDCF()">
+            <input type="range" id="growthSlider" min="0" max="40" value="10" step="1" oninput="debouncedUpdateDCF()">
             <span class="slider-val" id="growthVal">10.0%</span>
           </div>
           <div id="dcfResult" class="verdict-box" style="margin-top:20px"></div>
@@ -463,22 +463,22 @@ tr:hover{background:rgba(99,102,241,0.05)}
             <h4 style="color:#f59e0b;margin-bottom:12px;font-size:13px">⚙️ Parameters (Adjustable)</h4>
             <div class="iv-slider-row">
               <label>Growth Rate Yr 1-5:</label>
-              <input type="range" id="ivGrowth1" min="0" max="50" value="20" step="1" oninput="calcIntrinsic()">
+              <input type="range" id="ivGrowth1" min="0" max="50" value="20" step="1" oninput="debouncedCalcIntrinsic()">
               <span class="iv-slider-val" id="ivGrowth1Val">20%</span>
             </div>
             <div class="iv-slider-row">
               <label>Growth Rate Yr 6-10:</label>
-              <input type="range" id="ivGrowth2" min="0" max="30" value="10" step="1" oninput="calcIntrinsic()">
+              <input type="range" id="ivGrowth2" min="0" max="30" value="10" step="1" oninput="debouncedCalcIntrinsic()">
               <span class="iv-slider-val" id="ivGrowth2Val">10%</span>
             </div>
             <div class="iv-slider-row">
               <label>Growth Rate Yr 11-20:</label>
-              <input type="range" id="ivGrowth3" min="0" max="15" value="4" step="0.5" oninput="calcIntrinsic()">
+              <input type="range" id="ivGrowth3" min="0" max="15" value="4" step="0.5" oninput="debouncedCalcIntrinsic()">
               <span class="iv-slider-val" id="ivGrowth3Val">4.0%</span>
             </div>
             <div class="iv-slider-row">
               <label>Discount Rate:</label>
-              <input type="range" id="ivDiscount" min="3" max="15" value="7" step="0.5" oninput="calcIntrinsic()">
+              <input type="range" id="ivDiscount" min="3" max="15" value="7" step="0.5" oninput="debouncedCalcIntrinsic()">
               <span class="iv-slider-val" id="ivDiscountVal">7.0%</span>
             </div>
           </div>
@@ -575,22 +575,22 @@ tr:hover{background:rgba(99,102,241,0.05)}
             <h4 style="color:#f59e0b;margin-bottom:12px;font-size:13px">⚙️ Assumptions</h4>
             <div class="iv-slider-row">
               <label>Revenue Growth (%):</label>
-              <input type="range" id="peGrowth" min="0" max="40" value="10" step="1" oninput="calcPEModel()">
+              <input type="range" id="peGrowth" min="0" max="40" value="10" step="1" oninput="debouncedCalcPEModel()">
               <span class="iv-slider-val" id="peGrowthVal">10%</span>
             </div>
             <div class="iv-slider-row">
               <label>Net Profit Margin (%):</label>
-              <input type="range" id="peMargin" min="1" max="50" value="25" step="1" oninput="calcPEModel()">
+              <input type="range" id="peMargin" min="1" max="50" value="25" step="1" oninput="debouncedCalcPEModel()">
               <span class="iv-slider-val" id="peMarginVal">25%</span>
             </div>
             <div class="iv-slider-row">
               <label>Projection Years:</label>
-              <input type="range" id="peYears" min="3" max="10" value="5" step="1" oninput="calcPEModel()">
+              <input type="range" id="peYears" min="3" max="10" value="5" step="1" oninput="debouncedCalcPEModel()">
               <span class="iv-slider-val" id="peYearsVal">5</span>
             </div>
             <div class="iv-slider-row">
               <label>Discount Rate (%):</label>
-              <input type="range" id="peDiscRate" min="3" max="15" value="10" step="0.5" oninput="calcPEModel()">
+              <input type="range" id="peDiscRate" min="3" max="15" value="10" step="0.5" oninput="debouncedCalcPEModel()">
               <span class="iv-slider-val" id="peDiscRateVal">10.0%</span>
             </div>
           </div>
@@ -612,7 +612,7 @@ tr:hover{background:rgba(99,102,241,0.05)}
             <h4 style="color:#ef4444;text-align:center;margin-bottom:10px">Conservative</h4>
             <div class="iv-slider-row">
               <label>P/E Multiple:</label>
-              <input type="range" id="peLowMult" min="5" max="50" value="20" step="1" oninput="calcPEModel()">
+              <input type="range" id="peLowMult" min="5" max="50" value="20" step="1" oninput="debouncedCalcPEModel()">
               <span class="iv-slider-val" id="peLowMultVal">20x</span>
             </div>
             <div class="iv-row"><span>Target Price</span><span id="peLowTarget" class="iv-val" style="color:#ef4444;font-size:16px">—</span></div>
@@ -625,7 +625,7 @@ tr:hover{background:rgba(99,102,241,0.05)}
             <h4 style="color:#f59e0b;text-align:center;margin-bottom:10px">Base Case</h4>
             <div class="iv-slider-row">
               <label>P/E Multiple:</label>
-              <input type="range" id="peMidMult" min="5" max="60" value="25" step="1" oninput="calcPEModel()">
+              <input type="range" id="peMidMult" min="5" max="60" value="25" step="1" oninput="debouncedCalcPEModel()">
               <span class="iv-slider-val" id="peMidMultVal">25x</span>
             </div>
             <div class="iv-row"><span>Target Price</span><span id="peMidTarget" class="iv-val" style="color:#f59e0b;font-size:16px">—</span></div>
@@ -638,7 +638,7 @@ tr:hover{background:rgba(99,102,241,0.05)}
             <h4 style="color:#22c55e;text-align:center;margin-bottom:10px">Optimistic</h4>
             <div class="iv-slider-row">
               <label>P/E Multiple:</label>
-              <input type="range" id="peHighMult" min="10" max="80" value="30" step="1" oninput="calcPEModel()">
+              <input type="range" id="peHighMult" min="10" max="80" value="30" step="1" oninput="debouncedCalcPEModel()">
               <span class="iv-slider-val" id="peHighMultVal">30x</span>
             </div>
             <div class="iv-row"><span>Target Price</span><span id="peHighTarget" class="iv-val" style="color:#22c55e;font-size:16px">—</span></div>
@@ -733,6 +733,15 @@ const REFRESH_INTERVAL = 60 * 60 * 1000;  // auto-refresh every 1 hour
 let charts = {};
 let currentStock = null;
 
+// Debounce helper
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), ms); };
+}
+const debouncedUpdateDCF = debounce(() => updateDCF(), 150);
+const debouncedCalcIntrinsic = debounce(() => calcIntrinsic(), 150);
+const debouncedCalcPEModel = debounce(() => calcPEModel(), 150);
+
 // Currency helpers for ILS/USD
 function getCur(d) { return d?.currency || (d?.isILS ? '₪' : '$'); }
 function fmtPrice(price, d) {
@@ -822,17 +831,17 @@ async function loadPortfolio() {
 
 function renderPortfolioTable() {
   const tbody = document.getElementById('portfolioTable');
-  tbody.innerHTML = '';
   const tickers = Object.keys(portfolio);
+  const rows = [];
 
   tickers.forEach(ticker => {
     const d = stockCache[ticker];
     if (!d || d.error) {
-      tbody.innerHTML += `<tr>
+      rows.push(`<tr>
         <td><button class="remove-btn" onclick="removeTicker('${ticker}')">✕</button></td>
         <td><strong>${ticker}</strong></td>
         <td colspan="9" style="color:var(--red)">${d?.error || 'Error loading'}</td>
-      </tr>`;
+      </tr>`);
       return;
     }
     const changeClass = d.changePct >= 0 ? 'text-green' : 'text-red';
@@ -849,7 +858,7 @@ function renderPortfolioTable() {
       ? (d.valuation.trailingPE > d.valuation.peAvgHistorical ? 'text-red' : 'text-green')
       : '';
 
-    tbody.innerHTML += `<tr style="cursor:pointer" onclick="openStock('${ticker}')">
+    rows.push(`<tr style="cursor:pointer" onclick="openStock('${ticker}')">
       <td><button class="remove-btn" onclick="event.stopPropagation();removeTicker('${ticker}')">✕</button></td>
       <td><strong>${ticker}</strong></td>
       <td style="font-size:13px">${d.name || ''}</td>
@@ -862,9 +871,10 @@ function renderPortfolioTable() {
       <td><input class="portfolio-shares" type="number" value="${shares}" min="0"
            onclick="event.stopPropagation()" onchange="updateShares('${ticker}',this.value)" dir="ltr"></td>
       <td dir="ltr">${shares ? '$' + value.toLocaleString('en',{maximumFractionDigits:0}) : '-'}</td>
-    </tr>`;
+    </tr>`);
   });
 
+  tbody.innerHTML = rows.join('');
   updatePortfolioValue();
 }
 
@@ -1469,13 +1479,21 @@ function renderMacroCharts(d) {
 setTimeout(() => loadMacroData(), 2000);
 
 // Auto-refresh: stocks + macro every hour
-setInterval(() => {
-  console.log('🔄 Auto-refresh triggered');
-  // Clear stock cache to force refetch
-  Object.keys(stockCacheTime).forEach(t => stockCacheTime[t] = 0);
-  if (Object.keys(portfolio).length) loadPortfolio();
-  loadMacroData(true);
-}, REFRESH_INTERVAL);
+let _autoRefreshTimer = null;
+function startAutoRefresh() {
+  if (_autoRefreshTimer) clearInterval(_autoRefreshTimer);
+  _autoRefreshTimer = setInterval(() => {
+    console.log('🔄 Auto-refresh triggered');
+    Object.keys(stockCacheTime).forEach(t => stockCacheTime[t] = 0);
+    if (Object.keys(portfolio).length) loadPortfolio();
+    loadMacroData(true);
+  }, REFRESH_INTERVAL);
+}
+startAutoRefresh();
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { clearInterval(_autoRefreshTimer); _autoRefreshTimer = null; }
+  else startAutoRefresh();
+});
 
 // ─── Daily Briefing ───
 
@@ -1530,7 +1548,6 @@ async function generateBriefing() {
       body: JSON.stringify({tickers}),
     });
     const d = await resp.json();
-    clearInterval(progInterval);
 
     if (d.error) {
       alert('שגיאה: ' + d.error);
@@ -1538,9 +1555,9 @@ async function generateBriefing() {
     }
     showBriefingResult(d);
   } catch(e) {
-    clearInterval(progInterval);
     alert('שגיאה ביצירת סיכום: ' + e.message);
   } finally {
+    clearInterval(progInterval);
     document.getElementById('briefingLoading').style.display = 'none';
     document.getElementById('briefingGenBtn').disabled = false;
     document.getElementById('briefingGenBtn').textContent = '🎙️ צור סיכום';

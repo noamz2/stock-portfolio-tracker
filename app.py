@@ -1549,10 +1549,14 @@ def podcast_status(ticker):
         return jsonify({'exists': False, 'error': str(e)})
 
 
-# Background crumb refresher — retries every 5 min if crumb is missing
+# Background crumb refresher — retries with exponential backoff if crumb is missing
 def _crumb_refresh_loop():
     import time as _t
     _t.sleep(10)  # wait for startup
+    backoff = 300  # start at 5 min
+    max_backoff = 3600  # cap at 1 hour
+    max_retries = 20  # stop after 20 consecutive failures
+    failures = 0
     while True:
         try:
             if not _yahoo_crumb:
@@ -1560,11 +1564,26 @@ def _crumb_refresh_loop():
                 _init_yahoo_session(force_refresh=True)
                 if _yahoo_crumb:
                     print(f"[crumb-refresher] Success! Crumb: {_yahoo_crumb[:8]}...")
+                    backoff = 300  # reset backoff on success
+                    failures = 0
                 else:
-                    print("[crumb-refresher] Failed, will retry in 5 min")
+                    failures += 1
+                    if failures >= max_retries:
+                        print(f"[crumb-refresher] Giving up after {max_retries} failures")
+                        break
+                    print(f"[crumb-refresher] Failed ({failures}/{max_retries}), will retry in {backoff}s")
+                    backoff = min(backoff * 2, max_backoff)
+            else:
+                backoff = 300  # already have crumb, reset backoff
+                failures = 0
         except Exception as e:
+            failures += 1
+            if failures >= max_retries:
+                print(f"[crumb-refresher] Giving up after {max_retries} errors")
+                break
             print(f"[crumb-refresher] Error: {e}")
-        _t.sleep(300)  # retry every 5 min
+            backoff = min(backoff * 2, max_backoff)
+        _t.sleep(backoff)
 
 import threading
 _crumb_thread = threading.Thread(target=_crumb_refresh_loop, daemon=True)
