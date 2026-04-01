@@ -41,6 +41,29 @@ HEBREW_NAMES = {
     'LEUMI': 'בנק לאומי', 'BEZEQ': 'בזק',
 }
 
+def _wilder_rsi(prices, period=14):
+    """Compute RSI using Wilder's smoothing (the standard method used by TradingView, etc.)."""
+    if len(prices) < period + 1:
+        return None
+    deltas = np.diff(prices)
+    gains = np.where(deltas > 0, deltas, 0)
+    losses = np.where(deltas < 0, -deltas, 0)
+
+    # Seed with SMA
+    avg_gain = np.mean(gains[:period])
+    avg_loss = np.mean(losses[:period])
+
+    # Wilder's smoothing
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return round(100 - (100 / (1 + rs)), 1)
+
+
 def resolve_ticker(t):
     return TICKER_MAP.get(t.upper(), t.upper())
 
@@ -89,18 +112,11 @@ def collect_macro():
         sp_prev = safe_get(si, 'previousClose', 'regularMarketPreviousClose')
         sp_change = round((sp_price - sp_prev) / sp_prev * 100, 2) if sp_price and sp_prev else 0
 
-        # RSI
-        hist = sp.history(period='1mo', interval='1d')
+        # RSI (Wilder's smoothing)
+        hist = sp.history(period='6mo', interval='1d')
         sp_rsi = None
-        if not hist.empty and len(hist) > 14:
-            closes = hist['Close'].values
-            deltas = np.diff(closes)
-            gains = np.where(deltas > 0, deltas, 0)
-            losses = np.where(deltas < 0, -deltas, 0)
-            avg_g = np.mean(gains[-14:])
-            avg_l = np.mean(losses[-14:])
-            if avg_l > 0:
-                sp_rsi = round(100 - (100 / (1 + avg_g / avg_l)), 1)
+        if not hist.empty and len(hist) > 30:
+            sp_rsi = _wilder_rsi(hist['Close'].values, 14)
 
         macro['sp500'] = {
             'price': round(sp_price, 2) if sp_price else None,
@@ -162,18 +178,16 @@ def collect_stock(ticker):
     target_high = safe_get(info, 'targetHighPrice')
     recommendation = safe_get(info, 'recommendationKey')
 
-    # RSI
-    hist = t.history(period='1mo', interval='1d')
+    # RSI (Wilder's smoothing) + MA200
+    hist_long = t.history(period='2y', interval='1d')
     rsi = None
-    if not hist.empty and len(hist) > 14:
-        closes = hist['Close'].values
-        deltas = np.diff(closes)
-        gains = np.where(deltas > 0, deltas, 0)
-        losses = np.where(deltas < 0, -deltas, 0)
-        avg_g = np.mean(gains[-14:])
-        avg_l = np.mean(losses[-14:])
-        if avg_l > 0:
-            rsi = round(100 - (100 / (1 + avg_g / avg_l)), 1)
+    ma200 = None
+    if not hist_long.empty and len(hist_long) > 30:
+        rsi = _wilder_rsi(hist_long['Close'].values, 14)
+    if not hist_long.empty and len(hist_long) >= 200:
+        ma200_val = hist_long['Close'].rolling(200).mean().iloc[-1]
+        if not np.isnan(ma200_val):
+            ma200 = round(float(ma200_val), 2)
 
     # 52-week range
     w52_high = safe_get(info, 'fiftyTwoWeekHigh')
@@ -213,6 +227,7 @@ def collect_stock(ticker):
         'profit_margin': round(profit_margin * 100, 1) if profit_margin else None,
         'market_cap': market_cap,
         'rsi': rsi,
+        'ma200': round(ma200 / div, 2) if ma200 else None,
         'w52_high': round(w52_high / div, 2) if w52_high else None,
         'w52_low': round(w52_low / div, 2) if w52_low else None,
         'pct_from_high': pct_from_high,
@@ -364,11 +379,15 @@ def generate_text_report(data):
         if details:
             lines.append(f"    {' | '.join(details)}")
 
-        # RSI + 52W
+        # RSI + MA200 + 52W
         sub = []
         if s.get('rsi'):
-            rsi_txt = 'Oversold' if s['rsi'] < 30 else 'Overbought' if s['rsi'] > 70 else ''
-            sub.append(f"RSI: {s['rsi']}{' (' + rsi_txt + ')' if rsi_txt else ''}")
+            rsi_txt = 'Oversold 🔴' if s['rsi'] < 30 else 'Overbought 🟢' if s['rsi'] > 70 else ''
+            sub.append(f"RSI(14): {s['rsi']}{' (' + rsi_txt + ')' if rsi_txt else ''}")
+        if s.get('ma200'):
+            above_below = 'מעל' if s['price'] > s['ma200'] else 'מתחת'
+            pct_from_ma = round((s['price'] - s['ma200']) / s['ma200'] * 100, 1)
+            sub.append(f"MA200: {s['currency']}{s['ma200']} ({above_below}, {pct_from_ma:+.1f}%)")
         if s.get('pct_from_high'):
             sub.append(f"מרחק מ-52W High: {s['pct_from_high']:+.1f}%")
         if sub:
@@ -381,9 +400,7 @@ def generate_text_report(data):
 
         # News
         if s.get('news'):
-            lines.append(f"    📰 חדשות:")
-            for n in s['news'][:3]:
-                lines.append(f"       • {n['title']}")
+            lines.append(f"    📰 {len(s['news'])} כתבות חדשות פורסמו היום")
 
     lines.append("")
     lines.append("─" * 40)
@@ -393,8 +410,105 @@ def generate_text_report(data):
     return '\n'.join(lines)
 
 
+BRIEFING_SYSTEM_PROMPT = """אתה הפרשן הכלכלי המוביל בישראל — משלב עומק אנליטי של וול סטריט עם נגישות של משפיע רשת ישראלי.
+
+אתה מגיש סיכום יומי לתיק השקעות — מאקרו + מניות ספציפיות. אתה מדבר כמו גיא בכר או מתי גרינברג — חכם, בקיא, אבל בגובה העיניים.
+
+כללים:
+- התחל עם: "שלום לכולם, ברוכים הבאים לסיכום היומי של שוק ההון. תזכורת — זה לא ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
+- עברית טבעית, שיחתית. כמו פודקאסט, לא דוח
+- לא RSI, לא ווליום, לא ממוצעים נעים, לא "אזור התנגדות"
+- לא להקריא שמות כתבות באנגלית
+- כן: מחיר, אחוז שינוי, הכנסות, רווח, צמיחה, יעדי אנליסטים
+- ספר את הסיפור — לא רשימה של מספרים אלא נרטיב
+- ציין שמות אנליסטים ובנקים כשרלוונטי
+- סיים עם מה לעקוב — אירועים ספציפיים
+- אורך: 800-1200 מילים
+- טקסט מוכן להקראה — ללא כותרות, כוכביות, מספור, או markdown"""
+
+
 def generate_podcast_script(data):
-    """Generate Hebrew podcast script from data."""
+    """Generate Hebrew podcast script — tries Claude API first, falls back to basic."""
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+
+    if api_key:
+        try:
+            return _generate_podcast_with_claude(data, api_key)
+        except Exception as e:
+            print(f"  ⚠️  Claude API failed for briefing: {e}, using fallback")
+
+    return _generate_podcast_fallback(data)
+
+
+def _generate_podcast_with_claude(data, api_key):
+    """Generate analyst-quality podcast using Claude."""
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    m = data['macro']
+    stocks = data['stocks']
+    valid_stocks = [s for s in stocks if 'error' not in s]
+    date = datetime.fromisoformat(data['date']).strftime('%d/%m/%Y')
+
+    # Build rich context for Claude
+    portfolio_data = {
+        "date": date,
+        "macro": {
+            "fear_greed": m.get('fear_greed', {}),
+            "sp500": m.get('sp500', {}),
+            "vix": m.get('vix'),
+            "usd_ils": m.get('usd_ils'),
+            "ta35": m.get('ta35'),
+        },
+        "stocks": [],
+    }
+
+    for s in valid_stocks:
+        stock_info = {
+            "name_he": s.get('hebrew', s['ticker']),
+            "ticker": s['ticker'],
+            "price": s.get('price'),
+            "currency": s.get('currency', '$'),
+            "change_pct": s.get('change_pct'),
+            "revenue_growth_pct": s.get('revenue_growth'),
+            "earnings_growth_pct": s.get('earnings_growth'),
+            "pe": s.get('pe'),
+            "forward_pe": s.get('forward_pe'),
+            "profit_margin_pct": s.get('profit_margin'),
+            "analyst_target": s.get('target_mean'),
+            "recommendation": s.get('recommendation'),
+            "pct_from_52w_high": s.get('pct_from_high'),
+            "news_count": len(s.get('news', [])),
+        }
+        portfolio_data["stocks"].append(stock_info)
+
+    prompt = f"""צור סיכום יומי מקצועי לתיק ההשקעות.
+
+מבנה:
+1. פתיחה (30 שניות) — מה הסיפור הגדול היום בשוק? לא "שלום היום נדבר על..." אלא כותרת שמושכת
+2. תמונת מאקרו (60 שניות) — S&P, סנטימנט, VIX, שקל-דולר — כסיפור, לא כרשימה. מה האווירה ולמה?
+3. מניות בתיק (3-4 דקות) — מי עלה, מי ירד, ולמה. התמקד במניות עם תנועות משמעותיות או נתונים מעניינים. ציין יעדי אנליסטים כשיש פער משמעותי. ספר על צמיחה או בעיות
+4. מה בין השורות (45 שניות) — מגמה כללית שעולה מהתיק? האם הסקטורים שלך מתנהגים דומה? יש קשר בין המניות?
+5. סיכום ומה לעקוב (30 שניות)
+
+נתוני התיק:
+{json.dumps(portfolio_data, ensure_ascii=False, indent=2)}"""
+
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=4000,
+        system=BRIEFING_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    script = message.content[0].text
+    print(f"  ✅ Briefing script generated with Claude ({len(script)} chars)")
+    return script
+
+
+def _generate_podcast_fallback(data):
+    """Generate basic Hebrew podcast script without AI."""
     m = data['macro']
     stocks = data['stocks']
     valid_stocks = [s for s in stocks if 'error' not in s]
@@ -403,93 +517,91 @@ def generate_podcast_script(data):
     fg = m.get('fear_greed', {})
     sp = m.get('sp500', {})
 
-    script = f"""שלום וברוכים הבאים לסיכום היומי של תיק ההשקעות, תאריך {date}.
-זו אינה המלצת השקעה.
+    script = f"""שלום וברוכים הבאים לסיכום היומי של שוק ההון, תאריך {date}. תזכורת — זו אינה המלצת השקעה, אלא סיכום חדשות ומידע בלבד.
 
-נתחיל בתמונת המאקרו:
 """
 
-    # Macro section
+    # Macro — tell the story, not the numbers
+    script += "נתחיל בתמונה הרחבה. "
+
     if sp.get('price'):
-        script += f"מדד ה-S&P 500 עומד על {sp['price']:,.0f} נקודות, שינוי של {sp.get('change_pct', 0):+.1f} אחוז. "
+        sp_change = sp.get('change_pct', 0)
+        if sp_change < -1.5:
+            script += f"יום אדום בוול סטריט — מדד ה-S&P 500 ירד {abs(sp_change):.1f} אחוז. "
+        elif sp_change > 1.5:
+            script += f"יום ירוק בוול סטריט — מדד ה-S&P 500 עלה {sp_change:.1f} אחוז. "
+        else:
+            script += f"השווקים בוול סטריט נסחרו ללא כיוון ברור, שינוי של {sp_change:+.1f} אחוז ב-S&P 500. "
 
     if fg.get('score') is not None:
         score = fg['score']
         if score < 20:
-            script += f"מדד הפחד והתאוות בצע עומד על {score}, שזה פחד קיצוני. היסטורית, רמות כאלה נוטות להיות הזדמנויות קנייה לטווח הארוך. "
+            script += "הסנטימנט בשוק הוא פחד קיצוני — משקיעים חוששים ומוכרים. היסטורית, דווקא ברגעים כאלה נוצרות הזדמנויות למי שמוכן לחכות. "
         elif score > 75:
-            script += f"מדד הפחד והתאוות בצע עומד על {score}, שזה אזור של תאוות בצע. כדאי לשקול לקחת חלק מהרווחים. "
-        else:
-            script += f"מדד הפחד והתאוות בצע עומד על {score}. "
+            script += "הסנטימנט בשוק חיובי מאוד, אולי אפילו יותר מדי — תאוות בצע שולטת, וזה בדרך כלל הזמן להיזהר. "
+        elif score < 35:
+            script += "יש חששות בשוק, הסנטימנט נמוך יחסית. "
 
-    if m.get('vix'):
-        if m['vix'] > 25:
-            script += f"מדד ה-VIX גבוה על {m['vix']:.0f}, מה שמצביע על תנודתיות גבוהה ופחד בשוק. "
-        else:
-            script += f"מדד ה-VIX על {m['vix']:.0f}. "
-
-    if sp.get('rsi') and sp['rsi'] < 30:
-        script += f"ה-RSI של ה-S&P 500 עומד על {sp['rsi']:.0f}, שזה אזור של oversold. "
+    if m.get('vix') and m['vix'] > 25:
+        script += "התנודתיות גבוהה — מה שאומר שהשוק עצבני ויש חוסר ודאות. "
 
     if m.get('usd_ils'):
         script += f"שער הדולר עומד על {m['usd_ils']:.2f} שקלים. "
 
-    # Stocks section
+    # Stocks — winners and losers as a story
     winners = [s for s in valid_stocks if s.get('change_pct', 0) > 1]
     losers = [s for s in valid_stocks if s.get('change_pct', 0) < -1]
 
-    script += "\n\nעכשיו לניתוח המניות בתיק.\n"
+    script += "\n\nעכשיו למניות בתיק — מה קרה היום.\n"
 
     if losers:
         losers.sort(key=lambda s: s['change_pct'])
-        script += "\nהמניות שירדו בולטות: "
+        script += "\nמהצד המאכזב: "
         for s in losers[:3]:
-            script += f"{s['hebrew']} ירדה {abs(s['change_pct']):.1f} אחוז ועומדת על {s['currency']}{s['price']}. "
-            if s.get('pct_from_high') and s['pct_from_high'] < -20:
-                script += f"המניה נמצאת {abs(s['pct_from_high']):.0f} אחוז מתחת לשיא של 52 שבועות. "
-            if s.get('rsi') and s['rsi'] < 30:
-                script += f"ה-RSI נמצא באזור oversold על {s['rsi']:.0f}. "
+            script += f"{s['hebrew']} ירדה {abs(s['change_pct']):.1f} אחוז. "
 
     if winners:
         winners.sort(key=lambda s: s['change_pct'], reverse=True)
-        script += "\nמהצד החיובי: "
+        script += "\nמהצד המעודד: "
         for s in winners[:3]:
-            script += f"{s['hebrew']} עלתה {s['change_pct']:.1f} אחוז ל-{s['currency']}{s['price']}. "
+            script += f"{s['hebrew']} עלתה {s['change_pct']:.1f} אחוז. "
 
-    # Detailed per-stock
-    script += "\n\nניתוח מפורט של המניות המרכזיות:\n"
+    # Per-stock — focus on news and story, not technical data
+    script += "\n\nבואו נצלול פנימה:\n"
 
     for s in valid_stocks[:6]:
-        script += f"\n{s['hebrew']}: "
-        script += f"המחיר עומד על {s['currency']}{s['price']}, שינוי של {s['change_pct']:+.1f} אחוז. "
-        if s.get('pe') and s.get('forward_pe'):
-            script += f"מכפיל הרווח הנוכחי הוא {s['pe']:.0f} ומכפיל הרווח העתידי {s['forward_pe']:.0f}. "
+        script += f"\n{s['hebrew']} — "
+        change = s.get('change_pct', 0)
+        if abs(change) > 0.5:
+            direction = "עלתה" if change > 0 else "ירדה"
+            script += f"{direction} {abs(change):.1f} אחוז ונסחרת סביב {s['currency']}{s['price']}. "
+        else:
+            script += f"נסחרת סביב {s['currency']}{s['price']}, ללא שינוי משמעותי. "
+
+        # Analyst target — as a story
         if s.get('target_mean'):
             upside = round((s['target_mean'] - s['price']) / s['price'] * 100, 1)
-            if upside > 10:
-                script += f"יעד האנליסטים הממוצע הוא {s['currency']}{s['target_mean']}, מה שמשקף פוטנציאל עלייה של {upside:.0f} אחוז. "
+            if upside > 15:
+                script += f"האנליסטים עדיין אופטימיים — יעד ממוצע של {s['currency']}{s['target_mean']}, שזה פוטנציאל של {upside:.0f} אחוז. "
             elif upside < -5:
-                script += f"יעד האנליסטים נמצא מתחת למחיר הנוכחי, מה שמרמז על תמחור יתר. "
-        if s.get('news') and s['news']:
-            script += f"בחדשות: {s['news'][0]['title']}. "
+                script += f"האנליסטים חושבים שהמחיר גבוה — היעד הממוצע נמוך מהמחיר הנוכחי. "
 
-    # Summary
-    script += f"""
+        # Earnings growth as story
+        if s.get('revenue_growth') and abs(s['revenue_growth']) > 5:
+            if s['revenue_growth'] > 15:
+                script += f"מבחינת צמיחה — ההכנסות צומחות ב-{s['revenue_growth']:.0f} אחוז, מה שמעיד על ביקוש חזק. "
+            elif s['revenue_growth'] < -5:
+                script += f"ההכנסות ירדו ב-{abs(s['revenue_growth']):.0f} אחוז, מה שמדאיג. "
 
-לסיכום: """
+    # Summary — mood, not numbers
+    script += "\n\nלסיכום: "
 
-    if (fg.get('score') or 50) < 20:
-        script += "השוק נמצא בפחד קיצוני. היסטורית מצבים כאלה נוטים להיות הזדמנויות, אבל חשוב להישאר ממושמעים ולא למכור בפאניקה. "
-
-    oversold = [s for s in valid_stocks if s.get('rsi') and s['rsi'] < 30]
-    if oversold:
-        names = ', '.join(s['hebrew'] for s in oversold)
-        script += f"המניות {names} נמצאות באזור oversold מבחינה טכנית. "
-
-    big_upside = [s for s in valid_stocks if s.get('target_mean') and ((s['target_mean'] - s['price']) / s['price'] * 100) > 20]
-    if big_upside:
-        names = ', '.join(s['hebrew'] for s in big_upside)
-        script += f"מבחינת פוטנציאל עלייה, {names} מציגות את הפער הגדול ביותר ליעד האנליסטים. "
+    if (fg.get('score') or 50) < 25:
+        script += "השוק בגדול חושש. אם אתם משקיעים לטווח ארוך, זה דווקא יכול להיות הזמן להיות אמיצים, אבל בזהירות. "
+    elif (fg.get('score') or 50) > 70:
+        script += "השוק בסנטימנט חיובי, אבל כדאי לזכור שבשיא האופטימיות צריך דווקא להיזהר. "
+    else:
+        script += "השוק ממשיך להתנהל, חשוב לעקוב אחרי החדשות ולהישאר מעודכנים. "
 
     script += "\nזה הסיכום להיום. יום מוצלח ותודה שהאזנתם!"
 
@@ -497,13 +609,44 @@ def generate_podcast_script(data):
 
 
 def text_to_speech(text, output_path):
-    """Convert text to speech using gTTS."""
+    """Convert text to speech — tries Edge TTS (neural), falls back to gTTS."""
+    # Try Edge TTS first (free, neural Hebrew voice)
+    try:
+        import asyncio
+        import edge_tts
+
+        voice = "he-IL-AvriNeural"
+
+        async def _generate():
+            communicate = edge_tts.Communicate(text, voice, rate="+0%", pitch="+0Hz")
+            await communicate.save(str(output_path))
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    pool.submit(lambda: asyncio.run(_generate())).result(timeout=120)
+            else:
+                loop.run_until_complete(_generate())
+        except RuntimeError:
+            asyncio.run(_generate())
+
+        size_kb = os.path.getsize(output_path) / 1024
+        print(f"  🔊 Audio saved (Edge TTS): {output_path.name} ({size_kb:.0f} KB)")
+        return True
+    except ImportError:
+        print("  ⚠️  edge-tts not installed, falling back to gTTS")
+    except Exception as e:
+        print(f"  ⚠️  Edge TTS failed ({e}), falling back to gTTS")
+
+    # Fallback to gTTS
     try:
         from gtts import gTTS
         tts = gTTS(text=text, lang='iw', slow=False)
         tts.save(str(output_path))
         size_kb = os.path.getsize(output_path) / 1024
-        print(f"  🔊 Audio saved: {output_path.name} ({size_kb:.0f} KB)")
+        print(f"  🔊 Audio saved (gTTS): {output_path.name} ({size_kb:.0f} KB)")
         return True
     except Exception as e:
         print(f"  ❌ TTS failed: {e}")

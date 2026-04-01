@@ -485,15 +485,39 @@ def sanitize_for_json(obj):
     return obj
 
 def compute_rsi(prices, period=14):
+    """Compute RSI using Wilder's smoothing — matches TradingView/Bloomberg."""
+    if len(prices) < period + 1:
+        return [None] * len(prices)
     deltas = np.diff(prices)
     gains = np.where(deltas > 0, deltas, 0)
     losses = np.where(deltas < 0, -deltas, 0)
-    avg_gain = np.convolve(gains, np.ones(period)/period, mode='valid')
-    avg_loss = np.convolve(losses, np.ones(period)/period, mode='valid')
-    rs = np.divide(avg_gain, avg_loss, out=np.zeros_like(avg_gain), where=avg_loss!=0)
-    rsi = 100 - (100 / (1 + rs))
-    pad = [None] * (len(prices) - len(rsi))
-    return pad + rsi.tolist()
+
+    # Build RSI series using Wilder's exponential smoothing
+    rsi_values = []
+
+    # Seed with SMA of first 'period' values
+    avg_gain = np.mean(gains[:period])
+    avg_loss = np.mean(losses[:period])
+
+    if avg_loss == 0:
+        rsi_values.append(100.0)
+    else:
+        rs = avg_gain / avg_loss
+        rsi_values.append(100 - (100 / (1 + rs)))
+
+    # Apply Wilder's smoothing for each subsequent value
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        if avg_loss == 0:
+            rsi_values.append(100.0)
+        else:
+            rs = avg_gain / avg_loss
+            rsi_values.append(100 - (100 / (1 + rs)))
+
+    # Pad front with None (period values needed for seed + 1 for diff)
+    pad = [None] * (len(prices) - len(rsi_values))
+    return pad + rsi_values
 
 def compute_ma(prices, period=200):
     if len(prices) < period:
@@ -639,9 +663,9 @@ def get_stock(ticker):
             closes = hist5y['Close'].tolist()
             volumes = hist5y['Volume'].tolist() if 'Volume' in hist5y.columns else []
 
-        # Technical indicators — RSI 200 period, MA 200 period
+        # Technical indicators — RSI(14) standard, MA(200)
         if closes:
-            rsi_values = compute_rsi(np.array(closes), period=200)
+            rsi_values = compute_rsi(np.array(closes), period=14)
             ma200 = compute_ma(closes, 200)
         else:
             rsi_values = []
@@ -1048,31 +1072,26 @@ def _fetch_sp_inner():
         sp_dates = [d.strftime('%Y-%m') for d in sp_hist.index]
         sp_closes = [round(float(c), 2) for c in sp_hist['Close'].tolist()]
 
-        # RSI from daily
-        sp_daily = yf_safe_history(sp, period='3mo', interval='1d')
+        # RSI(14) + MA200 from daily — use 2y history for accuracy
+        sp_daily_long = yf_safe_history(sp, period='2y', interval='1d')
         sp_rsi = None
-        if not sp_daily.empty and 'Close' in sp_daily.columns:
-            closes_arr = sp_daily['Close'].values
-            if len(closes_arr) > 15:
-                deltas = np.diff(closes_arr)
-                gains = np.where(deltas > 0, deltas, 0)
-                losses = np.where(deltas < 0, -deltas, 0)
-                avg_gain = np.mean(gains[-14:])
-                avg_loss = np.mean(losses[-14:])
-                if avg_loss > 0:
-                    rs = avg_gain / avg_loss
-                    sp_rsi = round(100 - (100 / (1 + rs)), 1)
-
-        # MA200 from daily
         ma200 = None
-        sp_daily_1y = yf_safe_history(sp, period='1y', interval='1d')
-        if not sp_daily_1y.empty and 'Close' in sp_daily_1y.columns and len(sp_daily_1y) >= 200:
-            ma200 = round(float(sp_daily_1y['Close'].rolling(200).mean().iloc[-1]), 2)
+        if not sp_daily_long.empty and 'Close' in sp_daily_long.columns:
+            closes_arr = sp_daily_long['Close'].values
+            # RSI using Wilder's smoothing
+            rsi_series = compute_rsi(closes_arr, period=14)
+            if rsi_series and rsi_series[-1] is not None:
+                sp_rsi = round(rsi_series[-1], 1)
+            # MA200
+            if len(sp_daily_long) >= 200:
+                ma200_val = sp_daily_long['Close'].rolling(200).mean().iloc[-1]
+                if not np.isnan(ma200_val):
+                    ma200 = round(float(ma200_val), 2)
 
         # Change
-        if not sp_daily.empty and 'Close' in sp_daily.columns and len(sp_daily) > 1:
-            prev = float(sp_daily['Close'].iloc[-2])
-            change_pct = round((float(sp_daily['Close'].iloc[-1]) - prev) / prev * 100, 2)
+        if not sp_daily_long.empty and 'Close' in sp_daily_long.columns and len(sp_daily_long) > 1:
+            prev = float(sp_daily_long['Close'].iloc[-2])
+            change_pct = round((float(sp_daily_long['Close'].iloc[-1]) - prev) / prev * 100, 2)
         else:
             change_pct = 0
 
@@ -1120,19 +1139,21 @@ def _fetch_sp_inner():
         pe_dates = [p['date'] for p in pe_history]
         pe_values = [p['pe'] for p in pe_history]
 
-        # PEG Ratio = PE / YoY Earnings Growth
+        # PEG Ratio = Forward PE / Smoothed Earnings Growth
+        # Yardeni standard: Forward P/E divided by long-term expected growth (LTEG)
+        # We approximate by using Forward P/E and a 3-year smoothed earnings growth rate
         peg_current = None
         peg_dates = []
         peg_values = []
         try:
             from bs4 import BeautifulSoup as _BS
             from datetime import datetime as _dt
-            re = http_requests.get('https://www.multpl.com/s-p-500-earnings/table/by-month',
+            re_earn = http_requests.get('https://www.multpl.com/s-p-500-earnings/table/by-month',
                                    headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'},
                                    timeout=10)
             earn_dict = {}
-            if re.status_code == 200:
-                soup_e = _BS(re.text, 'html.parser')
+            if re_earn.status_code == 200:
+                soup_e = _BS(re_earn.text, 'html.parser')
                 table_e = soup_e.find('table', {'id': 'datatable'})
                 if table_e:
                     for row in table_e.find_all('tr')[1:]:
@@ -1145,7 +1166,30 @@ def _fetch_sp_inner():
                             except:
                                 pass
 
-            # Build PE dict
+            # Build Forward PE dict — try to get from multpl
+            fwd_pe_dict = {}
+            try:
+                re_fwd = http_requests.get('https://www.multpl.com/s-p-500-forward-pe-ratio/table/by-month',
+                                           headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'},
+                                           timeout=10)
+                if re_fwd.status_code == 200:
+                    soup_f = _BS(re_fwd.text, 'html.parser')
+                    table_f = soup_f.find('table', {'id': 'datatable'})
+                    if table_f:
+                        for row in table_f.find_all('tr')[1:]:
+                            cols = row.find_all('td')
+                            if len(cols) >= 2:
+                                try:
+                                    d = _dt.strptime(cols[0].text.strip().replace(',', ''), '%b %d %Y')
+                                    val = float(cols[1].text.strip().replace('†\n', '').replace(',', '').strip())
+                                    if 5 < val < 60:
+                                        fwd_pe_dict[d.strftime('%Y-%m')] = val
+                                except:
+                                    pass
+            except:
+                pass
+
+            # Fallback: if no forward PE, use trailing PE dict
             pe_dict = {}
             for p in pe_history:
                 try:
@@ -1154,17 +1198,41 @@ def _fetch_sp_inner():
                 except:
                     pass
 
-            # Calculate PEG for each month
-            for ym in sorted(pe_dict.keys(), reverse=True)[:120]:
+            # Use forward PE if available, otherwise trailing
+            active_pe_dict = fwd_pe_dict if fwd_pe_dict else pe_dict
+
+            # Approximate LTEG (Long-Term Expected Growth) as Yardeni uses:
+            # Yardeni: Forward PE / 5-year forward consensus annual earnings growth
+            # We approximate by: Forward PE / (5-year average of annual YoY growth rates)
+            # Key: use only positive growth years (like analyst consensus which doesn't
+            # project sustained negative growth) and floor at 5% (S&P long-term min)
+            sorted_months = sorted(active_pe_dict.keys(), reverse=True)[:180]
+            for ym in sorted_months:
                 yr, mo = int(ym[:4]), ym[5:]
-                prev_ym = f'{yr-1}-{mo}'
-                if ym in earn_dict and prev_ym in earn_dict and earn_dict[prev_ym] > 0:
-                    growth = ((earn_dict[ym] - earn_dict[prev_ym]) / earn_dict[prev_ym]) * 100
-                    if growth > 0.5:  # avoid near-zero growth distortion
-                        peg = round(pe_dict[ym] / growth, 2)
-                        if 0 < peg < 20:  # filter extreme values
-                            peg_dates.append(ym)
-                            peg_values.append(peg)
+
+                # Calculate YoY earnings growth for each of the past 5 years
+                growth_rates = []
+                for y_offset in range(5):
+                    cur_ym = f'{yr - y_offset}-{mo}'
+                    prev_ym = f'{yr - y_offset - 1}-{mo}'
+                    if cur_ym in earn_dict and prev_ym in earn_dict and earn_dict[prev_ym] > 0:
+                        g = (earn_dict[cur_ym] - earn_dict[prev_ym]) / earn_dict[prev_ym] * 100
+                        growth_rates.append(g)
+
+                if len(growth_rates) >= 3:
+                    # LTEG approximation: average of growth rates,
+                    # but clip negative rates to 0 (analysts don't forecast sustained decline)
+                    clipped = [max(g, 0) for g in growth_rates]
+                    avg_growth = sum(clipped) / len(clipped)
+
+                    # Floor at 5% — S&P 500 long-term EPS growth averages ~7%
+                    avg_growth = max(avg_growth, 5.0)
+
+                    peg = round(active_pe_dict[ym] / avg_growth, 2)
+                    if 0.5 < peg < 3.0:  # Yardeni range is ~0.8-2.4
+                        peg_dates.append(ym)
+                        peg_values.append(peg)
+
             if peg_values:
                 peg_current = peg_values[0]
         except Exception as e:
@@ -1682,6 +1750,91 @@ def serve_briefing_audio():
     if os.path.exists(audio_path):
         return send_file(audio_path, mimetype='audio/mpeg')
     return jsonify({'error': 'No audio found'}), 404
+
+
+# ─── Stock News Endpoint ───
+
+@app.route('/api/stock-news/<ticker>')
+def get_stock_news(ticker):
+    """Fetch recent news for a stock using Tavily + Yahoo RSS.
+    Returns a structured JSON summary.
+    """
+    ticker = ticker.upper().strip()
+
+    try:
+        news_items = []
+
+        # Source 1: Yahoo Finance RSS (free, no key)
+        try:
+            import feedparser
+            feed = feedparser.parse(f'https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}&region=US&lang=en-US')
+            for entry in feed.entries[:8]:
+                news_items.append({
+                    'title': entry.get('title', ''),
+                    'source': 'Yahoo Finance',
+                    'url': entry.get('link', ''),
+                    'published': entry.get('published', ''),
+                    'summary': entry.get('summary', '')[:300],
+                })
+        except Exception as e:
+            print(f"Yahoo RSS failed for {ticker}: {e}")
+
+        # Source 2: Google News RSS (free, no key)
+        try:
+            import feedparser as fp2
+            feed2 = fp2.parse(f'https://news.google.com/rss/search?q={ticker}+stock&hl=en&gl=US&ceid=US:en')
+            for entry in feed2.entries[:6]:
+                url = entry.get('link', '')
+                # Deduplicate
+                if not any(n['url'] == url for n in news_items):
+                    source = entry.get('source', {})
+                    source_name = source.get('title', 'Google News') if isinstance(source, dict) else 'Google News'
+                    news_items.append({
+                        'title': entry.get('title', ''),
+                        'source': source_name,
+                        'url': url,
+                        'published': entry.get('published', ''),
+                        'summary': '',
+                    })
+        except Exception as e:
+            print(f"Google News RSS failed for {ticker}: {e}")
+
+        # Source 3: Tavily deep search (API key required)
+        tavily_key = os.environ.get('TAVILY_API_KEY', '')
+        if tavily_key and not tavily_key.startswith('your_'):
+            try:
+                from tavily import TavilyClient
+                client = TavilyClient(api_key=tavily_key)
+                response = client.search(
+                    query=f"{ticker} stock news today",
+                    search_depth="advanced",
+                    max_results=6,
+                )
+                seen_urls = {n['url'] for n in news_items}
+                for r in response.get('results', []):
+                    url = r.get('url', '')
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        domain = url.split('://')[1].split('/')[0].replace('www.', '') if '://' in url else 'Tavily'
+                        news_items.append({
+                            'title': r.get('title', ''),
+                            'source': domain,
+                            'url': url,
+                            'published': '',
+                            'summary': (r.get('content') or '')[:300],
+                        })
+            except Exception as e:
+                print(f"Tavily failed for {ticker}: {e}")
+
+        return jsonify({
+            'ticker': ticker,
+            'count': len(news_items),
+            'news': news_items[:15],
+            'fetched_at': datetime.now().isoformat(),
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
