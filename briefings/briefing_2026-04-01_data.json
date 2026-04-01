@@ -1,0 +1,522 @@
+{
+  "macro": {
+    "fear_greed": {
+      "score": null
+    },
+    "vix": 24.8,
+    "sp500": {
+      "price": 6528.52,
+      "change_pct": 2.91,
+      "rsi": 42.6
+    },
+    "usd_ils": 3.1312,
+    "ta35": 4099.01
+  },
+  "stocks": [
+    {
+      "ticker": "META",
+      "resolved": "META",
+      "name": "Meta Platforms, Inc.",
+      "hebrew": "מטא",
+      "price": 572.13,
+      "change_pct": 6.67,
+      "currency": "$",
+      "pe": 24.3,
+      "forward_pe": 15.9,
+      "eps": 23.51,
+      "forward_eps": 35.88,
+      "revenue_growth": 23.8,
+      "earnings_growth": 10.7,
+      "profit_margin": 30.1,
+      "market_cap": 1447234633728,
+      "rsi": 40.2,
+      "ma200": 685.11,
+      "w52_high": 796.25,
+      "w52_low": 479.8,
+      "pct_from_high": -28.1,
+      "target_mean": 861.76,
+      "target_low": 614.0,
+      "target_high": 1144.0,
+      "recommendation": "strong_buy",
+      "news": [
+        {
+          "title": "Update: OpenAI Raises $122 Billion in Funding Round Valuing Company at $852 Billion",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/openai-raises-122-billion-funding-100711520.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:07:11 +0000"
+        },
+        {
+          "title": "Morning Brief: Stocks roar back, plus our giant, action-packed Q1 roundup",
+          "link": "https://finance.yahoo.com/news/morning-brief-stocks-roar-back-plus-our-giant-action-packed-q1-roundup-100033568.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:00:33 +0000"
+        },
+        {
+          "title": "Why Microsoft’s Growth Isn’t Saving Its Stock",
+          "link": "https://www.trefis.com/articles/595469/why-microsofts-growth-isnt-saving-its-stock/2026-04-01?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 09:21:40 +0000"
+        },
+        {
+          "title": "Omdia: Global Online Video and TV Revenues to Exceed $1 Trillion by 2030, Driven by Social Video Advertising",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/omdia-global-online-video-tv-085700985.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 08:57:00 +0000"
+        },
+        {
+          "title": "OpenAI’s $122 Billion Mega-Round Dwarfs Nearly Every S&P 500 Giant, But With Zero Profit",
+          "link": "https://beincrypto.com/openai-122b-funding-round-852b-valuation/?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 08:40:25 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "MSFT",
+      "resolved": "MSFT",
+      "name": "Microsoft Corporation",
+      "hebrew": "מייקרוסופט",
+      "price": 370.17,
+      "change_pct": 3.12,
+      "currency": "$",
+      "pe": 23.2,
+      "forward_pe": 19.6,
+      "eps": 15.99,
+      "forward_eps": 18.85,
+      "revenue_growth": 16.7,
+      "earnings_growth": 59.8,
+      "profit_margin": 39.0,
+      "market_cap": 2751243485184,
+      "rsi": 36.1,
+      "ma200": 476.29,
+      "w52_high": 555.45,
+      "w52_low": 344.79,
+      "pct_from_high": -33.4,
+      "target_mean": 589.9,
+      "target_low": 392.0,
+      "target_high": 730.0,
+      "recommendation": "strong_buy",
+      "news": [
+        {
+          "title": "Update: Microsoft, Amazon Agree to UK Regulator Demands for Interoperability; Microsoft Business Tools Under UK Probe",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/microsoft-amazon-agree-uk-regulator-101927873.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:19:27 +0000"
+        },
+        {
+          "title": "Update: OpenAI Raises $122 Billion in Funding Round Valuing Company at $852 Billion",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/openai-raises-122-billion-funding-100711520.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:07:11 +0000"
+        },
+        {
+          "title": "Morning Brief: Stocks roar back, plus our giant, action-packed Q1 roundup",
+          "link": "https://finance.yahoo.com/news/morning-brief-stocks-roar-back-plus-our-giant-action-packed-q1-roundup-100033568.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:00:33 +0000"
+        },
+        {
+          "title": "Big Tech: Time to buy?",
+          "link": "https://finance.yahoo.com/video/big-tech-time-to-buy-100000006.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:00:00 +0000"
+        },
+        {
+          "title": "Market uncertainty: Understanding the shift",
+          "link": "https://finance.yahoo.com/video/market-uncertainty-understanding-the-shift-100000239.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:00:00 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "SOFI",
+      "resolved": "SOFI",
+      "name": "SoFi Technologies, Inc.",
+      "hebrew": "סופי",
+      "price": 15.88,
+      "change_pct": 4.82,
+      "currency": "$",
+      "pe": 40.7,
+      "forward_pe": 19.6,
+      "eps": 0.39,
+      "forward_eps": 0.81,
+      "revenue_growth": 40.2,
+      "earnings_growth": -57.0,
+      "profit_margin": 13.4,
+      "market_cap": 20251191296,
+      "rsi": 32.2,
+      "ma200": 23.81,
+      "w52_high": 32.73,
+      "w52_low": 8.6,
+      "pct_from_high": -51.5,
+      "target_mean": 25.32,
+      "target_low": 12.0,
+      "target_high": 38.0,
+      "recommendation": "hold",
+      "news": [
+        {
+          "title": "How Investors May Respond To SoFi Technologies (SOFI) Short-Seller Allegations And CEO Stock Purchase",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/investors-may-respond-sofi-technologies-091452216.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 09:14:52 +0000"
+        },
+        {
+          "title": "Is SoFi a Fintech Winner or a 'Financial Engineering' Story?",
+          "link": "https://www.fool.com/investing/2026/03/31/is-sofi-a-fintech-winner-or-a-financial-engineerin/?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 21:13:00 +0000"
+        },
+        {
+          "title": "Elon Musk Says This About Tesla's Optimus Release And SpaceX IPO",
+          "link": "https://finance.yahoo.com/m/5a36d5de-fe9d-3636-98f5-4c0f4cba02c6/elon-musk-says-this-about.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 20:01:23 +0000"
+        },
+        {
+          "title": "Tesla Surges 5%: Delivery Hopes, Terafab, and SpaceX Buzz Are All Converging at Once",
+          "link": "https://247wallst.com/investing/2026/03/31/tesla-surges-5-delivery-hopes-terafab-and-spacex-buzz-are-all-converging-at-once/?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 19:19:39 +0000"
+        },
+        {
+          "title": "Is E*Trade About to Cut Robinhood and SoFi Out of the SpaceX IPO?",
+          "link": "https://www.fool.com/investing/2026/03/31/is-etrade-about-to-cut-robinhood-and-sofi-out-of-t/?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 19:16:15 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "ADOBE",
+      "resolved": "ADBE",
+      "name": "Adobe Inc.",
+      "hebrew": "ADOBE",
+      "price": 243.08,
+      "change_pct": 0.81,
+      "currency": "$",
+      "pe": 14.2,
+      "forward_pe": 9.2,
+      "eps": 17.16,
+      "forward_eps": 26.36,
+      "revenue_growth": 12.0,
+      "earnings_growth": 11.1,
+      "profit_margin": 29.5,
+      "market_cap": 99088384000,
+      "rsi": 39.5,
+      "ma200": 329.31,
+      "w52_high": 422.95,
+      "w52_low": 233.16,
+      "pct_from_high": -42.5,
+      "target_mean": 328.19,
+      "target_low": 220.0,
+      "target_high": 487.0,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "Figma: Ugly Chart, Good Business",
+          "link": "https://www.trefis.com/articles/595322/figma-ugly-chart-good-business/2026-04-01?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 07:55:16 +0000"
+        },
+        {
+          "title": "Cybersecurity Firm TAC Security Surpasses 10,000 Clients, Emerges Among the Top 5 Vulnerability Management, AppSec Companies Globally",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/cybersecurity-firm-tac-security-surpasses-173700629.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 17:37:00 +0000"
+        },
+        {
+          "title": "The ‘death of SaaS’ could be the best thing to ever happen to SaaS M&A",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/death-saas-could-best-thing-121447145.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 12:14:47 +0000"
+        },
+        {
+          "title": "Wild Charts Show Pain Points in S&P 500’s Worst Month Since 2022",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/wild-charts-show-pain-points-113754963.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 11:37:54 +0000"
+        },
+        {
+          "title": "Zacks Investment Ideas feature highlights Adobe's and Microsoft",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/zacks-investment-ideas-feature-highlights-092600213.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 09:26:00 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "AMZN",
+      "resolved": "AMZN",
+      "name": "Amazon.com, Inc.",
+      "hebrew": "אמזון",
+      "price": 208.27,
+      "change_pct": 3.64,
+      "currency": "$",
+      "pe": 29.1,
+      "forward_pe": 22.2,
+      "eps": 7.16,
+      "forward_eps": 9.39,
+      "revenue_growth": 13.6,
+      "earnings_growth": 5.0,
+      "profit_margin": 10.8,
+      "market_cap": 2235761950720,
+      "rsi": 48.1,
+      "ma200": 224.59,
+      "w52_high": 258.6,
+      "w52_low": 161.38,
+      "pct_from_high": -19.5,
+      "target_mean": 281.34,
+      "target_low": 175.0,
+      "target_high": 360.0,
+      "recommendation": "strong_buy",
+      "news": [
+        {
+          "title": "Update: Microsoft, Amazon Agree to UK Regulator Demands for Interoperability; Microsoft Business Tools Under UK Probe",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/microsoft-amazon-agree-uk-regulator-101927873.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:19:27 +0000"
+        },
+        {
+          "title": "Update: OpenAI Raises $122 Billion in Funding Round Valuing Company at $852 Billion",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/openai-raises-122-billion-funding-100711520.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:07:11 +0000"
+        },
+        {
+          "title": "Morning Brief: Stocks roar back, plus our giant, action-packed Q1 roundup",
+          "link": "https://finance.yahoo.com/news/morning-brief-stocks-roar-back-plus-our-giant-action-packed-q1-roundup-100033568.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:00:33 +0000"
+        },
+        {
+          "title": "Corti Ships Symphony for Medical Coding with more than 25% Accuracy Edge Over OpenAI and Anthropic",
+          "link": "https://finance.yahoo.com/sectors/healthcare/articles/corti-ships-symphony-medical-coding-100000246.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:00:00 +0000"
+        },
+        {
+          "title": "OpenAI closes $122bn funding round at $852bn valuation",
+          "link": "https://www.verdict.co.uk/openai-122bn-funding-round/?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 09:31:26 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "PANW",
+      "resolved": "PANW",
+      "name": "Palo Alto Networks, Inc.",
+      "hebrew": "פאלו אלטו",
+      "price": 160.32,
+      "change_pct": 3.87,
+      "currency": "$",
+      "pe": 89.1,
+      "forward_pe": 40.4,
+      "eps": 1.8,
+      "forward_eps": 3.97,
+      "revenue_growth": 14.9,
+      "earnings_growth": 60.5,
+      "profit_margin": 13.0,
+      "market_cap": 130821128192,
+      "rsi": 49.5,
+      "ma200": 188.12,
+      "w52_high": 223.61,
+      "w52_low": 139.57,
+      "pct_from_high": -28.3,
+      "target_mean": 206.97,
+      "target_low": 114.0,
+      "target_high": 265.0,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "Palo Alto Networks CEO’s Big Buy Underscores AI Security Confidence Narrative",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/palo-alto-networks-ceo-big-041531690.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 04:15:31 +0000"
+        },
+        {
+          "title": "What Happens When AI Agents Go Rogue?",
+          "link": "https://finance.yahoo.com/m/40ac8ec2-ce02-386e-8ab2-b3c18491a2b5/what-happens-when-ai-agents.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 16:10:00 +0000"
+        },
+        {
+          "title": "Cramer: CoreWeave’s $8.5B Financing Is a ‘Landmark’ Deal That AI Investors Can’t Ignore",
+          "link": "https://247wallst.com/investing/2026/03/31/cramer-coreweaves-8-5b-financing-is-a-landmark-deal-that-ai-investors-cant-ignore/?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 15:12:10 +0000"
+        },
+        {
+          "title": "JPMorgan Says Palo Alto Networks’ $10M Insider Buy Is a ‘Substantial Vote of Confidence’",
+          "link": "https://247wallst.com/investing/2026/03/31/jpmorgan-says-palo-alto-networks-10m-insider-buy-is-a-substantial-vote-of-confidence/?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 14:33:12 +0000"
+        },
+        {
+          "title": "Morgan Stanley Picks Top 5 Cybersecurity Stocks to Buy with Up to 65% Upside",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/morgan-stanley-picks-top-5-124717189.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 12:47:17 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "ONON",
+      "resolved": "ONON",
+      "name": "On Holding AG",
+      "hebrew": "און",
+      "price": 34.02,
+      "change_pct": 6.71,
+      "currency": "$",
+      "pe": 44.8,
+      "forward_pe": 16.9,
+      "eps": 0.76,
+      "forward_eps": 2.01,
+      "revenue_growth": 22.6,
+      "earnings_growth": -24.0,
+      "profit_margin": 6.8,
+      "market_cap": 11260536832,
+      "rsi": 34.3,
+      "ma200": 45.21,
+      "w52_high": 61.29,
+      "w52_low": 31.41,
+      "pct_from_high": -44.5,
+      "target_mean": 56.72,
+      "target_low": 29.95,
+      "target_high": 85.03,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "Shuffle Board: On Names Co-CEOs, Kornit Digital Taps Asos Chief Exec",
+          "link": "https://sourcingjournal.com/topics/business-news/shuffle-board-executive-moves-on-ebay-1234818392/?.tsrc=rss",
+          "published": "Fri, 27 Mar 2026 20:00:00 +0000"
+        },
+        {
+          "title": "On Holding (ONON) Valuation Check After Co CEO Transition And New CFO Announcement",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/holding-onon-valuation-check-co-180511425.html?.tsrc=rss",
+          "published": "Thu, 26 Mar 2026 18:05:11 +0000"
+        },
+        {
+          "title": "On Holding (ONON) Stock Sinks As Market Gains: What You Should Know",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/holding-onon-stock-sinks-market-215004337.html?.tsrc=rss",
+          "published": "Wed, 25 Mar 2026 21:50:04 +0000"
+        },
+        {
+          "title": "On Holding shakes up leadership team in response to rising pressure, says Jefferies",
+          "link": "https://www.proactiveinvestors.com/companies/news/1089529/on-holding-shakes-up-leadership-team-in-response-to-rising-pressure-says-jefferies-1089529.html?.tsrc=rss",
+          "published": "Wed, 25 Mar 2026 19:51:00 +0000"
+        },
+        {
+          "title": "On’s Second CEO Change in a Year Could Indicate Bigger Issues at the Company",
+          "link": "https://wwd.com/footwear-news/shoe-industry-news/on-running-ceo-analyst-reaction-stock-market-1238689220/?.tsrc=rss",
+          "published": "Wed, 25 Mar 2026 18:40:16 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "IREN",
+      "resolved": "IREN",
+      "name": "IREN Limited",
+      "hebrew": "אירן",
+      "price": 34.28,
+      "change_pct": 8.41,
+      "currency": "$",
+      "pe": 23.8,
+      "forward_pe": 27.1,
+      "eps": 1.44,
+      "forward_eps": 1.26,
+      "revenue_growth": 59.0,
+      "earnings_growth": null,
+      "profit_margin": 51.5,
+      "market_cap": 11372703744,
+      "rsi": 38.8,
+      "ma200": 38.68,
+      "w52_high": 76.87,
+      "w52_low": 5.12,
+      "pct_from_high": -55.4,
+      "target_mean": 76.14,
+      "target_low": 26.0,
+      "target_high": 125.0,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "Nebius Stock Rises. Why the ‘Neocloud’ Neophyte Has Been a Winner.",
+          "link": "https://finance.yahoo.com/m/a584bb97-88d2-3a05-87f9-b4a5e69094f6/nebius-stock-rises.-why-the.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 14:00:00 +0000"
+        },
+        {
+          "title": "IREN (IREN) Stock Down Significantly After Jim Cramer Called it “Too Hot”",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/iren-iren-stock-down-significantly-115556709.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 11:55:56 +0000"
+        },
+        {
+          "title": "Investors Weigh IREN Dilution Risk As AI Push Meets Softer Bitcoin Prices",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/investors-weigh-iren-dilution-risk-030635386.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 03:06:35 +0000"
+        },
+        {
+          "title": "Stock Market Today, March 30: IREN Falls on Funding Risks for AI Data Centers",
+          "link": "https://www.fool.com/coverage/stock-market-today/2026/03/30/stock-market-today-march-30-iren-falls-on-funding-risks-for-ai-data-centers/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 22:28:34 +0000"
+        },
+        {
+          "title": "IREN CEO: AI Buildout Is 'Permanent Whack-A-Mole' — And That's The Real Bottleneck",
+          "link": "https://finance.yahoo.com/sectors/technology/articles/iren-ceo-ai-buildout-permanent-220128921.html?.tsrc=rss",
+          "published": "Thu, 26 Mar 2026 22:01:28 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "MELI",
+      "resolved": "MELI",
+      "name": "MercadoLibre, Inc.",
+      "hebrew": "מרקדו ליברה",
+      "price": 1729.02,
+      "change_pct": 6.78,
+      "currency": "$",
+      "pe": 43.9,
+      "forward_pe": 23.6,
+      "eps": 39.42,
+      "forward_eps": 73.11,
+      "revenue_growth": 44.6,
+      "earnings_growth": -12.5,
+      "profit_margin": 6.9,
+      "market_cap": 87656448000,
+      "rsi": 49.1,
+      "ma200": 2165.05,
+      "w52_high": 2645.22,
+      "w52_low": 1593.21,
+      "pct_from_high": -34.6,
+      "target_mean": 2565.65,
+      "target_low": 1827.0,
+      "target_high": 3500.0,
+      "recommendation": "strong_buy",
+      "news": [
+        {
+          "title": "Does MercadoLibre (MELI) Offer Value After Recent Share Price Weakness?",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/does-mercadolibre-meli-offer-value-081813731.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 08:18:13 +0000"
+        },
+        {
+          "title": "Why MercadoLibre (MELI) Stock Is Up Today",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/why-mercadolibre-meli-stock-today-220519808.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 22:05:19 +0000"
+        },
+        {
+          "title": "Latin America’s Mercado Libre Pulls the Plug on Its Crypto Coin",
+          "link": "https://decrypt.co/362958/latin-america-mercado-libre-pulls-plug-crypto-coin?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 20:12:38 +0000"
+        },
+        {
+          "title": "MercadoLibre's fintech terminates its cryptocurrency Mercado Coin",
+          "link": "https://finance.yahoo.com/markets/crypto/articles/mercadolibres-fintech-terminates-cryptocurrency-mercado-193526774.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 19:35:26 +0000"
+        },
+        {
+          "title": "Here’s Generation Investment Management’s Views on MercadoLibre (MELI)",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/generation-investment-management-views-mercadolibre-132909435.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 13:29:09 +0000"
+        }
+      ]
+    },
+    {
+      "ticker": "לאומי",
+      "resolved": "לאומי",
+      "name": "לאומי",
+      "hebrew": "לאומי",
+      "price": 0.0,
+      "change_pct": 0,
+      "currency": "$",
+      "pe": null,
+      "forward_pe": null,
+      "eps": null,
+      "forward_eps": null,
+      "revenue_growth": null,
+      "earnings_growth": null,
+      "profit_margin": null,
+      "market_cap": null,
+      "rsi": null,
+      "ma200": null,
+      "w52_high": null,
+      "w52_low": null,
+      "pct_from_high": null,
+      "target_mean": null,
+      "target_low": null,
+      "target_high": null,
+      "recommendation": null,
+      "news": []
+    }
+  ],
+  "date": "2026-04-01T13:36:52.821996"
+}

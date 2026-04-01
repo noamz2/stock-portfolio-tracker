@@ -355,6 +355,14 @@ def _get_cached(key):
 def _set_cached(key, data):
     _server_cache[key] = {'data': data, 'ts': _time.time()}
 
+def _parse_years_param():
+    """Parse ?years= query param, default 10, clamp to allowed values."""
+    try:
+        y = int(request.args.get('years', 10))
+    except (ValueError, TypeError):
+        y = 10
+    return y if y in (5, 10, 20) else 10
+
 # ─── Ticker Aliases (Hebrew/English names → Yahoo Finance symbols) ───
 TICKER_ALIASES = {
     # US common aliases
@@ -630,7 +638,8 @@ def search_ticker(query):
 @app.route('/api/stock/<ticker>')
 def get_stock(ticker):
     """Get comprehensive stock data."""
-    cache_key = f'stock_{ticker.upper().strip()}'
+    years = _parse_years_param()
+    cache_key = f'stock_{ticker.upper().strip()}_{years}y'
     cached = _get_cached(cache_key)
     if cached:
         return jsonify(cached)
@@ -654,8 +663,8 @@ def get_stock(ticker):
         change = price - prev_close if price and prev_close else 0
         change_pct = (change / prev_close * 100) if prev_close else 0
 
-        # Historical data — full 5-year daily for ALL charts
-        hist5y = yf_safe_history(t, period="5y", interval="1d")
+        # Historical data — daily for ALL charts
+        hist5y = yf_safe_history(t, period=f"{years}y", interval="1d")
         if hist5y.empty or 'Close' not in hist5y.columns:
             dates, closes, volumes = [], [], []
         else:
@@ -673,8 +682,8 @@ def get_stock(ticker):
 
         current_rsi = rsi_values[-1] if rsi_values and rsi_values[-1] is not None else 50
 
-        # Historical P/E — 5 years
-        pe_dates, pe_values = get_historical_pe(t, info, years=5)
+        # Historical P/E
+        pe_dates, pe_values = get_historical_pe(t, info, years=years)
         current_pe = safe(info, 'trailingPE')
         forward_pe = safe(info, 'forwardPE')
 
@@ -725,6 +734,40 @@ def get_stock(ticker):
             'ebitda': safe(info, 'ebitda'),
         }
 
+        # PEG ratio
+        peg_ratio = safe(info, 'trailingPegRatio')
+        if peg_ratio is None:
+            # Calculate PEG from forward PE and earnings growth
+            eg = safe(info, 'earningsGrowth')
+            if forward_pe and eg and eg > 0:
+                peg_ratio = round(forward_pe / (eg * 100), 2)
+
+        # Historical Forward P/E (estimate from price history and forward EPS)
+        fwd_pe_dates = []
+        fwd_pe_values = []
+        peg_hist_dates = []
+        peg_hist_values = []
+        forward_eps = safe(info, 'forwardEps')
+        trailing_eps = safe(info, 'trailingEps')
+        if forward_eps and forward_eps > 0 and pe_dates and pe_values:
+            # Ratio of forward to trailing EPS gives us the scaling factor
+            eps_ratio = forward_eps / trailing_eps if trailing_eps and trailing_eps > 0 else 1.0
+            for dt, pe_val in zip(pe_dates, pe_values):
+                if pe_val and pe_val > 0:
+                    fwd_pe_est = pe_val * (trailing_eps / forward_eps) if forward_eps > 0 else None
+                    if fwd_pe_est and 2 < fwd_pe_est < 200:
+                        fwd_pe_dates.append(dt)
+                        fwd_pe_values.append(round(fwd_pe_est, 2))
+            # PEG history: forward PE / earnings growth rate (as %)
+            eg = safe(info, 'earningsGrowth')
+            if eg and eg > 0:
+                eg_pct = eg * 100
+                for dt, fpe in zip(fwd_pe_dates, fwd_pe_values):
+                    peg_val = round(fpe / eg_pct, 2)
+                    if 0.1 < peg_val < 10:
+                        peg_hist_dates.append(dt)
+                        peg_hist_values.append(peg_val)
+
         # Valuation metrics
         valuation = {
             'trailingPE': current_pe,
@@ -732,7 +775,7 @@ def get_stock(ticker):
             'priceToSales': safe(info, 'priceToSalesTrailing12Months'),
             'priceToBook': safe(info, 'priceToBook'),
             'evToEbitda': safe(info, 'enterpriseToEbitda'),
-            'evToRevenue': safe(info, 'enterpriseToRevenue'),
+            'pegRatio': peg_ratio,
             'pePercentile': pe_percentile,
             'peVerdict': pe_verdict,
             'peAvgHistorical': pe_avg,
@@ -860,6 +903,14 @@ def get_stock(ticker):
                 'dates': pe_dates,
                 'values': pe_values,
             },
+            'historicalForwardPE': {
+                'dates': fwd_pe_dates,
+                'values': fwd_pe_values,
+            },
+            'historicalPEG': {
+                'dates': peg_hist_dates,
+                'values': peg_hist_values,
+            },
             'valuation': clean_dict(valuation),
             'fundamentals': clean_dict(fundamentals),
             'dcfInputs': clean_dict(dcf_inputs),
@@ -961,7 +1012,9 @@ def calculate_dcf():
 @app.route('/api/macro')
 def get_macro_data():
     """Get macro market overview: Fear & Greed, VIX, USD/ILS, S&P500 metrics."""
-    cached = _get_cached('macro_dashboard')
+    years = _parse_years_param()
+    cache_key = f'macro_dashboard_{years}y'
+    cached = _get_cached(cache_key)
     if cached:
         return jsonify(cached)
 
@@ -972,13 +1025,13 @@ def get_macro_data():
         return _fetch_fg_inner()
 
     def _fetch_vix():
-        return _fetch_vix_inner()
+        return _fetch_vix_inner(years)
 
     def _fetch_usdils():
-        return _fetch_ils_inner()
+        return _fetch_ils_inner(years)
 
     def _fetch_sp500():
-        return _fetch_sp_inner()
+        return _fetch_sp_inner(years)
 
     def _fetch_ta35():
         return _fetch_ta35_inner()
@@ -999,8 +1052,9 @@ def get_macro_data():
                 result[key] = {'error': str(e)}
 
     result['_fetchedAt'] = datetime.now().isoformat()
+    result['years'] = years
     result = sanitize_for_json(result)
-    _set_cached('macro_dashboard', result)
+    _set_cached(cache_key, result)
     return jsonify(result)
 
 
@@ -1024,10 +1078,10 @@ def _fetch_fg_inner():
         return {'score': None, 'rating': 'N/A', 'error': str(e)}
 
 
-def _fetch_vix_inner():
+def _fetch_vix_inner(years=10):
     try:
         vix = yf_ticker('^VIX')
-        vix_hist = yf_safe_history(vix, period='10y', interval='1mo')
+        vix_hist = yf_safe_history(vix, period=f'{years}y', interval='1mo')
         if vix_hist.empty or 'Close' not in vix_hist.columns:
             return {'current': None, 'error': 'No VIX data returned'}
         vix_price = float(vix_hist['Close'].iloc[-1])
@@ -1043,10 +1097,10 @@ def _fetch_vix_inner():
         return {'current': None, 'error': str(e)}
 
 
-def _fetch_ils_inner():
+def _fetch_ils_inner(years=10):
     try:
         usdils = yf_ticker('ILS=X')
-        ils_hist = yf_safe_history(usdils, period='10y', interval='1mo')
+        ils_hist = yf_safe_history(usdils, period=f'{years}y', interval='1mo')
         if ils_hist.empty or 'Close' not in ils_hist.columns:
             return {'current': None, 'error': 'No ILS data returned'}
         ils_price = float(ils_hist['Close'].iloc[-1])
@@ -1062,10 +1116,10 @@ def _fetch_ils_inner():
         return {'current': None, 'error': str(e)}
 
 
-def _fetch_sp_inner():
+def _fetch_sp_inner(years=10):
     try:
         sp = yf_ticker('^GSPC')
-        sp_hist = yf_safe_history(sp, period='10y', interval='1mo')
+        sp_hist = yf_safe_history(sp, period=f'{years}y', interval='1mo')
         if sp_hist.empty or 'Close' not in sp_hist.columns:
             return {'price': None, 'error': 'No S&P 500 data returned'}
         sp_price = float(sp_hist['Close'].iloc[-1])
@@ -1107,7 +1161,7 @@ def _fetch_sp_inner():
             soup = BeautifulSoup(r.text, 'html.parser')
             table = soup.find('table', {'id': 'datatable'})
             if table:
-                for row in table.find_all('tr')[1:130]:  # ~10 years monthly
+                for row in table.find_all('tr')[1:years * 13]:  # monthly data
                     cols = row.find_all('td')
                     if len(cols) >= 2:
                         date_str = cols[0].text.strip()
@@ -1120,31 +1174,56 @@ def _fetch_sp_inner():
             if pe_history:
                 sp_pe = pe_history[0]['pe']
 
-            # Forward PE
-            r2 = http_requests.get('https://www.multpl.com/s-p-500-forward-pe-ratio/table/by-month',
-                                   headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'},
-                                   timeout=10)
-            soup2 = BeautifulSoup(r2.text, 'html.parser')
-            table2 = soup2.find('table', {'id': 'datatable'})
-            if table2:
-                cols = table2.find_all('tr')[1].find_all('td')
-                if len(cols) >= 2:
-                    try:
-                        sp_fwd_pe = float(cols[1].text.strip().replace('†\n', '').strip())
-                    except:
-                        pass
         except Exception:
             pass
+
+        # Forward PE — calculate from earnings data + growth projection
+        # since multpl.com forward PE page is no longer available
+        try:
+            from bs4 import BeautifulSoup as _BS_fwd
+            from datetime import datetime as _dt_fwd
+            r_earn = http_requests.get('https://www.multpl.com/s-p-500-earnings/table/by-month',
+                                       headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'},
+                                       timeout=10)
+            if r_earn.status_code == 200:
+                soup_earn = _BS_fwd(r_earn.text, 'html.parser')
+                tbl_earn = soup_earn.find('table', {'id': 'datatable'})
+                if tbl_earn:
+                    earn_rows = []
+                    for row in tbl_earn.find_all('tr')[1:]:
+                        cols = row.find_all('td')
+                        if len(cols) >= 2:
+                            try:
+                                d = _dt_fwd.strptime(cols[0].text.strip().replace(',', ''), '%b %d %Y')
+                                val = float(cols[1].text.strip().replace('†\n', '').replace('$', '').strip())
+                                earn_rows.append((d, val))
+                            except:
+                                pass
+                    # Get latest earnings and same month 1 year ago for YoY growth
+                    if len(earn_rows) >= 13:
+                        latest_eps = earn_rows[0][1]
+                        yr_ago_eps = earn_rows[12][1]  # ~12 months back
+                        if yr_ago_eps > 0 and latest_eps > 0:
+                            yoy_growth = (latest_eps - yr_ago_eps) / yr_ago_eps
+                            # Cap growth projection at 20% to be conservative
+                            proj_growth = min(max(yoy_growth, 0.02), 0.20)
+                            fwd_eps = latest_eps * (1 + proj_growth)
+                            if sp_price and fwd_eps > 0:
+                                sp_fwd_pe = round(sp_price / fwd_eps, 2)
+        except Exception as e:
+            print(f"Forward PE calculation failed: {e}")
 
         pe_dates = [p['date'] for p in pe_history]
         pe_values = [p['pe'] for p in pe_history]
 
-        # PEG Ratio = Forward PE / Smoothed Earnings Growth
-        # Yardeni standard: Forward P/E divided by long-term expected growth (LTEG)
-        # We approximate by using Forward P/E and a 3-year smoothed earnings growth rate
+        # PEG Ratio = Forward PE / LTEG (Long-Term Expected Growth)
+        # Yardeni standard: Forward P/E divided by long-term expected EPS growth
+        # We estimate forward PE from trailing PE + growth, then divide by LTEG
         peg_current = None
         peg_dates = []
         peg_values = []
+        fwd_pe_dates = []
+        fwd_pe_values = []
         try:
             from bs4 import BeautifulSoup as _BS
             from datetime import datetime as _dt
@@ -1166,30 +1245,7 @@ def _fetch_sp_inner():
                             except:
                                 pass
 
-            # Build Forward PE dict — try to get from multpl
-            fwd_pe_dict = {}
-            try:
-                re_fwd = http_requests.get('https://www.multpl.com/s-p-500-forward-pe-ratio/table/by-month',
-                                           headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'},
-                                           timeout=10)
-                if re_fwd.status_code == 200:
-                    soup_f = _BS(re_fwd.text, 'html.parser')
-                    table_f = soup_f.find('table', {'id': 'datatable'})
-                    if table_f:
-                        for row in table_f.find_all('tr')[1:]:
-                            cols = row.find_all('td')
-                            if len(cols) >= 2:
-                                try:
-                                    d = _dt.strptime(cols[0].text.strip().replace(',', ''), '%b %d %Y')
-                                    val = float(cols[1].text.strip().replace('†\n', '').replace(',', '').strip())
-                                    if 5 < val < 60:
-                                        fwd_pe_dict[d.strftime('%Y-%m')] = val
-                                except:
-                                    pass
-            except:
-                pass
-
-            # Fallback: if no forward PE, use trailing PE dict
+            # Build trailing PE dict from pe_history
             pe_dict = {}
             for p in pe_history:
                 try:
@@ -1198,15 +1254,7 @@ def _fetch_sp_inner():
                 except:
                     pass
 
-            # Use forward PE if available, otherwise trailing
-            active_pe_dict = fwd_pe_dict if fwd_pe_dict else pe_dict
-
-            # Approximate LTEG (Long-Term Expected Growth) as Yardeni uses:
-            # Yardeni: Forward PE / 5-year forward consensus annual earnings growth
-            # We approximate by: Forward PE / (5-year average of annual YoY growth rates)
-            # Key: use only positive growth years (like analyst consensus which doesn't
-            # project sustained negative growth) and floor at 5% (S&P long-term min)
-            sorted_months = sorted(active_pe_dict.keys(), reverse=True)[:180]
+            sorted_months = sorted(pe_dict.keys(), reverse=True)[:years * 13]
             for ym in sorted_months:
                 yr, mo = int(ym[:4]), ym[5:]
 
@@ -1220,20 +1268,47 @@ def _fetch_sp_inner():
                         growth_rates.append(g)
 
                 if len(growth_rates) >= 3:
-                    # LTEG approximation: average of growth rates,
-                    # but clip negative rates to 0 (analysts don't forecast sustained decline)
+                    # LTEG: clip negative rates to 0, take mean, floor at 5%
                     clipped = [max(g, 0) for g in growth_rates]
                     avg_growth = sum(clipped) / len(clipped)
-
-                    # Floor at 5% — S&P 500 long-term EPS growth averages ~7%
                     avg_growth = max(avg_growth, 5.0)
 
-                    peg = round(active_pe_dict[ym] / avg_growth, 2)
-                    if 0.5 < peg < 3.0:  # Yardeni range is ~0.8-2.4
+                    # Estimate forward PE from trailing PE and projected growth
+                    proj_g = min(max(avg_growth / 100, 0.02), 0.20)
+                    fwd_pe_ym = pe_dict[ym] / (1 + proj_g)
+
+                    # Collect forward PE history
+                    if 5 < fwd_pe_ym < 60:
+                        fwd_pe_dates.append(ym)
+                        fwd_pe_values.append(round(fwd_pe_ym, 2))
+
+                    peg = round(fwd_pe_ym / avg_growth, 2)
+                    if 0.3 < peg < 4.0:
                         peg_dates.append(ym)
                         peg_values.append(peg)
 
-            if peg_values:
+            # For the current month, use the already-calculated sp_fwd_pe if available
+            if sp_fwd_pe and peg_values:
+                # Recompute current PEG with the actual forward PE
+                latest_ym = peg_dates[0] if peg_dates else None
+                if latest_ym:
+                    yr, mo = int(latest_ym[:4]), latest_ym[5:]
+                    growth_rates_cur = []
+                    for y_offset in range(5):
+                        cur_ym = f'{yr - y_offset}-{mo}'
+                        prev_ym = f'{yr - y_offset - 1}-{mo}'
+                        if cur_ym in earn_dict and prev_ym in earn_dict and earn_dict[prev_ym] > 0:
+                            g = (earn_dict[cur_ym] - earn_dict[prev_ym]) / earn_dict[prev_ym] * 100
+                            growth_rates_cur.append(g)
+                    if len(growth_rates_cur) >= 3:
+                        clipped_cur = [max(g, 0) for g in growth_rates_cur]
+                        lteg_cur = max(sum(clipped_cur) / len(clipped_cur), 5.0)
+                        peg_current = round(sp_fwd_pe / lteg_cur, 2)
+                        peg_values[0] = peg_current
+            # Update forward PE history with actual calculated sp_fwd_pe for current month
+            if sp_fwd_pe and fwd_pe_dates:
+                fwd_pe_values[0] = sp_fwd_pe
+            if peg_current is None and peg_values:
                 peg_current = peg_values[0]
         except Exception as e:
             print(f"PEG calculation failed: {e}")
@@ -1247,6 +1322,7 @@ def _fetch_sp_inner():
             'peHistory': {'dates': pe_dates, 'values': pe_values},
             'peg': peg_current,
             'pegHistory': {'dates': peg_dates, 'values': peg_values},
+            'forwardPEHistory': {'dates': fwd_pe_dates, 'values': fwd_pe_values},
             'ma200': ma200,
             'dates': sp_dates,
             'closes': sp_closes,

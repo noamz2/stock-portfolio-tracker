@@ -4,133 +4,89 @@
 
 🌍 מאקרו — תמונת מצב השוק
 ────────────────────────────────────────
-  🔴 S&P 500: 6,343.72 (-0.39%)
-     RSI: 23.5 — Oversold 🔴
-  🔴 VIX: 30.6 (גבוה — פחד בשוק)
-  💱 USD/ILS: ₪3.1724
-  🇮🇱 TA-35: 4,022.57
+  🟢 S&P 500: 6,448.98 (+1.66%)
+     RSI: 32.3 — Neutral
+  🔴 VIX: 27.5 (גבוה — פחד בשוק)
+  💱 USD/ILS: ₪3.1601
+  🇮🇱 TA-35: 4,084.88
 
 
 📈 ניתוח מניות בתיק
 ────────────────────────────────────────
 
   🔴 ירידות:
-    אירן (IREN): $31.62 (-9.9%)
-    בנק לאומי (LEUMI): ₪67.69 (-4.1%)
-    בזק (BEZEQ): ₪7.43 (-2.0%)
-    און (ONON): $31.88 (-1.6%)
-    סופי (SOFI): $15.15 (-0.5%)
+    ADOBE (ADOBE): $240.83 (-0.1%)
+    לאומי (לאומי): $0.0 (+0.0%)
 
   🟢 עליות:
-    פאלו אלטו (PANW): $154.35 (+5.0%)
-    אדובי (ADBE): $241.13 (+2.7%)
-    מטא (META): $536.38 (+2.0%)
-    מרקדו ליברה (MELI): $1619.2 (+1.2%)
-    אמזון (AMZN): $200.95 (+0.8%)
-    מייקרוסופט (MSFT): $358.96 (+0.6%)
+    אירן (IREN): $33.14 (+4.8%)
+    מטא (META): $555.8 (+3.6%)
+    מרקדו ליברה (MELI): $1673.87 (+3.4%)
+    סופי (SOFI): $15.64 (+3.3%)
+    און (ONON): $32.91 (+3.2%)
+    אמזון (AMZN): $206.31 (+2.7%)
+    פאלו אלטו (PANW): $157.82 (+2.2%)
+    מייקרוסופט (MSFT): $365.6 (+1.9%)
 
 📋 ניתוח מפורט לכל מניה
 ══════════════════════════════════════════════════
 
-  ▸ אירן (IREN) — $31.62 (-9.9%)
-    P/E: 22.0x | Forward P/E: 25.0x | צמיחת הכנסות: +59.0% | מרווח רווח: 51.5%
-    RSI: 36.3 | מרחק מ-52W High: -58.9%
-    🎯 יעד אנליסטים: $76.14 (+140.8% upside) | המלצה: buy
-    📰 חדשות:
-       • IREN CEO: AI Buildout Is 'Permanent Whack-A-Mole' — And That's The Real Bottleneck
-       • Bitcoin Miners, Now AI Compute Leaders, Face Profitability Concerns
-       • Investis Holding SA (XSWX:IREN) Full Year 2025 Earnings Call Highlights: Strong Rental Income ...
-
-  ▸ בנק לאומי (LEUMI) — ₪67.69 (-4.1%)
-    P/E: 9.9x | Forward P/E: 12.5x | צמיחת הכנסות: -2.7% | צמיחת רווח: +4.8% | מרווח רווח: 46.2%
-    RSI: 22.5 (Oversold) | מרחק מ-52W High: -16.4%
-    🎯 יעד אנליסטים: ₪82.2 (+21.4% upside) | המלצה: strong_buy
-    📰 חדשות:
-       • A Look At Bank Leumi Le-Israel B.M (TASE:LUMI) Valuation After Recent Share Price Weakness
-       • NewMed Energy LP (DKDRF) Q4 2025 Earnings Call Highlights: Navigating Challenges with Strategic ...
-       • Bank Leumi Le-Israel BM (BLMIF) Q4 2025 Earnings Call Highlights: Record Profits and Strategic ...
-
-  ▸ בזק (BEZEQ) — ₪7.43 (-2.0%)
-    P/E: 14.6x | Forward P/E: 16.2x | צמיחת הכנסות: -0.8% | צמיחת רווח: +16.7% | מרווח רווח: 16.3%
-    RSI: 28.1 (Oversold) | מרחק מ-52W High: -18.7%
-    🎯 יעד אנליסטים: ₪7.66 (+3.1% upside) | המלצה: buy
-    📰 חדשות:
-       • Can Bezeq’s Strong 57% Rally Continue After Israel’s New Spectrum Auction?
-       • Israel's Bezeq Telecom raises 2025 profit amid regulatory shaekeup on fibre costs
-       • Israel's Bezeq to buy local telecoms firm for $160 million
-
-  ▸ און (ONON) — $31.88 (-1.6%)
-    P/E: 41.4x | Forward P/E: 15.8x | צמיחת הכנסות: +22.6% | צמיחת רווח: -24.0% | מרווח רווח: 6.8%
-    RSI: 24.3 (Oversold) | מרחק מ-52W High: -48.0%
-    🎯 יעד אנליסטים: $56.28 (+76.5% upside) | המלצה: buy
-    📰 חדשות:
-       • Shuffle Board: On Names Co-CEOs, Kornit Digital Taps Asos Chief Exec
-       • On Holding (ONON) Valuation Check After Co CEO Transition And New CFO Announcement
-       • On Holding (ONON) Stock Sinks As Market Gains: What You Should Know
-
-  ▸ סופי (SOFI) — $15.15 (-0.5%)
-    P/E: 38.8x | Forward P/E: 18.7x | צמיחת הכנסות: +40.2% | צמיחת רווח: -57.0% | מרווח רווח: 13.4%
-    RSI: 13.0 (Oversold) | מרחק מ-52W High: -53.7%
-    🎯 יעד אנליסטים: $25.32 (+67.1% upside) | המלצה: hold
-    📰 חדשות:
-       • OpenAI, Anthropic, SpaceX: Where the most anticipated IPOs stand
-       • Robinhood reportedly cut out of blockbuster SpaceX IPO
-       • Treasuries Climb as Powell Eases Fed-Hike Jitters: Markets Wrap
-
-  ▸ מייקרוסופט (MSFT) — $358.96 (+0.6%)
-    P/E: 22.5x | Forward P/E: 19.0x | צמיחת הכנסות: +16.7% | צמיחת רווח: +59.8% | מרווח רווח: 39.0%
-    RSI: 12.4 (Oversold) | מרחק מ-52W High: -35.4%
-    🎯 יעד אנליסטים: $589.9 (+64.3% upside) | המלצה: strong_buy
-    📰 חדשות:
-       • Dow Tests 45,000 as War Sends Oil to $110+ and the VIX Surges 50% in a Month
-       • Sector Update: Tech Stocks Fall Late Afternoon
-       • Ross Stores Beat Earnings and Gained 68% in a Year. Reddit Is Still Betting Against It.
-
-  ▸ אמזון (AMZN) — $200.95 (+0.8%)
-    P/E: 28.0x | Forward P/E: 21.4x | צמיחת הכנסות: +13.6% | צמיחת רווח: +5.0% | מרווח רווח: 10.8%
-    RSI: 36.7 | מרחק מ-52W High: -22.3%
-    🎯 יעד אנליסטים: $281.34 (+40.0% upside) | המלצה: strong_buy
-    📰 חדשות:
-       • Stock Market Today: Dow Up As Powell Says This; Micron Dives, Alternative Asset Plays Get A Lift (Live Coverage)
-       • Ross Stores Beat Earnings and Gained 68% in a Year. Reddit Is Still Betting Against It.
-       • AI Shopping Shift Puts Amazon, Walmart in Focus
-
-  ▸ מרקדו ליברה (MELI) — $1619.2 (+1.2%)
-    P/E: 41.1x | Forward P/E: 22.0x | צמיחת הכנסות: +44.6% | צמיחת רווח: -12.5% | מרווח רווח: 6.9%
-    RSI: 36.4 | מרחק מ-52W High: -38.8%
-    🎯 יעד אנליסטים: $2565.65 (+58.5% upside) | המלצה: strong_buy
-    📰 חדשות:
-       • MercadoLibre Stock Is on Sale. Here's What $5,000 Invested Today Could Do for Your Portfolio.
-       • MercadoLibre (MELI) Valuation Check After Recent Share Price Weakness
-       • The U.S. Market Is in Turmoil. Here's 1 Reason MercadoLibre Looks Better Than Ever.
-
-  ▸ מטא (META) — $536.38 (+2.0%)
-    P/E: 22.8x | Forward P/E: 14.9x | צמיחת הכנסות: +23.8% | צמיחת רווח: +10.7% | מרווח רווח: 30.1%
-    RSI: 19.7 (Oversold) | מרחק מ-52W High: -32.6%
-    🎯 יעד אנליסטים: $861.76 (+60.7% upside) | המלצה: strong_buy
-    📰 חדשות:
-       • Another Day, Another Massive AI Infrastructure Deal
-       • Meta Named Morgan Stanley's New Top Pick Following Sell-Off
-       • Sector Update: Tech Stocks Fall Late Afternoon
-
-  ▸ אדובי (ADBE) — $241.13 (+2.7%)
+  ▸ ADOBE (ADOBE) — $240.83 (-0.1%)
     P/E: 14.0x | Forward P/E: 9.1x | צמיחת הכנסות: +12.0% | צמיחת רווח: +11.1% | מרווח רווח: 29.5%
-    RSI: 25.0 (Oversold) | מרחק מ-52W High: -43.0%
-    🎯 יעד אנליסטים: $328.19 (+36.1% upside) | המלצה: buy
-    📰 חדשות:
-       • Adobe Faces CMA Probe As Subscription Model And Valuation Come Into Focus
-       • Figma Rides on Strong MCP Server Demand: A Sign for More Upside?
-       • HubSpot Pivoting Toward Margin Expansion: Is the Growth Sustainable?
+    RSI: 25.4 (Oversold) | מרחק מ-52W High: -43.1%
+    🎯 יעד אנליסטים: $328.19 (+36.3% upside) | המלצה: buy
+    📰 5 כתבות פורסמו היום
 
-  ▸ פאלו אלטו (PANW) — $154.35 (+5.0%)
-    P/E: 86.2x | Forward P/E: 38.9x | צמיחת הכנסות: +14.9% | צמיחת רווח: +60.5% | מרווח רווח: 13.0%
-    RSI: 38.0 | מרחק מ-52W High: -31.0%
-    🎯 יעד אנליסטים: $206.97 (+34.1% upside) | המלצה: buy
-    📰 חדשות:
-       • Stock Market Today: Dow Up As Powell Says This; Micron Dives, Alternative Asset Plays Get A Lift (Live Coverage)
-       • Cybersecurity Stocks Should Be Winning. ‘It’s Like the Upside-Down World.’
-       • Palo Alto Stock Rises. Its CEO Made a $10 Million Purchase.
+  ▸ לאומי (לאומי) — $0.0 (+0.0%)
+
+  ▸ מייקרוסופט (MSFT) — $365.6 (+1.9%)
+    P/E: 22.9x | Forward P/E: 19.4x | צמיחת הכנסות: +16.7% | צמיחת רווח: +59.8% | מרווח רווח: 39.0%
+    RSI: 21.1 (Oversold) | מרחק מ-52W High: -34.2%
+    🎯 יעד אנליסטים: $589.9 (+61.4% upside) | המלצה: strong_buy
+    📰 5 כתבות פורסמו היום
+
+  ▸ פאלו אלטו (PANW) — $157.82 (+2.2%)
+    P/E: 87.2x | Forward P/E: 39.7x | צמיחת הכנסות: +14.9% | צמיחת רווח: +60.5% | מרווח רווח: 13.0%
+    RSI: 42.8 | מרחק מ-52W High: -29.4%
+    🎯 יעד אנליסטים: $206.97 (+31.1% upside) | המלצה: buy
+    📰 5 כתבות פורסמו היום
+
+  ▸ אמזון (AMZN) — $206.31 (+2.7%)
+    P/E: 28.8x | Forward P/E: 22.0x | צמיחת הכנסות: +13.6% | צמיחת רווח: +5.0% | מרווח רווח: 10.8%
+    RSI: 44.1 | מרחק מ-52W High: -20.2%
+    🎯 יעד אנליסטים: $281.34 (+36.4% upside) | המלצה: strong_buy
+    📰 5 כתבות פורסמו היום
+
+  ▸ און (ONON) — $32.91 (+3.2%)
+    P/E: 43.3x | Forward P/E: 16.3x | צמיחת הכנסות: +22.6% | צמיחת רווח: -24.0% | מרווח רווח: 6.8%
+    RSI: 31.0 | מרחק מ-52W High: -46.3%
+    🎯 יעד אנליסטים: $56.2 (+70.8% upside) | המלצה: buy
+    📰 5 כתבות פורסמו היום
+
+  ▸ סופי (SOFI) — $15.64 (+3.3%)
+    P/E: 40.1x | Forward P/E: 19.3x | צמיחת הכנסות: +40.2% | צמיחת רווח: -57.0% | מרווח רווח: 13.4%
+    RSI: 17.9 (Oversold) | מרחק מ-52W High: -52.2%
+    🎯 יעד אנליסטים: $25.32 (+61.9% upside) | המלצה: hold
+    📰 5 כתבות פורסמו היום
+
+  ▸ מרקדו ליברה (MELI) — $1673.87 (+3.4%)
+    P/E: 42.6x | Forward P/E: 22.8x | צמיחת הכנסות: +44.6% | צמיחת רווח: -12.5% | מרווח רווח: 6.9%
+    RSI: 40.5 | מרחק מ-52W High: -36.7%
+    🎯 יעד אנליסטים: $2565.65 (+53.3% upside) | המלצה: strong_buy
+    📰 5 כתבות פורסמו היום
+
+  ▸ מטא (META) — $555.8 (+3.6%)
+    P/E: 23.7x | Forward P/E: 15.5x | צמיחת הכנסות: +23.8% | צמיחת רווח: +10.7% | מרווח רווח: 30.1%
+    RSI: 26.8 (Oversold) | מרחק מ-52W High: -30.2%
+    🎯 יעד אנליסטים: $861.76 (+55.0% upside) | המלצה: strong_buy
+    📰 5 כתבות פורסמו היום
+
+  ▸ אירן (IREN) — $33.14 (+4.8%)
+    P/E: 23.0x | Forward P/E: 26.2x | צמיחת הכנסות: +59.0% | מרווח רווח: 51.5%
+    RSI: 29.3 (Oversold) | מרחק מ-52W High: -56.9%
+    🎯 יעד אנליסטים: $76.14 (+129.8% upside) | המלצה: buy
+    📰 5 כתבות פורסמו היום
 
 ────────────────────────────────────────
 ⚠️  אין זו המלצת השקעה. נא להתייעץ עם יועץ מורשה.
-נוצר: 00:50 31/03/2026
+נוצר: 17:29 31/03/2026

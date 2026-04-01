@@ -125,6 +125,10 @@ header h1 {
 .btn-sm { padding: 8px 16px; font-size: 13px; border-radius: 8px; }
 .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-outline:hover { border-color: var(--text); background: rgba(255,255,255,0.05); }
+.time-range-toggle { display:inline-flex; gap:0; background:#1E293B; border-radius:6px; overflow:hidden; font-size:11px; }
+.time-range-toggle button { padding:4px 12px; border:none; background:transparent; color:#94A3B8; cursor:pointer; font-weight:600; font-size:11px; }
+.time-range-toggle button:hover { background:rgba(255,255,255,0.05); }
+.time-range-toggle button.active { background:#00D4FF; color:#0F172A; }
 
 .card {
   background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 24px;
@@ -387,6 +391,11 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
         <h2>🌍 Macro Dashboard</h2>
         <div style="display:flex;align-items:center;gap:12px">
           <span id="macroLastUpdate" style="color:#94A3B8;font-size:11px"></span>
+          <div class="time-range-toggle" id="macroTimeToggle" onclick="event.stopPropagation()">
+            <button onclick="setMacroYears(5)">5Y</button>
+            <button onclick="setMacroYears(10)" class="active">10Y</button>
+            <button onclick="setMacroYears(20)">20Y</button>
+          </div>
           <button onclick="event.stopPropagation();loadMacroData(true)" style="background:#1E293B;color:#94A3B8;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px">🔄 Refresh</button>
           <span id="macroToggle" style="color:var(--muted);font-size:20px">▼</span>
         </div>
@@ -478,6 +487,10 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
             <div style="font-size:12px;color:#00D4FF;margin-bottom:4px;text-align:center;font-weight:600">S&P 500 PEG Ratio — 10 Years <span style="color:#94A3B8;font-weight:400">(Forward PE / 5Y Avg Growth)</span></div>
             <div style="height:200px"><canvas id="macroPegChart"></canvas></div>
           </div>
+          <div style="background:#0B1422;border-radius:8px;padding:12px">
+            <div style="font-size:12px;color:#a78bfa;margin-bottom:4px;text-align:center;font-weight:600">S&P 500 Forward P/E — 10 Years <span style="color:#94A3B8;font-weight:400">(estimated)</span></div>
+            <div style="height:200px"><canvas id="macroFwdPeChart"></canvas></div>
+          </div>
         </div>
       </div>
     </div>
@@ -503,8 +516,9 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
     </div>
 
     <!-- Tabs -->
-    <div class="tabs">
-      <div class="tab active" data-tab="charts" onclick="switchTab(this)">Charts</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0">
+      <div class="tabs" style="margin-bottom:0">
+        <div class="tab active" data-tab="charts" onclick="switchTab(this)">Charts</div>
       <div class="tab" data-tab="valuation" onclick="switchTab(this)">Valuation</div>
       <div class="tab" data-tab="dcf" onclick="switchTab(this)">DCF Model</div>
       <div class="tab" data-tab="intrinsic" onclick="switchTab(this)">💎 Intrinsic Value</div>
@@ -512,6 +526,12 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
       <div class="tab" data-tab="fundamentals" onclick="switchTab(this)">Fundamentals</div>
       <div class="tab" data-tab="news" onclick="switchTab(this)">News</div>
       <div class="tab" data-tab="podcast" onclick="switchTab(this)">🎙️ Podcast</div>
+      </div>
+      <div class="time-range-toggle" id="stockTimeToggle">
+        <button onclick="setStockYears(5)">5Y</button>
+        <button onclick="setStockYears(10)" class="active">10Y</button>
+        <button onclick="setStockYears(20)">20Y</button>
+      </div>
     </div>
 
     <!-- Charts Tab -->
@@ -534,6 +554,16 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
           <h3>Valuation Verdict</h3>
           <div id="valuationVerdict" class="verdict-box"></div>
           <div id="valuationMetrics" class="metric-grid" style="margin-top:16px"></div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:12px">
+        <div class="card">
+          <h3>Historical Forward P/E (est.)</h3>
+          <div class="chart-container"><canvas id="fwdPeChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>Historical PEG Ratio (est.)</h3>
+          <div class="chart-container"><canvas id="pegChart"></canvas></div>
         </div>
       </div>
     </div>
@@ -965,7 +995,7 @@ async function loadPortfolio() {
   if (toFetch.length) {
     await Promise.all(toFetch.map(async t => {
       try {
-        const res = await fetch(`${API}/api/stock/${t}`);
+        const res = await fetch(`${API}/api/stock/${t}?years=${stockYears}`);
         if (res.ok) {
           stockCache[t] = await res.json();
           stockCacheTime[t] = Date.now();
@@ -1144,6 +1174,26 @@ function formatDateLabel(dateStr) {
   return months[parseInt(parts[1])-1] + ' ' + parts[0];
 }
 
+async function setStockYears(y) {
+  stockYears = y;
+  document.querySelectorAll('#stockTimeToggle button').forEach(b => {
+    b.classList.toggle('active', b.textContent === y + 'Y');
+  });
+  if (!currentStock) return;
+  try {
+    const res = await fetch(`${API}/api/stock/${currentStock}?years=${y}`);
+    if (res.ok) {
+      const d = await res.json();
+      stockCache[currentStock] = d;
+      stockCacheTime[currentStock] = Date.now();
+      renderCharts(d);
+      renderValuation(d);
+    }
+  } catch (e) {
+    console.error('Stock re-fetch error:', e);
+  }
+}
+
 function renderCharts(d) {
   destroyCharts();
   const labels = d.chart.dates.map(d => formatDateLabel(d));
@@ -1245,6 +1295,48 @@ function renderValuation(d) {
     });
   }
 
+  // Forward P/E Chart
+  if (charts.fwdPe) charts.fwdPe.destroy();
+  if (d.historicalForwardPE?.dates?.length) {
+    const fwdPE = d.valuation.forwardPE;
+    const fwdDates = d.historicalForwardPE.dates;
+    const fwdVals = d.historicalForwardPE.values;
+    const fwdAvg = fwdVals.reduce((a,b) => a+b, 0) / fwdVals.length;
+    charts.fwdPe = new Chart(document.getElementById('fwdPeChart'), {
+      type: 'line',
+      data: {
+        labels: fwdDates,
+        datasets: [
+          { label: 'Forward P/E', data: fwdVals, borderColor: '#a78bfa', borderWidth: 1.5, pointRadius: 0, fill: { target: 'origin', above: 'rgba(167,139,250,0.1)' } },
+          ...(fwdPE ? [{ label: `Current (${fwdPE.toFixed(1)}x)`, data: Array(fwdDates.length).fill(fwdPE), borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, borderDash: [5,3] }] : []),
+          { label: `Avg (${fwdAvg.toFixed(1)}x)`, data: Array(fwdDates.length).fill(fwdAvg), borderColor: '#22c55e', borderWidth: 1, pointRadius: 0, borderDash: [3,3] },
+        ]
+      },
+      options: chartOpts('rgba(30,41,59,0.5)'),
+    });
+  }
+
+  // PEG Chart
+  if (charts.pegStock) charts.pegStock.destroy();
+  if (d.historicalPEG?.dates?.length) {
+    const pegCur = d.valuation.pegRatio;
+    const pegDates = d.historicalPEG.dates;
+    const pegVals = d.historicalPEG.values;
+    const pegAvg = pegVals.reduce((a,b) => a+b, 0) / pegVals.length;
+    charts.pegStock = new Chart(document.getElementById('pegChart'), {
+      type: 'line',
+      data: {
+        labels: pegDates,
+        datasets: [
+          { label: 'PEG', data: pegVals, borderColor: '#00D4FF', borderWidth: 1.5, pointRadius: 0, fill: { target: 'origin', above: 'rgba(0,212,255,0.1)' } },
+          ...(pegCur ? [{ label: `Current (${pegCur.toFixed(2)})`, data: Array(pegDates.length).fill(pegCur), borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, borderDash: [5,3] }] : []),
+          { label: 'Fair (1.0)', data: Array(pegDates.length).fill(1.0), borderColor: 'rgba(34,197,94,0.5)', borderWidth: 1.5, pointRadius: 0, borderDash: [3,3] },
+        ]
+      },
+      options: chartOpts('rgba(30,41,59,0.5)'),
+    });
+  }
+
   // Verdict
   const vv = document.getElementById('valuationVerdict');
   const verdict = d.valuation.peVerdict;
@@ -1264,7 +1356,7 @@ function renderValuation(d) {
     ['EV/EBITDA', d.valuation.evToEbitda?.toFixed(1) + 'x'],
     ['P/S', d.valuation.priceToSales?.toFixed(1) + 'x'],
     ['P/B', d.valuation.priceToBook?.toFixed(1) + 'x'],
-    ['EV/Revenue', d.valuation.evToRevenue?.toFixed(1) + 'x'],
+    ['PEG', d.valuation.pegRatio?.toFixed(2)],
   ].map(([l, v]) => `<div class="metric"><div class="val">${v || 'N/A'}</div><div class="lbl">${l}</div></div>`).join('');
 }
 
@@ -1457,6 +1549,8 @@ function hideLoading() { document.getElementById('loadingOverlay').classList.add
 
 let macroCharts = {};
 let macroLoaded = false;
+let macroYears = 10;
+let stockYears = 10;
 let macroLastFetch = 0;
 
 function toggleMacro() {
@@ -1472,11 +1566,20 @@ function toggleMacro() {
   }
 }
 
+function setMacroYears(y) {
+  macroYears = y;
+  document.querySelectorAll('#macroTimeToggle button').forEach(b => {
+    b.classList.toggle('active', b.textContent === y + 'Y');
+  });
+  macroLoaded = false;
+  loadMacroData(true);
+}
+
 async function loadMacroData(force = false) {
   // Skip if loaded recently (within 1 hour) unless forced
   if (!force && macroLoaded && (Date.now() - macroLastFetch) < CACHE_TTL) return;
   try {
-    const resp = await fetch(`${API}/api/macro`);
+    const resp = await fetch(`${API}/api/macro?years=${macroYears}`);
     const d = await resp.json();
     macroLoaded = true;
     macroLastFetch = Date.now();
@@ -1634,6 +1737,27 @@ function renderMacroCharts(d) {
           { label: 'P/E', data: values, borderColor: '#f59e0b', borderWidth: 1.5, fill: { target: 'origin', above: 'rgba(245,158,11,0.08)' } },
           { label: `Avg (${avg.toFixed(1)}x)`, data: Array(dates.length).fill(avg), borderColor: 'rgba(99,102,241,0.5)', borderWidth: 1.5, borderDash: [5,3] },
           { label: '15x', data: Array(dates.length).fill(15), borderColor: 'rgba(34,197,94,0.3)', borderWidth: 1, borderDash: [3,3] },
+        ]
+      },
+      options: macroOpts,
+    });
+  }
+
+  // Forward P/E Chart
+  const fwdPeH = d.sp500?.forwardPEHistory;
+  if (fwdPeH?.dates?.length) {
+    if (macroCharts.fwdPe) macroCharts.fwdPe.destroy();
+    const fwdDates = fwdPeH.dates.slice().reverse();
+    const fwdVals = fwdPeH.values.slice().reverse();
+    const fwdAvg = fwdVals.reduce((a,b) => a+b, 0) / fwdVals.length;
+    macroCharts.fwdPe = new Chart(document.getElementById('macroFwdPeChart'), {
+      type: 'line',
+      data: {
+        labels: fwdDates,
+        datasets: [
+          { label: 'Forward P/E', data: fwdVals, borderColor: '#a78bfa', borderWidth: 1.5, fill: { target: 'origin', above: 'rgba(167,139,250,0.08)' } },
+          { label: `Avg (${fwdAvg.toFixed(1)}x)`, data: Array(fwdDates.length).fill(fwdAvg), borderColor: 'rgba(99,102,241,0.5)', borderWidth: 1.5, borderDash: [5,3] },
+          { label: '15x', data: Array(fwdDates.length).fill(15), borderColor: 'rgba(34,197,94,0.3)', borderWidth: 1, borderDash: [3,3] },
         ]
       },
       options: macroOpts,
