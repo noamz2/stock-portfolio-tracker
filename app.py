@@ -535,22 +535,112 @@ def compute_ma(prices, period=200):
     return pad + ma
 
 def get_historical_pe(ticker_obj, info, years=5):
-    """Calculate historical P/E over time using price history and annual EPS."""
+    """Calculate historical P/E using price history and actual historical EPS."""
     try:
         hist = ticker_obj.history(period=f"{years}y", interval="1mo")
         if hist.empty or 'Close' not in hist.columns:
             return [], []
 
-        earnings = ticker_obj.earnings_history
-        eps_ttm = safe(info, 'trailingEps', 0)
-        if not eps_ttm or eps_ttm <= 0:
+        eps_ttm_current = safe(info, 'trailingEps', 0)
+        if not eps_ttm_current or eps_ttm_current <= 0:
             return [], []
 
         dates = [d.strftime('%Y-%m') for d in hist.index]
         prices = hist['Close'].tolist()
 
-        # Simple approach: use current EPS as baseline, scale by price changes
-        pe_values = [p / eps_ttm if eps_ttm > 0 else None for p in prices]
+        # Build TTM EPS timeline from earnings_dates (best source: ~6 years of quarterly EPS)
+        ttm_timeline = {}  # ym -> ttm_eps
+        try:
+            ed = ticker_obj.earnings_dates
+            if ed is not None and not ed.empty and 'Reported EPS' in ed.columns:
+                eps_entries = []
+                for idx, row in ed.iterrows():
+                    val = row.get('Reported EPS')
+                    if val is not None and not np.isnan(val) and val > 0:
+                        eps_entries.append((idx.to_pydatetime().strftime('%Y-%m'), float(val)))
+                eps_entries.sort()
+                # Build TTM (rolling 4-quarter sum)
+                for i in range(3, len(eps_entries)):
+                    ttm = sum(e[1] for e in eps_entries[i-3:i+1])
+                    ttm_timeline[eps_entries[i][0]] = ttm
+        except:
+            pass
+
+        # Supplement with annual financials (Diluted EPS)
+        annual_eps = {}
+        try:
+            fin = ticker_obj.financials
+            if fin is not None and not fin.empty and 'Diluted EPS' in fin.index:
+                for col in fin.columns:
+                    yr = col.year
+                    mo = f'{col.month:02d}'
+                    annual_eps[f'{yr}-{mo}'] = float(fin.loc['Diluted EPS', col])
+        except:
+            pass
+
+        # Merge: TTM takes priority, fill gaps with annual
+        for ym, eps in annual_eps.items():
+            if ym not in ttm_timeline:
+                ttm_timeline[ym] = eps
+
+        if not ttm_timeline:
+            # Fallback to old method (current EPS for all dates)
+            pe_values = [round(p / eps_ttm_current, 2) if p and p > 0 else None for p in prices]
+            return dates, pe_values
+
+        sorted_ttm = sorted(ttm_timeline.keys())
+        earliest_eps_date = sorted_ttm[0]
+
+        # For dates within TTM range, interpolate; for dates before, extrapolate
+        # Compute CAGR from available data for backward extrapolation
+        cagr = 0.10  # default 10% if can't compute
+        if len(sorted_ttm) >= 2:
+            first_val = ttm_timeline[sorted_ttm[0]]
+            last_val = ttm_timeline[sorted_ttm[-1]]
+            # Parse year difference
+            y1 = int(sorted_ttm[0][:4]) + int(sorted_ttm[0][5:]) / 12
+            y2 = int(sorted_ttm[-1][:4]) + int(sorted_ttm[-1][5:]) / 12
+            span = y2 - y1
+            if span > 0 and first_val > 0 and last_val > 0:
+                cagr = (last_val / first_val) ** (1 / span) - 1
+                cagr = max(min(cagr, 0.30), 0.02)  # clamp 2-30%
+
+        def get_eps_for_date(ym):
+            if ym in ttm_timeline:
+                return ttm_timeline[ym]
+
+            # Find surrounding EPS dates
+            lower = [k for k in sorted_ttm if k <= ym]
+            upper = [k for k in sorted_ttm if k > ym]
+
+            if lower and upper:
+                # Interpolate
+                lk, uk = lower[-1], upper[0]
+                lv, uv = ttm_timeline[lk], ttm_timeline[uk]
+                yl = int(lk[:4]) + int(lk[5:]) / 12
+                yu = int(uk[:4]) + int(uk[5:]) / 12
+                yc = int(ym[:4]) + int(ym[5:]) / 12
+                frac = (yc - yl) / (yu - yl) if (yu - yl) > 0 else 0
+                return lv + frac * (uv - lv)
+            elif lower:
+                # After last known — use current TTM EPS
+                return eps_ttm_current
+            else:
+                # Before earliest known — extrapolate backward with CAGR
+                earliest_val = ttm_timeline[sorted_ttm[0]]
+                ye = int(sorted_ttm[0][:4]) + int(sorted_ttm[0][5:]) / 12
+                yc = int(ym[:4]) + int(ym[5:]) / 12
+                years_back = ye - yc
+                return earliest_val / ((1 + cagr) ** years_back)
+
+        pe_values = []
+        for dt, price in zip(dates, prices):
+            eps = get_eps_for_date(dt)
+            if eps and eps > 0.01 and price and price > 0:
+                pe = price / eps
+                pe_values.append(round(pe, 2) if 0 < pe < 500 else None)
+            else:
+                pe_values.append(None)
 
         return dates, pe_values
     except:
@@ -742,31 +832,46 @@ def get_stock(ticker):
             if forward_pe and eg and eg > 0:
                 peg_ratio = round(forward_pe / (eg * 100), 2)
 
-        # Historical Forward P/E (estimate from price history and forward EPS)
+        # Historical Forward P/E and PEG
+        # Forward PE: scale trailing PE by current trailing/forward EPS ratio
+        # PEG: use implied long-term growth from yfinance's trailingPegRatio
         fwd_pe_dates = []
         fwd_pe_values = []
         peg_hist_dates = []
         peg_hist_values = []
-        forward_eps = safe(info, 'forwardEps')
-        trailing_eps = safe(info, 'trailingEps')
-        if forward_eps and forward_eps > 0 and pe_dates and pe_values:
-            # Ratio of forward to trailing EPS gives us the scaling factor
-            eps_ratio = forward_eps / trailing_eps if trailing_eps and trailing_eps > 0 else 1.0
+        try:
+            # Forward PE ratio: trailing_eps / forward_eps (consistent across time)
+            forward_eps_val = safe(info, 'forwardEps')
+            trailing_eps_val = safe(info, 'trailingEps')
+            fwd_ratio = (trailing_eps_val / forward_eps_val) if (
+                forward_eps_val and trailing_eps_val and forward_eps_val > 0
+            ) else None
+
+            # PEG implied growth: derived from yfinance's trailingPegRatio
+            # This is the analyst consensus long-term growth (5yr expected)
+            implied_growth_pct = None
+            if peg_ratio and peg_ratio > 0 and current_pe and current_pe > 0:
+                implied_growth_pct = current_pe / peg_ratio  # as percentage
+
             for dt, pe_val in zip(pe_dates, pe_values):
-                if pe_val and pe_val > 0:
-                    fwd_pe_est = pe_val * (trailing_eps / forward_eps) if forward_eps > 0 else None
-                    if fwd_pe_est and 2 < fwd_pe_est < 200:
+                if pe_val is None or pe_val <= 0:
+                    continue
+
+                # Forward PE = trailing PE * (trailing EPS / forward EPS)
+                if fwd_ratio:
+                    fwd_pe = pe_val * fwd_ratio
+                    if 2 < fwd_pe < 500:
                         fwd_pe_dates.append(dt)
-                        fwd_pe_values.append(round(fwd_pe_est, 2))
-            # PEG history: forward PE / earnings growth rate (as %)
-            eg = safe(info, 'earningsGrowth')
-            if eg and eg > 0:
-                eg_pct = eg * 100
-                for dt, fpe in zip(fwd_pe_dates, fwd_pe_values):
-                    peg_val = round(fpe / eg_pct, 2)
+                        fwd_pe_values.append(round(fwd_pe, 2))
+
+                # PEG = trailing PE / implied long-term growth %
+                if implied_growth_pct and implied_growth_pct > 0:
+                    peg_val = round(pe_val / implied_growth_pct, 2)
                     if 0.1 < peg_val < 10:
                         peg_hist_dates.append(dt)
                         peg_hist_values.append(peg_val)
+        except Exception as e:
+            print(f"Forward PE/PEG history error: {e}")
 
         # Valuation metrics
         valuation = {
