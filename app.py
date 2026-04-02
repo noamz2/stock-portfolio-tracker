@@ -1693,8 +1693,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-PODCAST_DIR = Path(__file__).parent.parent / "stock-podcast" / "podcasts"
-PODCAST_SCRIPT = Path(__file__).parent.parent / "stock-podcast" / "podcast.py"
+PODCAST_DIR = Path(__file__).parent / "briefings"
+PODCAST_SCRIPT = Path(__file__).parent / "daily_briefing.py"
 
 
 @app.route('/api/podcast/<ticker>', methods=['POST'])
@@ -1704,19 +1704,19 @@ def create_podcast(ticker):
         ticker = ticker.upper().strip()
         resolved = resolve_ticker(ticker)
 
-        # Run podcast.py as subprocess
+        # Run daily_briefing.py with single ticker as positional arg
         env = {**dict(__import__('os').environ)}
         result = subprocess.run(
-            [sys.executable, str(PODCAST_SCRIPT), "--ticker", resolved],
-            capture_output=True, text=True, timeout=120,
+            [sys.executable, str(PODCAST_SCRIPT), resolved],
+            capture_output=True, text=True, timeout=180,
             cwd=str(PODCAST_SCRIPT.parent), env=env,
         )
 
         today = datetime.now().strftime("%Y-%m-%d")
 
-        # Find generated files
-        audio_file = PODCAST_DIR / f"{resolved}_{today}.mp3"
-        script_file = PODCAST_DIR / f"{resolved}_{today}_script.txt"
+        # daily_briefing.py generates briefing_{date}.mp3
+        audio_file = PODCAST_DIR / f"briefing_{today}.mp3"
+        script_file = PODCAST_DIR / f"briefing_{today}_script.txt"
 
         if not audio_file.exists() and not script_file.exists():
             return jsonify({'error': f'Podcast generation failed: {result.stderr[-300:] if result.stderr else "unknown error"}'}), 500
@@ -1748,14 +1748,13 @@ def create_podcast(ticker):
 def get_podcast_audio(ticker):
     """Serve the podcast MP3 file."""
     try:
-        ticker = resolve_ticker(ticker.upper().strip())
         today = datetime.now().strftime("%Y-%m-%d")
-        audio_file = PODCAST_DIR / f"{ticker}_{today}.mp3"
+        audio_file = PODCAST_DIR / f"briefing_{today}.mp3"
 
         if not audio_file.exists():
             # Try yesterday
             yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-            audio_file = PODCAST_DIR / f"{ticker}_{yesterday}.mp3"
+            audio_file = PODCAST_DIR / f"briefing_{yesterday}.mp3"
 
         if not audio_file.exists():
             return jsonify({'error': 'No podcast audio found'}), 404
@@ -1772,8 +1771,8 @@ def podcast_status(ticker):
         ticker_resolved = resolve_ticker(ticker.upper().strip())
         today = datetime.now().strftime("%Y-%m-%d")
 
-        audio_file = PODCAST_DIR / f"{ticker_resolved}_{today}.mp3"
-        script_file = PODCAST_DIR / f"{ticker_resolved}_{today}_script.txt"
+        audio_file = PODCAST_DIR / f"briefing_{today}.mp3"
+        script_file = PODCAST_DIR / f"briefing_{today}_script.txt"
 
         exists = audio_file.exists() or script_file.exists()
 

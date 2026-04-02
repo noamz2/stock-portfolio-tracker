@@ -18,6 +18,26 @@ import numpy as np
 import requests
 import yfinance as yf
 
+# Load .env file if it exists
+_env_path = Path(__file__).parent / '.env'
+if _env_path.exists():
+    with open(_env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _key, _val = _line.split('=', 1)
+                os.environ.setdefault(_key.strip(), _val.strip())
+
+try:
+    import feedparser
+except ImportError:
+    feedparser = None
+
+try:
+    from tavily import TavilyClient
+except ImportError:
+    TavilyClient = None
+
 # ─── Configuration ───
 PORTFOLIO = [
     'META', 'MSFT', 'SOFI', 'ADBE', 'AMZN',
@@ -239,6 +259,216 @@ def collect_stock(ticker):
     }
 
 
+def _is_generic_url(url):
+    """Filter out generic stock data pages that don't contain real news."""
+    skip_domains = [
+        'tradingview.com', 'stockanalysis.com', 'finance.yahoo.com/quote',
+        'google.com/finance', 'marketwatch.com/investing/stock/',
+        'wsj.com/market-data', 'macrotrends.net',
+    ]
+    url_lower = url.lower()
+    return any(d in url_lower for d in skip_domains)
+
+
+def _tavily_extract_urls(tavily_client, urls):
+    """Use Tavily extract to get full article content from URLs."""
+    try:
+        # Tavily extract API — pulls full text from URLs
+        result = tavily_client.extract(urls=urls[:5])
+        extracted = {}
+        for r in result.get('results', []):
+            url = r.get('url', '')
+            text = r.get('raw_content', '') or r.get('text', '')
+            if url and text and len(text) > 100:
+                extracted[url] = text[:3000]  # Cap per article
+        return extracted
+    except Exception as e:
+        print(f"    ⚠️  Tavily extract failed: {e}")
+        return {}
+
+
+def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
+    """Collect news from 3 sources with actual article content."""
+    articles = []
+    seen_urls = set()
+    rss_urls_to_extract = []  # URLs from RSS that need full content
+
+    # Source 1: Yahoo Finance RSS
+    if feedparser:
+        try:
+            feed = feedparser.parse(f'https://feeds.finance.yahoo.com/rss/2.0/headline?s={resolved_ticker}')
+            for entry in feed.entries[:8]:
+                url = entry.get('link', '')
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    articles.append({
+                        'title': entry.get('title', ''),
+                        'source': 'Yahoo Finance',
+                        'url': url,
+                        'published': entry.get('published', ''),
+                        'content': entry.get('summary', ''),
+                    })
+                    rss_urls_to_extract.append(url)
+        except Exception as e:
+            print(f"    ⚠️  Yahoo RSS failed for {ticker}: {e}")
+
+    # Source 2: Google News RSS
+    if feedparser:
+        try:
+            gn_url = f'https://news.google.com/rss/search?q={ticker}+stock&hl=en&gl=US&ceid=US:en'
+            feed = feedparser.parse(gn_url)
+            for entry in feed.entries[:6]:
+                url = entry.get('link', '')
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    source = ''
+                    if hasattr(entry, 'source'):
+                        source = entry.source.get('title', 'Google News')
+                    articles.append({
+                        'title': entry.get('title', ''),
+                        'source': source or 'Google News',
+                        'url': url,
+                        'published': entry.get('published', ''),
+                        'content': entry.get('summary', ''),
+                    })
+                    rss_urls_to_extract.append(url)
+        except Exception as e:
+            print(f"    ⚠️  Google News RSS failed for {ticker}: {e}")
+
+    # Use Tavily extract to get full content for RSS articles
+    tavily_key = os.environ.get('TAVILY_API_KEY', '')
+    if tavily_key and TavilyClient and rss_urls_to_extract:
+        tavily = TavilyClient(api_key=tavily_key)
+        extracted = _tavily_extract_urls(tavily, rss_urls_to_extract[:5])
+        for a in articles:
+            url = a.get('url', '')
+            if url in extracted:
+                a['content'] = extracted[url]
+        time.sleep(0.3)
+
+    # Source 3: Tavily Search (deep content extraction)
+    if tavily_key and TavilyClient:
+        try:
+            tavily = TavilyClient(api_key=tavily_key)
+            query = f"{company_name} ({ticker}) stock news latest developments"
+            results = tavily.search(query=query, search_depth="advanced", max_results=5,
+                                     include_raw_content=True)
+            for r in results.get('results', []):
+                url = r.get('url', '')
+                if url and url not in seen_urls and not _is_generic_url(url):
+                    seen_urls.add(url)
+                    content = r.get('raw_content', '') or r.get('content', '')
+                    articles.append({
+                        'title': r.get('title', ''),
+                        'source': 'Tavily',
+                        'url': url,
+                        'published': '',
+                        'content': content[:3000],
+                    })
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"    ⚠️  Tavily failed for {ticker}: {e}")
+
+    # For Israeli stocks, also search in Hebrew
+    is_israeli = resolved_ticker.endswith('.TA')
+    if is_israeli and tavily_key and TavilyClient:
+        try:
+            tavily = TavilyClient(api_key=tavily_key)
+            query = f"{hebrew_name} מניה חדשות"
+            results = tavily.search(query=query, search_depth="advanced", max_results=3,
+                                     include_raw_content=True)
+            for r in results.get('results', []):
+                url = r.get('url', '')
+                if url and url not in seen_urls and not _is_generic_url(url):
+                    seen_urls.add(url)
+                    content = r.get('raw_content', '') or r.get('content', '')
+                    articles.append({
+                        'title': r.get('title', ''),
+                        'source': 'Tavily (HE)',
+                        'url': url,
+                        'published': '',
+                        'content': content[:3000],
+                    })
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"    ⚠️  Tavily HE failed for {ticker}: {e}")
+
+    return articles
+
+
+def _groq_chat(api_key, messages, max_tokens=1000, system=None):
+    """Call Groq API (OpenAI-compatible)."""
+    from openai import OpenAI
+    client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+    kwargs = {
+        "model": "llama-3.3-70b-versatile",
+        "max_tokens": max_tokens,
+        "messages": messages,
+    }
+    if system:
+        kwargs["messages"] = [{"role": "system", "content": system}] + kwargs["messages"]
+    response = client.chat.completions.create(**kwargs)
+    return response.choices[0].message.content
+
+
+def summarize_stock_news(ticker, hebrew_name, stock_data, articles, api_key):
+    """Use Groq to summarize news articles for a single stock."""
+    # Only summarize if we have articles with actual content
+    articles_with_content = [a for a in articles if a.get('content') and len(a['content']) > 50]
+    if not articles_with_content:
+        return {
+            'summary': '',
+            'has_news': False,
+            'article_count': len(articles),
+            'key_headlines': [a['title'] for a in articles[:3]],
+        }
+
+    try:
+        change_pct = stock_data.get('change_pct', 0)
+        direction = "עלתה" if change_pct > 0 else "ירדה" if change_pct < 0 else "לא השתנתה"
+
+        articles_text = ""
+        for i, a in enumerate(articles_with_content[:6], 1):
+            content = a['content'][:2500]  # More content per article for richer summaries
+            articles_text += f"\n--- כתבה {i}: {a['title']} ({a['source']}) ---\n{content}\n"
+
+        prompt = f"""אתה עיתונאי כלכלי. קרא את הכתבות על מניית {hebrew_name} ({ticker}) וספר מה כתוב בהן.
+
+מחיר נוכחי: {stock_data.get('currency', '$')}{stock_data.get('price', '?')} | שינוי: {change_pct:+.1f}% | המניה {direction}.
+
+כתבות:
+{articles_text}
+
+כתוב בעברית, 200-350 מילים. המטרה: לספר למשקיע מה כתוב בכתבות, כאילו אתה מספר לחבר.
+
+הנחיות:
+- עבור על כל כתבה שקראת וספר מה היא אומרת — ציטוטים, מספרים, שמות אנשים, החלטות, אירועים
+- אם כתבה אומרת שמישהו מכר מניות — ציין מי, כמה, ולמה
+- אם כתבה מדברת על עסקה — ציין את הפרטים: סכום, חברות, מה בדיוק קורה
+- אם כתבה מצטטת אנליסט — ציין את שמו ומה הוא אמר
+- תרגם הכל לעברית, אל תצטט כותרות באנגלית
+- קשר בין מה שכתוב בכתבות לתנועת המניה
+- אל תחזור על אותו רעיון פעמיים
+- אל תשתמש במונחים טכניים"""
+
+        summary = _groq_chat(api_key, [{"role": "user", "content": prompt}], max_tokens=1500)
+        return {
+            'summary': summary,
+            'has_news': True,
+            'article_count': len(articles),
+            'key_headlines': [a['title'] for a in articles_with_content[:3]],
+        }
+
+    except Exception as e:
+        print(f"    ⚠️  News summarization failed for {ticker}: {e}")
+        return {
+            'summary': '',
+            'has_news': False,
+            'article_count': len(articles),
+            'key_headlines': [a['title'] for a in articles[:3]],
+        }
+
+
 def collect_all():
     """Collect all data."""
     print("=" * 60)
@@ -257,6 +487,25 @@ def collect_all():
         except Exception as e:
             print(f"❌ {e}")
             stocks.append({'ticker': ticker, 'error': str(e)})
+
+    # Phase 2: Deep news collection + summarization
+    print("\n📰 Collecting deep news...")
+    api_key = os.environ.get('GROQ_API_KEY', '')
+    for s in stocks:
+        if 'error' in s:
+            continue
+        print(f"  📰 {s['ticker']}...", end=" ", flush=True)
+        articles = collect_news_deep(s['ticker'], s['resolved'], s.get('name', ''), s.get('hebrew', ''))
+        s['news_deep'] = articles
+        content_count = len([a for a in articles if a.get('content') and len(a['content']) > 50])
+        print(f"{len(articles)} articles ({content_count} with content)")
+
+        if api_key and content_count >= 1:
+            s['news_summary'] = summarize_stock_news(s['ticker'], s['hebrew'], s, articles, api_key)
+            if s['news_summary']['has_news']:
+                print(f"    ✅ Summary generated")
+        else:
+            s['news_summary'] = {'summary': '', 'has_news': False, 'article_count': len(articles), 'key_headlines': []}
 
     return {'macro': macro, 'stocks': stocks, 'date': datetime.now().isoformat()}
 
@@ -398,8 +647,14 @@ def generate_text_report(data):
             upside = round((s['target_mean'] - s['price']) / s['price'] * 100, 1)
             lines.append(f"    🎯 יעד אנליסטים: {s['currency']}{s['target_mean']} ({upside:+.1f}% upside) | המלצה: {s.get('recommendation', '—')}")
 
-        # News
-        if s.get('news'):
+        # News summary
+        news_summary = s.get('news_summary', {})
+        if news_summary.get('has_news') and news_summary.get('summary'):
+            lines.append(f"    📰 סיכום חדשות ({news_summary.get('article_count', 0)} כתבות):")
+            for line in news_summary['summary'].split('\n'):
+                if line.strip():
+                    lines.append(f"    {line.strip()}")
+        elif s.get('news'):
             lines.append(f"    📰 {len(s['news'])} כתבות חדשות פורסמו היום")
 
     lines.append("")
@@ -410,48 +665,46 @@ def generate_text_report(data):
     return '\n'.join(lines)
 
 
-BRIEFING_SYSTEM_PROMPT = """אתה הפרשן הכלכלי המוביל בישראל — משלב עומק אנליטי של וול סטריט עם נגישות של משפיע רשת ישראלי.
+BRIEFING_SYSTEM_PROMPT = """אתה מגיש פודקאסט כלכלי יומי בעברית. התפקיד שלך הוא לקרוא את החדשות ולספר למאזינים מה כתוב בהן — כאילו אתה מספר לחבר טוב מה קראת היום בעיתון הכלכלי.
 
-אתה מגיש סיכום יומי לתיק השקעות — מאקרו + מניות ספציפיות. אתה מדבר כמו גיא בכר או מתי גרינברג — חכם, בקיא, אבל בגובה העיניים.
+הסגנון שלך:
+- אתה מספר סיפורים, לא מקריא נתונים. כל מניה היא סיפור שמבוסס על מה שפורסם עליה בחדשות.
+- אם כתבה מספרת שמנכ"ל חברה אמר משהו — תצטט אותו (בעברית). אם אנליסט פרסם דוח — תספר מה הוא כתב. אם מישהו מכר מניות — תספר מי, כמה, ותן הקשר.
+- אתה יוצר עניין. תשאל שאלות רטוריות: "אז מה באמת קורה שם?", "והשאלה הגדולה היא...", "ופה זה נהיה מעניין..."
+- שפה פשוטה ויומיומית, בלי מונחים טכניים כמו RSI, ממוצעים נעים, ווליום
+- תרגם הכל לעברית. אסור לצטט כותרות או משפטים באנגלית
 
-כללים:
-- התחל עם: "שלום לכולם, ברוכים הבאים לסיכום היומי של שוק ההון. תזכורת — זה לא ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
-- עברית טבעית, שיחתית. כמו פודקאסט, לא דוח
-- לא RSI, לא ווליום, לא ממוצעים נעים, לא "אזור התנגדות"
-- לא להקריא שמות כתבות באנגלית
-- כן: מחיר, אחוז שינוי, הכנסות, רווח, צמיחה, יעדי אנליסטים
-- ספר את הסיפור — לא רשימה של מספרים אלא נרטיב
-- ציין שמות אנליסטים ובנקים כשרלוונטי
-- סיים עם מה לעקוב — אירועים ספציפיים
-- אורך: 800-1200 מילים
-- טקסט מוכן להקראה — ללא כותרות, כוכביות, מספור, או markdown"""
+כללים טכניים:
+- פתח עם: "שלום לכולם, ברוכים הבאים לסיכום היומי של שוק ההון. תזכורת חשובה — זה לא ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
+- אסור: סוגריים מרובעים, כוכביות, סולמית, מספור, markdown
+- אורך מינימלי: 1200 מילים
+- טקסט רציף מוכן להקראה בקול רם
+- מעברים חלקים: "נעבור ל...", "עכשיו בואו נדבר על...", "ומה קורה עם..."
+- אל תחזור על אותו רעיון פעמיים"""
 
 
 def generate_podcast_script(data):
-    """Generate Hebrew podcast script — tries Claude API first, falls back to basic."""
-    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    """Generate Hebrew podcast script — tries Groq API first, falls back to basic."""
+    api_key = os.environ.get('GROQ_API_KEY', '')
 
     if api_key:
         try:
-            return _generate_podcast_with_claude(data, api_key)
+            return _generate_podcast_with_groq(data, api_key)
         except Exception as e:
-            print(f"  ⚠️  Claude API failed for briefing: {e}, using fallback")
+            print(f"  ⚠️  Groq API failed for briefing: {e}, using fallback")
 
     return _generate_podcast_fallback(data)
 
 
-def _generate_podcast_with_claude(data, api_key):
-    """Generate analyst-quality podcast using Claude."""
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=api_key)
+def _generate_podcast_with_groq(data, api_key):
+    """Generate analyst-quality podcast using Groq."""
 
     m = data['macro']
     stocks = data['stocks']
     valid_stocks = [s for s in stocks if 'error' not in s]
     date = datetime.fromisoformat(data['date']).strftime('%d/%m/%Y')
 
-    # Build rich context for Claude
+    # Build rich context for Groq
     portfolio_data = {
         "date": date,
         "macro": {
@@ -465,6 +718,7 @@ def _generate_podcast_with_claude(data, api_key):
     }
 
     for s in valid_stocks:
+        news_summary = s.get('news_summary', {})
         stock_info = {
             "name_he": s.get('hebrew', s['ticker']),
             "ticker": s['ticker'],
@@ -479,31 +733,37 @@ def _generate_podcast_with_claude(data, api_key):
             "analyst_target": s.get('target_mean'),
             "recommendation": s.get('recommendation'),
             "pct_from_52w_high": s.get('pct_from_high'),
-            "news_count": len(s.get('news', [])),
+            "news_summary": news_summary.get('summary', 'אין חדשות זמינות'),
+            "key_headlines": news_summary.get('key_headlines', []),
+            "article_count": news_summary.get('article_count', 0),
         }
         portfolio_data["stocks"].append(stock_info)
 
-    prompt = f"""צור סיכום יומי מקצועי לתיק ההשקעות.
+    prompt = f"""צור פודקאסט יומי בעברית. 1200-1800 מילים. טקסט רציף בלבד, בלי כוכביות או מספור.
 
-מבנה:
-1. פתיחה (30 שניות) — מה הסיפור הגדול היום בשוק? לא "שלום היום נדבר על..." אלא כותרת שמושכת
-2. תמונת מאקרו (60 שניות) — S&P, סנטימנט, VIX, שקל-דולר — כסיפור, לא כרשימה. מה האווירה ולמה?
-3. מניות בתיק (3-4 דקות) — מי עלה, מי ירד, ולמה. התמקד במניות עם תנועות משמעותיות או נתונים מעניינים. ציין יעדי אנליסטים כשיש פער משמעותי. ספר על צמיחה או בעיות
-4. מה בין השורות (45 שניות) — מגמה כללית שעולה מהתיק? האם הסקטורים שלך מתנהגים דומה? יש קשר בין המניות?
-5. סיכום ומה לעקוב (30 שניות)
+לכל מניה יש סיכום חדשות מפורט למטה. התפקיד שלך הוא לספר את הסיפורים מהחדשות בצורה מרתקת.
 
-נתוני התיק:
+לכל מניה, עשה את הדברים הבאים:
+- ספר מה כתוב בחדשות. לא תקציר כללי, אלא הסיפור עצמו: מי אמר מה, מה קרה, אילו מספרים הוזכרו
+- תן הקשר: למה זה חשוב למשקיע? מה זה אומר על העתיד?
+- שאל שאלה רטורית שיוצרת עניין: "והשאלה היא...", "אז מה זה אומר בפועל?"
+- קשר בין החדשות למחיר המניה
+
+מבנה הפודקאסט:
+
+פתיחה קצרה — הסיפור הכי מעניין מהחדשות היום. תפתח עם משהו שתופס: "היום פורסם ש...", "הסיפור הגדול היום הוא..."
+
+מאקרו בקצרה — S&P, שקל-דולר, אווירה בשוק. 3-4 משפטים מקסימום.
+
+ניתוח מניות לפי חדשות (החלק העיקרי!) — לכל מניה: ספר את הסיפור מהחדשות, תן הקשר, ואז מחיר ויעד אנליסטים אם רלוונטי.
+
+סיכום — מסר אחד מרכזי ליום.
+
+נתוני התיק (כולל סיכומי חדשות מפורטים):
 {json.dumps(portfolio_data, ensure_ascii=False, indent=2)}"""
 
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4000,
-        system=BRIEFING_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    script = message.content[0].text
-    print(f"  ✅ Briefing script generated with Claude ({len(script)} chars)")
+    script = _groq_chat(api_key, [{"role": "user", "content": prompt}], max_tokens=6000, system=BRIEFING_SYSTEM_PROMPT)
+    print(f"  ✅ Briefing script generated with Groq ({len(script)} chars)")
     return script
 
 
@@ -566,10 +826,10 @@ def _generate_podcast_fallback(data):
         for s in winners[:3]:
             script += f"{s['hebrew']} עלתה {s['change_pct']:.1f} אחוז. "
 
-    # Per-stock — focus on news and story, not technical data
+    # Per-stock — focus on news and story
     script += "\n\nבואו נצלול פנימה:\n"
 
-    for s in valid_stocks[:6]:
+    for s in valid_stocks[:8]:
         script += f"\n{s['hebrew']} — "
         change = s.get('change_pct', 0)
         if abs(change) > 0.5:
@@ -578,20 +838,24 @@ def _generate_podcast_fallback(data):
         else:
             script += f"נסחרת סביב {s['currency']}{s['price']}, ללא שינוי משמעותי. "
 
-        # Analyst target — as a story
-        if s.get('target_mean'):
-            upside = round((s['target_mean'] - s['price']) / s['price'] * 100, 1)
-            if upside > 15:
-                script += f"האנליסטים עדיין אופטימיים — יעד ממוצע של {s['currency']}{s['target_mean']}, שזה פוטנציאל של {upside:.0f} אחוז. "
-            elif upside < -5:
-                script += f"האנליסטים חושבים שהמחיר גבוה — היעד הממוצע נמוך מהמחיר הנוכחי. "
+        # Include news summary if available
+        news_summary = s.get('news_summary', {})
+        if news_summary.get('has_news') and news_summary.get('summary'):
+            script += news_summary['summary'] + " "
+        else:
+            # Fallback to basic analysis without news
+            if s.get('target_mean'):
+                upside = round((s['target_mean'] - s['price']) / s['price'] * 100, 1)
+                if upside > 15:
+                    script += f"האנליסטים עדיין אופטימיים — יעד ממוצע של {s['currency']}{s['target_mean']}, שזה פוטנציאל של {upside:.0f} אחוז. "
+                elif upside < -5:
+                    script += f"האנליסטים חושבים שהמחיר גבוה — היעד הממוצע נמוך מהמחיר הנוכחי. "
 
-        # Earnings growth as story
-        if s.get('revenue_growth') and abs(s['revenue_growth']) > 5:
-            if s['revenue_growth'] > 15:
-                script += f"מבחינת צמיחה — ההכנסות צומחות ב-{s['revenue_growth']:.0f} אחוז, מה שמעיד על ביקוש חזק. "
-            elif s['revenue_growth'] < -5:
-                script += f"ההכנסות ירדו ב-{abs(s['revenue_growth']):.0f} אחוז, מה שמדאיג. "
+            if s.get('revenue_growth') and abs(s['revenue_growth']) > 5:
+                if s['revenue_growth'] > 15:
+                    script += f"מבחינת צמיחה — ההכנסות צומחות ב-{s['revenue_growth']:.0f} אחוז, מה שמעיד על ביקוש חזק. "
+                elif s['revenue_growth'] < -5:
+                    script += f"ההכנסות ירדו ב-{abs(s['revenue_growth']):.0f} אחוז, מה שמדאיג. "
 
     # Summary — mood, not numbers
     script += "\n\nלסיכום: "

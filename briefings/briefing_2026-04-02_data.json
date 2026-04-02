@@ -1,0 +1,195 @@
+{
+  "macro": {
+    "fear_greed": {
+      "score": null
+    },
+    "vix": 25.6,
+    "sp500": {
+      "price": 6564.75,
+      "change_pct": -0.16,
+      "rsi": 45.1
+    },
+    "usd_ils": 3.1312,
+    "ta35": 4099.01
+  },
+  "stocks": [
+    {
+      "ticker": "IREN",
+      "resolved": "IREN",
+      "name": "IREN Limited",
+      "hebrew": "אירן",
+      "price": 34.32,
+      "change_pct": 0.67,
+      "currency": "$",
+      "pe": 23.8,
+      "forward_pe": 27.1,
+      "eps": 1.44,
+      "forward_eps": 1.26,
+      "revenue_growth": 59.0,
+      "earnings_growth": null,
+      "profit_margin": 51.5,
+      "market_cap": 11385974784,
+      "rsi": 39.1,
+      "ma200": 38.92,
+      "w52_high": 76.87,
+      "w52_low": 5.12,
+      "pct_from_high": -55.4,
+      "target_mean": 76.14,
+      "target_low": 26.0,
+      "target_high": 125.0,
+      "recommendation": "buy",
+      "news": [
+        {
+          "title": "How The IREN (IREN) Story Is Shifting With AI Contracts And Execution Questions",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/iren-iren-story-shifting-ai-231440364.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 23:14:40 +0000"
+        },
+        {
+          "title": "IREN Limited (IREN): Billionaire Rob Citrone Trims Position",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/iren-limited-iren-billionaire-rob-152557720.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 15:25:57 +0000"
+        },
+        {
+          "title": "AI Infrastructure Spending Could Nearly Triple by 2029. Here Are 2 Stocks to Buy.",
+          "link": "https://www.fool.com/investing/2026/04/01/ai-spending-triple-by-2029-2-stocks-buy/?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:35:00 +0000"
+        },
+        {
+          "title": "Nebius Stock Rises. Why the ‘Neocloud’ Neophyte Has Been a Winner.",
+          "link": "https://finance.yahoo.com/m/a584bb97-88d2-3a05-87f9-b4a5e69094f6/nebius-stock-rises.-why-the.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 14:00:00 +0000"
+        },
+        {
+          "title": "IREN (IREN) Stock Down Significantly After Jim Cramer Called it “Too Hot”",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/iren-iren-stock-down-significantly-115556709.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 11:55:56 +0000"
+        }
+      ],
+      "news_deep": [
+        {
+          "title": "How The IREN (IREN) Story Is Shifting With AI Contracts And Execution Questions",
+          "source": "Yahoo Finance",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/iren-iren-story-shifting-ai-231440364.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 23:14:40 +0000",
+          "content": "                                                                                                                                                                                                                                                     How The IREN (IREN) Story Is Shifting With AI Contracts And Execution Questions \n\n\nOops, something went wrong\n\n[Skip to navigation](#navigation-container)  [Skip to right column](#right-rail) \n\n\n### [News](https://www.yahoo.com/)\n\n* [Today's news](https://www.yahoo.com/news/)\n* [US](https://www.yahoo.com/news/us/)\n* [Politics](https://www.yahoo.com/news/politics/)\n* [World](https://www.yahoo.com/news/world/)\n* [Weather](https://weather.yahoo.com/)\n* [Climate change](https://www.yahoo.com/issues/climate-change/)\n* [Health](https://health.yahoo.com/)  \n\n  + [Wellness](https://health.yahoo.com/wellness/)   \n\n    - [Mental health](https://health.yahoo.com/wellness/mental-health/)\n    - [Sexual health](https://health.yahoo.com/wellness/sexual-health/)\n    - [Dermatology](https://health.yahoo.com/wellness/dermatology/)\n    - [Oral health](https://health.yahoo.com/wellness/oral-health/)\n    - [Hair loss](https://health.yahoo.com/wellness/hair-loss/)\n    - [Foot health](https://health.yahoo.com/wellness/foot-health/)\n  + [Nutrition](https://health.yahoo.com/nutrition/)   \n\n    - [Healthy eating](https://health.yahoo.com/nutrition/healthy-eating/)\n    - [Meal delivery](https://health.yahoo.com/nutrition/meal-delivery/)\n    - [Weight loss](https://health.yahoo.com/nutrition/weight-loss/)\n    - [Vitamins and supplements](https://health.yahoo.com/nutrition/vitamins-supplements/)\n  + [Fitness](https://health.yahoo.com/fitness/)   \n\n    - [Equipment](https://health.yahoo.com/fitness/equipment/)\n    - [Exercise](https://health.yahoo.com/fitness/exercise/)\n  + [Women's health](https://health.yahoo.com/womens-health/)\n  + [Sleep](https://health.yahoo.com/sleep/)   \n\n    - [Best mattress](https://health.yahoo.com/wellness/sleep/mattresses/article/best-mattresses-000155774.html)\n  + [Healthy aging](https://health.yahoo.com/healthy-aging/)   \n\n    - [Hearing](https://health.yahoo.com/healthy-aging/hearing/)\n    - [Mobility](https://health.yahoo.com/healthy-aging/mobility/)\n* [Science](https://www.yahoo.com/news/science/)\n* [Originals](https://www.yahoo.com/guides/originals/)\n* [Newsletters](https://news.yahoo.com/newsletters/)\n* [Games](https://www.yahoo.com/games)\n\n### [Life](https://www.yahoo.com/lifestyle/)\n\n* [Health](https://health.yahoo.com/)  \n\n  + [Wellness](https://health.yahoo.com/wellness/)   \n\n    - [Nutrition](https://health.yahoo.com/wellness/nutrition/)\n    - [Fitness](https://health.yahoo.com/wellness/fitness/)\n    - [Healthy aging](https://health.yahoo.com/wellness/healthy-aging/)\n    - [Sleep](https://health.yahoo.com/wellness/sleep/)\n  + [Your body](https://health.yahoo.com/your-body/)   \n\n    - [Children's health](https://health.yahoo.com/your-body/childrens-health/)\n    - [Dermatology](https://health.yaho"
+        },
+        {
+          "title": "IREN Limited (IREN): Billionaire Rob Citrone Trims Position",
+          "source": "Yahoo Finance",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/iren-limited-iren-billionaire-rob-152557720.html?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 15:25:57 +0000",
+          "content": "Oops, something went wrong\n\n[Skip to navigation](#navigation-container)  [Skip to right column](#right-rail) \n\n\n### \n\n* [Today's news](https://www.yahoo.com/news/)\n* [US](https://www.yahoo.com/news/us/)\n* [Politics](https://www.yahoo.com/news/politics/)\n* [World](https://www.yahoo.com/news/world/)\n* [Weather](https://weather.yahoo.com/)\n* [Climate change](https://www.yahoo.com/issues/climate-change/)\n* [Health](https://health.yahoo.com/)\n  + [Wellness](https://health.yahoo.com/wellness/) \n    - [Mental health](https://health.yahoo.com/wellness/mental-health/)\n    - [Sexual health](https://health.yahoo.com/wellness/sexual-health/)\n    - [Dermatology](https://health.yahoo.com/wellness/dermatology/)\n    - [Oral health](https://health.yahoo.com/wellness/oral-health/)\n    - [Hair loss](https://health.yahoo.com/wellness/hair-loss/)\n    - [Foot health](https://health.yahoo.com/wellness/foot-health/)\n  + [Nutrition](https://health.yahoo.com/nutrition/) \n    - [Healthy eating](https://health.yahoo.com/nutrition/healthy-eating/)\n    - [Meal delivery](https://health.yahoo.com/nutrition/meal-delivery/)\n    - [Weight loss](https://health.yahoo.com/nutrition/weight-loss/)\n    - [Vitamins and supplements](https://health.yahoo.com/nutrition/vitamins-supplements/)\n  + [Fitness](https://health.yahoo.com/fitness/) \n    - [Equipment](https://health.yahoo.com/fitness/equipment/)\n    - [Exercise](https://health.yahoo.com/fitness/exercise/)\n  + [Women's health](https://health.yahoo.com/womens-health/)\n  + [Sleep](https://health.yahoo.com/sleep/) \n    - [Best mattress](https://health.yahoo.com/wellness/sleep/mattresses/article/best-mattresses-000155774.html)\n  + [Healthy aging](https://health.yahoo.com/healthy-aging/) \n    - [Hearing](https://health.yahoo.com/healthy-aging/hearing/)\n    - [Mobility](https://health.yahoo.com/healthy-aging/mobility/)\n* [Science](https://www.yahoo.com/news/science/)\n* [Originals](https://www.yahoo.com/guides/originals/)\n* [Newsletters](https://news.yahoo.com/newsletters/)\n* [Games](https://www.yahoo.com/games)\n\n### \n\n* [Health](https://health.yahoo.com/)\n  + [Wellness](https://health.yahoo.com/wellness/) \n    - [Nutrition](https://health.yahoo.com/wellness/nutrition/)\n    - [Fitness](https://health.yahoo.com/wellness/fitness/)\n    - [Healthy aging](https://health.yahoo.com/wellness/healthy-aging/)\n    - [Sleep](https://health.yahoo.com/wellness/sleep/)\n  + [Your body](https://health.yahoo.com/your-body/) \n    - [Children's health](https://health.yahoo.com/your-body/childrens-health/)\n    - [Dermatology](https://health.yahoo.com/your-body/dermatology/)\n    - [Foot health](https://health.yahoo.com/your-body/foot-health/)\n    - [Hair loss](https://health.yahoo.com/your-body/hair-loss/)\n    - [Oral health](https://health.yahoo.com/your-body/oral-health/)\n    - [Sexual health](https://health.yahoo.com/your-body/sexual-health/)\n    - [Weight management](https://health.yahoo.com/your-body/weight-management/)\n    - [Women's health](https://health."
+        },
+        {
+          "title": "AI Infrastructure Spending Could Nearly Triple by 2029. Here Are 2 Stocks to Buy.",
+          "source": "Yahoo Finance",
+          "url": "https://www.fool.com/investing/2026/04/01/ai-spending-triple-by-2029-2-stocks-buy/?.tsrc=rss",
+          "published": "Wed, 01 Apr 2026 10:35:00 +0000",
+          "content": "![The Motley Fool](https://g.foolcdn.com/misc-assets/logo-tmf-primary-1-magenta-purple-reversed.svg?_w=320)\n![The Motley Fool](https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Fmisc-assets%2Ftmf_holdingco_logo_stacked_magenta_royalpurple_rev.png&w=96&op=resize)\n\n# AI Infrastructure Spending Could Nearly Triple by 2029. Here Are 2 Stocks to Buy.\n\nAI data-center spending is exploding -- and these two winners still offer long-term upside.\n\n## Key Points\n\nBig tech is still pouring billions into the data centers powering artificial intelligence (AI) -- and the spending wave doesn't appear to be peaking anytime soon. Statista projects AI infrastructure investment will climb to $902 billion by 2029, up from $334 billion in 2025.\n\nEven after strong runs, some of the market's biggest AI winners, including **Nvidia** ([NVDA](/quote/nasdaq/nvda/) +0.38%) and **Iren** ([IREN](/quote/nasdaq/iren/) +0.70%), are priced in a way that could still leave room for meaningful upside over the next five years. Here's why both stocks remain compelling buys today.\n\n![A pile of cash sitting on a desk next to a phone and computer.](https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F862351%2Fstock-market-graph-smartphone-hundred-dollar-bills-money.jpg&w=3840&op=resize)\n\nImage source: Getty Images.\n\n## Nvidia\n\nData center spending is expected to rise sharply in 2026, according to [The Motley Fool's research](https://www.fool.com/research/ai-companies-spending-on-data-centers/). This means more demand for the chips that power AI workloads, and that's a direct tailwind for the leading supplier of graphics processing units (GPUs). Nvidia's innovation in GPUs, complete rack systems, and software has made it a cornerstone of the AI infrastructure build-out.\n\nNvidia's data center business accounted for more than 90% of its revenue last quarter and grew 75% year over year. Its leadership in this market is evident in its high margins, where it generated an impressive $120 billion in net income on $215 billion in revenue last year.\n\nNvidia's Blackwell GPUs have been in such high demand that even their six-year-old Hopper-generation chips have been sold out. CEO Jensen Huang said they see $1 trillion in cumulative purchase orders for Blackwell and its next-generation Rubin chips through 2027.\n\n![Nvidia Stock Quote](https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Fart%2Fcompanylogos%2Fmark%2FNVDA.png&w=128&op=resize)\n\n## [NASDAQ: NVDA](/quote/nasdaq/nvda/)\n\n### Key Data Points\n\nAll of that demand keeps Nvidia the default choice for new data centers. Take data center builder IREN, which is deploying **Dell** PowerEdge servers powered by Nvidia Blackwell GPUs and NVL72 racks. Nvidia is also seeing exploding demand for its networking products, including InfiniBand, Spectrum-X Ethernet, and NVLink systems, which cement the company's lead as a critical supplier to the AI infrastructure build-out.\n\nFor long-term AI investors, Nvidia"
+        },
+        {
+          "title": "Nebius Stock Rises. Why the ‘Neocloud’ Neophyte Has Been a Winner.",
+          "source": "Yahoo Finance",
+          "url": "https://finance.yahoo.com/m/a584bb97-88d2-3a05-87f9-b4a5e69094f6/nebius-stock-rises.-why-the.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 14:00:00 +0000",
+          "content": "                                                                                                                                                                                                                                                     Nebius Stock Rises. Why the ‘Neocloud’ Neophyte Has Been a Winner. \n\n\nOops, something went wrong\n\n[Skip to navigation](#navigation-container)  [Skip to right column](#right-rail) \n\n\n### [News](https://www.yahoo.com/)\n\n* [Today's news](https://www.yahoo.com/news/)\n* [US](https://www.yahoo.com/news/us/)\n* [Politics](https://www.yahoo.com/news/politics/)\n* [World](https://www.yahoo.com/news/world/)\n* [Weather](https://weather.yahoo.com/)\n* [Climate change](https://www.yahoo.com/issues/climate-change/)\n* [Health](https://health.yahoo.com/)  \n\n  + [Wellness](https://health.yahoo.com/wellness/)   \n\n    - [Mental health](https://health.yahoo.com/wellness/mental-health/)\n    - [Sexual health](https://health.yahoo.com/wellness/sexual-health/)\n    - [Dermatology](https://health.yahoo.com/wellness/dermatology/)\n    - [Oral health](https://health.yahoo.com/wellness/oral-health/)\n    - [Hair loss](https://health.yahoo.com/wellness/hair-loss/)\n    - [Foot health](https://health.yahoo.com/wellness/foot-health/)\n  + [Nutrition](https://health.yahoo.com/nutrition/)   \n\n    - [Healthy eating](https://health.yahoo.com/nutrition/healthy-eating/)\n    - [Meal delivery](https://health.yahoo.com/nutrition/meal-delivery/)\n    - [Weight loss](https://health.yahoo.com/nutrition/weight-loss/)\n    - [Vitamins and supplements](https://health.yahoo.com/nutrition/vitamins-supplements/)\n  + [Fitness](https://health.yahoo.com/fitness/)   \n\n    - [Equipment](https://health.yahoo.com/fitness/equipment/)\n    - [Exercise](https://health.yahoo.com/fitness/exercise/)\n  + [Women's health](https://health.yahoo.com/womens-health/)\n  + [Sleep](https://health.yahoo.com/sleep/)   \n\n    - [Best mattress](https://health.yahoo.com/wellness/sleep/mattresses/article/best-mattresses-000155774.html)\n  + [Healthy aging](https://health.yahoo.com/healthy-aging/)   \n\n    - [Hearing](https://health.yahoo.com/healthy-aging/hearing/)\n    - [Mobility](https://health.yahoo.com/healthy-aging/mobility/)\n* [Science](https://www.yahoo.com/news/science/)\n* [Originals](https://www.yahoo.com/guides/originals/)\n* [Newsletters](https://news.yahoo.com/newsletters/)\n* [Games](https://www.yahoo.com/games)\n\n### [Life](https://www.yahoo.com/lifestyle/)\n\n* [Health](https://health.yahoo.com/)  \n\n  + [Wellness](https://health.yahoo.com/wellness/)   \n\n    - [Nutrition](https://health.yahoo.com/wellness/nutrition/)\n    - [Fitness](https://health.yahoo.com/wellness/fitness/)\n    - [Healthy aging](https://health.yahoo.com/wellness/healthy-aging/)\n    - [Sleep](https://health.yahoo.com/wellness/sleep/)\n  + [Your body](https://health.yahoo.com/your-body/)   \n\n    - [Children's health](https://health.yahoo.com/your-body/childrens-health/)\n    - [Dermatology](https://health.yahoo.com/your-bo"
+        },
+        {
+          "title": "IREN (IREN) Stock Down Significantly After Jim Cramer Called it “Too Hot”",
+          "source": "Yahoo Finance",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/iren-iren-stock-down-significantly-115556709.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 11:55:56 +0000",
+          "content": "                                                                                                                                                                                                                                                     IREN (IREN) Stock Down Significantly After Jim Cramer Called it “Too Hot” \n\n\nOops, something went wrong\n\n[Skip to navigation](#navigation-container)  [Skip to right column](#right-rail) \n\n\n### [News](https://www.yahoo.com/)\n\n* [Today's news](https://www.yahoo.com/news/)\n* [US](https://www.yahoo.com/news/us/)\n* [Politics](https://www.yahoo.com/news/politics/)\n* [World](https://www.yahoo.com/news/world/)\n* [Weather](https://weather.yahoo.com/)\n* [Climate change](https://www.yahoo.com/issues/climate-change/)\n* [Health](https://health.yahoo.com/)  \n\n  + [Wellness](https://health.yahoo.com/wellness/)   \n\n    - [Mental health](https://health.yahoo.com/wellness/mental-health/)\n    - [Sexual health](https://health.yahoo.com/wellness/sexual-health/)\n    - [Dermatology](https://health.yahoo.com/wellness/dermatology/)\n    - [Oral health](https://health.yahoo.com/wellness/oral-health/)\n    - [Hair loss](https://health.yahoo.com/wellness/hair-loss/)\n    - [Foot health](https://health.yahoo.com/wellness/foot-health/)\n  + [Nutrition](https://health.yahoo.com/nutrition/)   \n\n    - [Healthy eating](https://health.yahoo.com/nutrition/healthy-eating/)\n    - [Meal delivery](https://health.yahoo.com/nutrition/meal-delivery/)\n    - [Weight loss](https://health.yahoo.com/nutrition/weight-loss/)\n    - [Vitamins and supplements](https://health.yahoo.com/nutrition/vitamins-supplements/)\n  + [Fitness](https://health.yahoo.com/fitness/)   \n\n    - [Equipment](https://health.yahoo.com/fitness/equipment/)\n    - [Exercise](https://health.yahoo.com/fitness/exercise/)\n  + [Women's health](https://health.yahoo.com/womens-health/)\n  + [Sleep](https://health.yahoo.com/sleep/)   \n\n    - [Best mattress](https://health.yahoo.com/wellness/sleep/mattresses/article/best-mattresses-000155774.html)\n  + [Healthy aging](https://health.yahoo.com/healthy-aging/)   \n\n    - [Hearing](https://health.yahoo.com/healthy-aging/hearing/)\n    - [Mobility](https://health.yahoo.com/healthy-aging/mobility/)\n* [Science](https://www.yahoo.com/news/science/)\n* [Originals](https://www.yahoo.com/guides/originals/)\n* [Newsletters](https://news.yahoo.com/newsletters/)\n* [Games](https://www.yahoo.com/games)\n\n### [Life](https://www.yahoo.com/lifestyle/)\n\n* [Health](https://health.yahoo.com/)  \n\n  + [Wellness](https://health.yahoo.com/wellness/)   \n\n    - [Nutrition](https://health.yahoo.com/wellness/nutrition/)\n    - [Fitness](https://health.yahoo.com/wellness/fitness/)\n    - [Healthy aging](https://health.yahoo.com/wellness/healthy-aging/)\n    - [Sleep](https://health.yahoo.com/wellness/sleep/)\n  + [Your body](https://health.yahoo.com/your-body/)   \n\n    - [Children's health](https://health.yahoo.com/your-body/childrens-health/)\n    - [Dermatology](https://health.yahoo.com/"
+        },
+        {
+          "title": "Investors Weigh IREN Dilution Risk As AI Push Meets Softer Bitcoin Prices",
+          "source": "Yahoo Finance",
+          "url": "https://finance.yahoo.com/markets/stocks/articles/investors-weigh-iren-dilution-risk-030635386.html?.tsrc=rss",
+          "published": "Tue, 31 Mar 2026 03:06:35 +0000",
+          "content": "Investors are questioning IREN's ability to fund its ambitious AI data center expansion as Bitcoin prices weaken. Concerns are growing about potential share dilution if the company raises fresh equity to support its new infrastructure plans. The shift toward AI infrastructure is reshaping the risk profile of NasdaqGS:IREN and drawing scrutiny from existing shareholders. NasdaqGS:IREN shares last closed at $31.62 after a 25.0% decline over the past week and a 22.8% decline over the past..."
+        },
+        {
+          "title": "Stock Market Today, March 30: IREN Falls on Funding Risks for AI Data Centers",
+          "source": "Yahoo Finance",
+          "url": "https://www.fool.com/coverage/stock-market-today/2026/03/30/stock-market-today-march-30-iren-falls-on-funding-risks-for-ai-data-centers/?.tsrc=rss",
+          "published": "Mon, 30 Mar 2026 22:28:34 +0000",
+          "content": "IREN fell as its AI data center push raises capital needs, with focus on how quickly it can grow beyond Bitcoin without increasing dilution."
+        },
+        {
+          "title": "IREN CEO: AI Buildout Is 'Permanent Whack-A-Mole' — And That's The Real Bottleneck",
+          "source": "Yahoo Finance",
+          "url": "https://finance.yahoo.com/sectors/technology/articles/iren-ceo-ai-buildout-permanent-220128921.html?.tsrc=rss",
+          "published": "Thu, 26 Mar 2026 22:01:28 +0000",
+          "content": "The AI boom isn't slowing down. It's tripping over itself. Speaking on the All-In Podcast during Nvidia Corp‘s GTC, IREN Limited CEO Daniel Roberts described the current AI infrastructure buildout in blunt terms: \"permanent whack-a-mole.\" That may be the most accurate description of the industry right now. From GPUs To Power — And Now Time The constraints keep shifting. First, it was GPUs (graphics processing unit). Then it became power. Now, according to Roberts, the real bottleneck is somethin"
+        },
+        {
+          "title": "How The IREN (IREN) Story Is Shifting With AI Contracts And Execution Questions - Yahoo Finance",
+          "source": "Yahoo Finance",
+          "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxQalFFb1piTU1ZZ0FZN3hVMWEwX3lKTVVSNTQ3RDRIUDItNjZ5TkF4NzFKaEl6NnVmbExxUTR3bWpMbWE1NE56NUxDS2VfZE8xMFoxWE5MYXBmWWpYU0VWOW5aaHMwZWlEOEZFRVdEdjMyZi1Yd2hkVXNQeHpwODBvVk5vSGFCdXZsS0I2NXI0NlZsUElzT2pj?oc=5",
+          "published": "Wed, 01 Apr 2026 23:14:40 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMilwFBVV95cUxQalFFb1piTU1ZZ0FZN3hVMWEwX3lKTVVSNTQ3RDRIUDItNjZ5TkF4NzFKaEl6NnVmbExxUTR3bWpMbWE1NE56NUxDS2VfZE8xMFoxWE5MYXBmWWpYU0VWOW5aaHMwZWlEOEZFRVdEdjMyZi1Yd2hkVXNQeHpwODBvVk5vSGFCdXZsS0I2NXI0NlZsUElzT2pj?oc=5\" target=\"_blank\">How The IREN (IREN) Story Is Shifting With AI Contracts And Execution Questions</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Yahoo Finance</font>"
+        },
+        {
+          "title": "Iren Stock Plunges 20% in 5 Days — Here’s Why Freedom Capital Says Hold - TipRanks",
+          "source": "TipRanks",
+          "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxNSFFhSFJUNHlQQy1JN0FvQk44YjUwYTJOUmNLVkR5T254cGNoUXFKa2FEVWhFRXlTUnZ3N1N1OWs3VGl0Vm9BRTNubURCRjctVHZRcGhrSXFDb0hSajBycEhWM1Z5UlpMTTFxVk5aX0hRZjRhU05vMTBicEZ3VXNjRy1RcGxRWVBIRENWUVhHUFQzVC1aSkVOR1NVRW4ydw?oc=5",
+          "published": "Thu, 02 Apr 2026 12:47:48 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMingFBVV95cUxNSFFhSFJUNHlQQy1JN0FvQk44YjUwYTJOUmNLVkR5T254cGNoUXFKa2FEVWhFRXlTUnZ3N1N1OWs3VGl0Vm9BRTNubURCRjctVHZRcGhrSXFDb0hSajBycEhWM1Z5UlpMTTFxVk5aX0hRZjRhU05vMTBicEZ3VXNjRy1RcGxRWVBIRENWUVhHUFQzVC1aSkVOR1NVRW4ydw?oc=5\" target=\"_blank\">Iren Stock Plunges 20% in 5 Days — Here’s Why Freedom Capital Says Hold</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">TipRanks</font>"
+        },
+        {
+          "title": "IREN stock slides 4% premarket: Analyst warns pivot from bitcoin miner to AI hyperscaler may take a while - MSN",
+          "source": "MSN",
+          "url": "https://news.google.com/rss/articles/CBMinAJBVV95cUxOWnRabXRzYWQzUkt5cHVJYkdFS3BCQVRQNDZiWEpCeW1XOGNDWFRONnhkRmUzaTdYc1pzUDlmLWVFS0RLU3R3ZTZ2b2xPR3lybU8tTG5ySkZVYnlWQzJqYnJlTWZGMG5tNGFON2RZU2ljY1I1T1B3X0JIenEwNjl0QlhraURBcDBuY3J6X0ktU29lWWtSYnViUEdySEJVWUtMOGNXQ0QwQ20yWURkUGFyNXNIYWlVV2IzV0Y0dlZwNVJYZUtLNkxXYWpLbGpPYXd3S19kbjJRb2JoU2NXdURCbEZJSThTWnl4dWF5WDlvN242b1hQSVZ6Y19wNlk4ZzZQc194TXlvVGJMeGM5SUxJYjFFdzBwaVQwbmZWUQ?oc=5",
+          "published": "Thu, 02 Apr 2026 14:44:02 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMinAJBVV95cUxOWnRabXRzYWQzUkt5cHVJYkdFS3BCQVRQNDZiWEpCeW1XOGNDWFRONnhkRmUzaTdYc1pzUDlmLWVFS0RLU3R3ZTZ2b2xPR3lybU8tTG5ySkZVYnlWQzJqYnJlTWZGMG5tNGFON2RZU2ljY1I1T1B3X0JIenEwNjl0QlhraURBcDBuY3J6X0ktU29lWWtSYnViUEdySEJVWUtMOGNXQ0QwQ20yWURkUGFyNXNIYWlVV2IzV0Y0dlZwNVJYZUtLNkxXYWpLbGpPYXd3S19kbjJRb2JoU2NXdURCbEZJSThTWnl4dWF5WDlvN242b1hQSVZ6Y19wNlk4ZzZQc194TXlvVGJMeGM5SUxJYjFFdzBwaVQwbmZWUQ?oc=5\" target=\"_blank\">IREN stock slides 4% premarket: Analyst warns pivot from bitcoin miner to AI hyperscaler may take a while</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">MSN</font>"
+        },
+        {
+          "title": "Stock Market Today, March 30: IREN Falls on Funding Risks for AI Data Centers - The Motley Fool",
+          "source": "The Motley Fool",
+          "url": "https://news.google.com/rss/articles/CBMi0gFBVV95cUxQc2ZHckY3WFhxSWlHb2d5WXhueW9SMjlBem9ZdW80YXluTnN3U1RnMTRWd1J5bDFTamxxNGdWRVZjbjhTaV9oRlNvM2lmYlpGZTJzMlpaQXJaQjRrNmdaMDhET291cVota1ljRnNXbXBSODE4UzdrbkpkSXhDNjUzRFNmRDdQcHlMa01jai1UNG5ud0RYWmk1anlXa0ZJQnAyM0dfVEZrNEtRb2RBRmJ2b2V5YzJhLUJ2VGZ6UkRFUVlpYWh5d3FseTYtb2prZHNNTmc?oc=5",
+          "published": "Mon, 30 Mar 2026 23:08:00 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMi0gFBVV95cUxQc2ZHckY3WFhxSWlHb2d5WXhueW9SMjlBem9ZdW80YXluTnN3U1RnMTRWd1J5bDFTamxxNGdWRVZjbjhTaV9oRlNvM2lmYlpGZTJzMlpaQXJaQjRrNmdaMDhET291cVota1ljRnNXbXBSODE4UzdrbkpkSXhDNjUzRFNmRDdQcHlMa01jai1UNG5ud0RYWmk1anlXa0ZJQnAyM0dfVEZrNEtRb2RBRmJ2b2V5YzJhLUJ2VGZ6UkRFUVlpYWh5d3FseTYtb2prZHNNTmc?oc=5\" target=\"_blank\">Stock Market Today, March 30: IREN Falls on Funding Risks for AI Data Centers</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">The Motley Fool</font>"
+        },
+        {
+          "title": "APLD, IREN, NBIS, CORZ: AI Data Center Stocks Jump Sharply As Trump Signals Exiting Iran War - Stocktwits",
+          "source": "Stocktwits",
+          "url": "https://news.google.com/rss/articles/CBMi5wFBVV95cUxNcFZtVFU3WFVVWTN1R0hMMUhPUm5WdXYwTUFsbjZxd29PQVU4aE80SUd0bGxZZGIxRjE3QUhlbUJBUnlEV2s5Ql9sQUNHUWY1cEhfWTBjMlJiR1N4RFg5Q1BHeGE5WFdISklBblViNmM4aVg0RU5GSEd4S3ZYVXgtWjN4d3dWNUY5YXBHaV9TV0pNZk1EelJJYTFfWjhUemROTmo0eGJJeENWLWpFY1ZQSFgxYXhVeXZYbC1zcFpjS09PS2hsOExtdHNHampEbzZjTkZOQVJWOWk2Z1BpUTB1dzRuQktmc1k?oc=5",
+          "published": "Wed, 01 Apr 2026 05:17:00 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMi5wFBVV95cUxNcFZtVFU3WFVVWTN1R0hMMUhPUm5WdXYwTUFsbjZxd29PQVU4aE80SUd0bGxZZGIxRjE3QUhlbUJBUnlEV2s5Ql9sQUNHUWY1cEhfWTBjMlJiR1N4RFg5Q1BHeGE5WFdISklBblViNmM4aVg0RU5GSEd4S3ZYVXgtWjN4d3dWNUY5YXBHaV9TV0pNZk1EelJJYTFfWjhUemROTmo0eGJJeENWLWpFY1ZQSFgxYXhVeXZYbC1zcFpjS09PS2hsOExtdHNHampEbzZjTkZOQVJWOWk2Z1BpUTB1dzRuQktmc1k?oc=5\" target=\"_blank\">APLD, IREN, NBIS, CORZ: AI Data Center Stocks Jump Sharply As Trump Signals Exiting Iran War</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Stocktwits</font>"
+        },
+        {
+          "title": "IREN Shares Slide Monday: What's Going On? - IREN (NASDAQ:IREN) - Benzinga",
+          "source": "Benzinga",
+          "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxPU1JtM2NMX01GeFJjYTdPRXVHQUgxTmRCVGxWZVF6OEoyTkd5ZVppV0R5RUpvVG5aVGt2MWthZEhOdjBvYW5QcVlaVHBwUExFUHRuZHJ5SjNYdTFmWHlGOEoyZVpHdC11clJjU1VyYmNDQm95bWpWT2o2bkJQcUkxQ0N5Nmp5dWtPSHJPM1lsdTljalp2MmZOMFY5cHg2VWVqU0E?oc=5",
+          "published": "Mon, 30 Mar 2026 16:07:24 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMiogFBVV95cUxPU1JtM2NMX01GeFJjYTdPRXVHQUgxTmRCVGxWZVF6OEoyTkd5ZVppV0R5RUpvVG5aVGt2MWthZEhOdjBvYW5QcVlaVHBwUExFUHRuZHJ5SjNYdTFmWHlGOEoyZVpHdC11clJjU1VyYmNDQm95bWpWT2o2bkJQcUkxQ0N5Nmp5dWtPSHJPM1lsdTljalp2MmZOMFY5cHg2VWVqU0E?oc=5\" target=\"_blank\">IREN Shares Slide Monday: What's Going On? - IREN (NASDAQ:IREN)</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Benzinga</font>"
+        },
+        {
+          "title": "IREN Expands AI Cloud Capacity to 150000 GPUs - Stock Titan",
+          "source": "Tavily",
+          "url": "https://www.stocktitan.net/news/IREN/",
+          "published": "",
+          "content": "# Latest IREN News - IREN Expands AI Cloud Capacity to 150,000 GPUs\n\n[![Image 1: stocktitan logo](https://www.stocktitan.net/img/logo/stock-titan-logo-header-free.png) STOCK TITAN](https://www.stocktitan.net/)\n*   [Login](https://www.stocktitan.net/news/IREN/#)\n*   [Sign up](https://www.stocktitan.net/news/IREN/#)\n*   [](https://www.stocktitan.net/news/IREN/#)[Login](https://www.stocktitan.net/news/IREN/#)[Sign up](https://www.stocktitan.net/news/IREN/#) \n\n0\n\n*   [NEWS FEED](https://www.stocktitan.net/news/live.html)[Stock News Live](https://www.stocktitan.net/news/live.html)[Stock News Today](https://www.stocktitan.net/news/today)[Trending News](https://www.stocktitan.net/news/trending.html) [AI news](https://www.stocktitan.net/news/ai.html)[FDA Approvals](https://www.stocktitan.net/news/fda-approvals.html)[Clinical Trials](https://www.stocktitan.net/news/clinical-trials.html)[Crypto News](https://www.stocktitan.net/news/crypto.html)[Merger & Acquisitions](https://www.stocktitan.net/news/acquisitions.html)[Earnings](https://www.stocktitan.net/news/earnings.html)[Offerings](https://www.stocktitan.net/news/offerings.html)[IPO News](https://www.stocktitan.net/news/ipo.html)[Stock Splits](https://www.stocktitan.net/news/stock-splits.html) [Top News - Gainers](https://www.stocktitan.net/rankings/top-news/gainers/2026-04)[Top News - Losers](https://www.stocktitan.net/rankings/top-news/losers/2026-04) \n*   [SEC FILINGS](https://www.stocktitan.net/sec-filings/live.html)[SEC Filings Live](https://www.stocktitan.net/sec-filings/live.html)[SEC Filings Today](https://www.stocktitan.net/sec-filings/today) [Form 4 - Insider Trading](https://www.stocktitan.net/sec-filings/form-4.html)[8-K - Material Events](https://www.stocktitan.net/sec-filings/8-k.html)[10-K - Annual Reports](https://www.stocktitan.net/sec-filings/10-k.html)[10-Q - Quarterly Reports](https://www.stocktitan.net/sec-filings/10-q.html)[DEF 14A - Proxy Statements](https://www.stocktitan.net/sec-filings/def-14a.html)[S-1 - IPO Registration](https://www.stocktitan.net/sec-filings/s-1.html)[S-3 - Shelf Registration](https://www.stocktitan.net/sec-filings/s-3.html) \n*   [STOCKS](https://www.stocktitan.net/stocks/themes)[All Stock Themes](https://www.stocktitan.net/stocks/themes) [AI Stocks](https://www.stocktitan.net/stocks/themes/ai-stocks)[EV Stocks](https://www.stocktitan.net/stocks/themes/ev-stocks)[Renewable Energy](https://www.stocktitan.net/stocks/themes/renewable-energy-stocks)[Crypto Stocks](https://www.stocktitan.net/stocks/themes/crypto-stocks)[Cybersecurity](https://www.stocktitan.net/stocks/themes/cybersecurity-stocks)[Oil & Gas](https://www.stocktitan.net/stocks/themes/oil-gas-stocks)[Defense & Military](https://www.stocktitan.net/stocks/themes/defense-military-stocks)[Space & Satellite](https://www.stocktitan.net/stocks/themes/space-stocks) [Financials](https://www.stocktitan.net/financials/) [All Stock Rankings](https://www.stocktitan.net/rankings)[Largest Companies by Market Cap](ht"
+        },
+        {
+          "title": "IREN Ltd - Stock Price, Quote and News - CNBC",
+          "source": "Tavily",
+          "url": "https://www.cnbc.com/quotes/IREN",
+          "published": "",
+          "content": "# IREN: 34.06 -0.03 (-0.09%)\n\n[Skip Navigation](https://www.cnbc.com/quotes/IREN#MainContent)\n\n[![Image 1: CNBC logo](https://static-redesign.cnbcfm.com/dist/d6085c9e81f4d7365c8d.svg)](https://www.cnbc.com/)\n\n[Markets](https://www.cnbc.com/markets/)\n\n*   [Pre-Markets](https://www.cnbc.com/pre-markets/)\n*   [U.S. Markets](https://www.cnbc.com/us-markets/)\n*   [Currencies](https://www.cnbc.com/currencies/)\n*   [Prediction Markets](https://www.cnbc.com/prediction-markets/)\n*   [Cryptocurrency](https://www.cnbc.com/cryptocurrency/)\n*   [Futures & Commodities](https://www.cnbc.com/futures-and-commodities/)\n*   [Bonds](https://www.cnbc.com/bonds/)\n*   [Funds & ETFs](https://www.cnbc.com/funds-and-etfs/)\n\n[Business](https://www.cnbc.com/business/)\n\n*   [Economy](https://www.cnbc.com/economy/)\n*   [Finance](https://www.cnbc.com/finance/)\n*   [Health & Science](https://www.cnbc.com/health-and-science/)\n*   [Media](https://www.cnbc.com/media/)\n*   [Real Estate](https://www.cnbc.com/real-estate/)\n*   [Energy](https://www.cnbc.com/energy/)\n*   [Climate](https://www.cnbc.com/climate/)\n*   [Transportation](https://www.cnbc.com/transportation/)\n*   [Investigations](https://www.cnbc.com/cnbc-investigations/)\n*   [Industrials](https://www.cnbc.com/industrials/)\n*   [Retail](https://www.cnbc.com/retail/)\n*   [Wealth](https://www.cnbc.com/wealth/)\n*   [Sports](https://www.cnbc.com/sports/)\n*   [Life](https://www.cnbc.com/life/)\n*   [Small Business](https://www.cnbc.com/small-business/)\n\n[Investing](https://www.cnbc.com/investing/)\n\n*   [Personal Finance](https://www.cnbc.com/personal-finance/)\n*   [Fintech](https://www.cnbc.com/fintech/)\n*   [Financial Advisors](https://www.cnbc.com/financial-advisors/)\n*   [Options Action](https://www.cnbc.com/options-action/)\n*   [ETF Street](https://www.cnbc.com/etf-street/)\n*   [Buffett Archive](https://buffett.cnbc.com/)\n*   [Earnings](https://www.cnbc.com/earnings/)\n*   [Trader Talk](https://www.cnbc.com/trader-talk/)\n\n[Tech](https://www.cnbc.com/technology/)\n\n*   [Cybersecurity](https://www.cnbc.com/cybersecurity/)\n*   [AI](https://www.cnbc.com/ai-artificial-intelligence/)\n*   [Enterprise](https://www.cnbc.com/enterprise/)\n*   [Internet](https://www.cnbc.com/internet/)\n*   [Media](https://www.cnbc.com/media/)\n*   [Mobile](https://www.cnbc.com/mobile/)\n*   [Social Media](https://www.cnbc.com/social-media/)\n*   [CNBC Disruptor 50](https://www.cnbc.com/cnbc-disruptors/)\n*   [Tech Guide](https://www.cnbc.com/tech-guide/)\n\n[Politics](https://www.cnbc.com/politics/)\n\n*   [White House](https://www.cnbc.com/white-house/)\n*   [Policy](https://www.cnbc.com/policy/)\n*   [Defense](https://www.cnbc.com/defense/)\n*   [Congress](https://www.cnbc.com/congress/)\n*   [Expanding Opportunity](https://www.cnbc.com/expanding-opportunity/)\n\n[Video](https://www.cnbc.com/tv/)\n\n*   [Latest Video](https://www.cnbc.com/latest-video/)\n*   [Full Episodes](https://www.cnbc.com/live-tv/full-episodes/)\n*   [Livestream](https://www.cnbc.com/live-tv/)\n*   [Li"
+        }
+      ],
+      "news_summary": {
+        "summary": "היי, קראתי כתבות על מניית אירן (IREN) ורציתי לספר לך מה כתוב בהן. \n\nהמניה עלתה ב-0.7% והמחיר הנוכחי הוא 34.32 דולר. \n\nבכתבה הראשונה, \"איך הסיפור של IREN משתנה עם חוזים של בינה מלאכותית ושאלות על ביצוע\", מדברים על כך שחברת IREN משנה את המוקד שלה לבינה מלאכותית, אך לא ניתן לראות את תוכן הכתבה.\n\nבכתבה השנייה, \"IREN Limited (IREN): מיליארדר רוב סיטרון מקטין את החזקותיו\", רוב סיטרון, מיליארדר, מקטין את החזקותיו בחברת IREN.\n\nבכתבה השלישית, \"הוצאות על תשתית של בינה מלאכותית עשויות לגדול פי שלוש עד 2029, וזהו מנייה לקנות\", נאמר כי הוצאות על תשתית של בינה מלאכותית צפויות לגדול פי שלוש עד 2029, ושתי המניות שיכולות להיות רווחיות הן Nvidia ו-IREN. \n\nבכתבה הרביעית, \"מניית Nebius עולה, מהו הסיבה?\", אין מידע רלוונטי על מניית IREN.\n\nבכתבה החמישית, \"מניית IREN יורדת באופן משמעותי לאחר שג'ים קראמר קרא לה 'חמה מדי'\", ג'ים קראמר, פרשן ידוע, אמר שמניית IREN \"חמה מדי\" ולאחר מכן המניה ירדה.\n\nבכתבה השישית, \"משקיעים בוחנים את סיכון הדילוטיה של IREN כאשר דחף הבינה המלאכותית נפגש עם מחירי ביטקוין הנמוכים\", ישנה חשש שחברת IREN תצטרך לגייס כסף חדש כדי לממן את תוכניות התשתית החדשות, וזה עלול לגרום לדילוטיה. \n\nכל הכתבות מדברות על המעבר של חברת IREN לתחום הבינה המלאכותית, וכיצד זה יכול להשפיע על המניה. ישנם חששות מסוימים, אך גם צפיות לגידול.",
+        "has_news": true,
+        "article_count": 16,
+        "key_headlines": [
+          "How The IREN (IREN) Story Is Shifting With AI Contracts And Execution Questions",
+          "IREN Limited (IREN): Billionaire Rob Citrone Trims Position",
+          "AI Infrastructure Spending Could Nearly Triple by 2029. Here Are 2 Stocks to Buy."
+        ]
+      }
+    }
+  ],
+  "date": "2026-04-02T19:57:09.631816"
+}
