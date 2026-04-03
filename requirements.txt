@@ -11,3 +11,4 @@ openai>=1.0.0
 tavily-python>=0.3.0
 edge-tts>=6.1.0
 gTTS>=2.3.0
+python-dotenv>=1.0.0

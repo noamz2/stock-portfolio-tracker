@@ -8,6 +8,8 @@ from flask_cors import CORS
 import yfinance as yf
 import numpy as np
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import warnings
 warnings.filterwarnings("ignore")
 
