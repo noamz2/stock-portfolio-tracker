@@ -197,6 +197,17 @@ tr:hover td { background: rgba(255,255,255,0.04); }
   border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+.eq-bar {
+  width: 6px; border-radius: 3px; background: linear-gradient(180deg, #00D4FF, #0066FF);
+  animation: eqBounce 1.2s ease-in-out var(--delay) infinite alternate;
+  height: var(--h1);
+}
+@keyframes eqBounce { 0% { height: var(--h1); opacity:0.6; } 100% { height: var(--h2); opacity:1; } }
+@keyframes fadeInOut { 0%,100% { opacity:0.7; } 50% { opacity:1; } }
+@keyframes stepPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.15); } }
+.podcast-step.active-step .step-icon { animation: stepPulse 1.5s ease-in-out infinite; display:inline-block; }
+.podcast-step.done-step .step-icon { animation: none; }
+.podcast-step.done-step .step-text { color: #22C55E !important; }
 .loading-overlay {
   position: fixed; inset: 0; background: rgba(5,5,5,0.85); backdrop-filter: blur(8px);
   display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999;
@@ -834,9 +845,37 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
     <div id="tab-podcast" class="tab-content hidden" dir="rtl">
       <div class="card" style="text-align:center;padding:32px">
         <div id="podcastLoading" class="hidden">
-          <div class="spinner" style="margin:0 auto 16px"></div>
-          <p style="color:#94A3B8">יוצר פודקאסט... אוסף נתונים, כותב תסריט וממיר לאודיו</p>
-          <p style="color:#94A3B8;font-size:12px">זה יכול לקחת עד 30 שניות</p>
+          <!-- Animated equalizer bars -->
+          <div style="display:flex;justify-content:center;align-items:flex-end;gap:4px;height:64px;margin-bottom:24px">
+            <div class="eq-bar" style="--delay:0s;--h1:20px;--h2:48px"></div>
+            <div class="eq-bar" style="--delay:0.15s;--h1:32px;--h2:56px"></div>
+            <div class="eq-bar" style="--delay:0.3s;--h1:16px;--h2:40px"></div>
+            <div class="eq-bar" style="--delay:0.45s;--h1:28px;--h2:60px"></div>
+            <div class="eq-bar" style="--delay:0.6s;--h1:24px;--h2:44px"></div>
+            <div class="eq-bar" style="--delay:0.2s;--h1:36px;--h2:52px"></div>
+            <div class="eq-bar" style="--delay:0.5s;--h1:18px;--h2:38px"></div>
+          </div>
+          <h3 id="podcastLoadingTitle" style="color:#F8FAFC;margin-bottom:12px;font-size:18px;animation:fadeInOut 2s ease-in-out infinite">יוצר את הפודקאסט שלך...</h3>
+          <!-- Progress steps -->
+          <div id="podcastSteps" style="text-align:right;direction:rtl;max-width:320px;margin:0 auto">
+            <div class="podcast-step active-step" data-step="0" style="display:flex;align-items:center;gap:10px;padding:8px 0;transition:all 0.5s ease">
+              <span class="step-icon">📡</span>
+              <span class="step-text" style="color:#00D4FF;font-size:14px">אוסף חדשות ונתונים...</span>
+            </div>
+            <div class="podcast-step" data-step="1" style="display:flex;align-items:center;gap:10px;padding:8px 0;transition:all 0.5s ease;opacity:0.3">
+              <span class="step-icon">✍️</span>
+              <span class="step-text" style="color:#94A3B8;font-size:14px">כותב תסריט</span>
+            </div>
+            <div class="podcast-step" data-step="2" style="display:flex;align-items:center;gap:10px;padding:8px 0;transition:all 0.5s ease;opacity:0.3">
+              <span class="step-icon">🔤</span>
+              <span class="step-text" style="color:#94A3B8;font-size:14px">מוסיף ניקוד להגייה</span>
+            </div>
+            <div class="podcast-step" data-step="3" style="display:flex;align-items:center;gap:10px;padding:8px 0;transition:all 0.5s ease;opacity:0.3">
+              <span class="step-icon">🔊</span>
+              <span class="step-text" style="color:#94A3B8;font-size:14px">ממיר לאודיו</span>
+            </div>
+          </div>
+          <p style="color:#475569;font-size:12px;margin-top:20px">התהליך אורך כ-2-5 דקות</p>
         </div>
         <div id="podcastReady" class="hidden">
           <div style="font-size:64px;margin-bottom:16px">🎙️</div>
@@ -2250,16 +2289,67 @@ function setSpeed(speed) {
 }
 
 let _podcastPollTimer = null;
+let _podcastStepTimer = null;
+
+function _startPodcastStepAnimation() {
+  if (_podcastStepTimer) clearInterval(_podcastStepTimer);
+  let currentStep = 0;
+  const steps = document.querySelectorAll('.podcast-step');
+  const titles = ['אוסף חדשות ונתונים...', 'כותב תסריט...', 'מוסיף ניקוד להגייה...', 'ממיר לאודיו...'];
+  const durations = [30000, 60000, 45000, 30000]; // estimated time per step
+
+  // Reset all steps
+  steps.forEach((s, i) => {
+    s.classList.remove('active-step', 'done-step');
+    s.style.opacity = i === 0 ? '1' : '0.3';
+    s.querySelector('.step-text').style.color = i === 0 ? '#00D4FF' : '#94A3B8';
+  });
+  steps[0].classList.add('active-step');
+
+  function advanceStep() {
+    if (currentStep >= steps.length - 1) return;
+    // Mark current as done
+    steps[currentStep].classList.remove('active-step');
+    steps[currentStep].classList.add('done-step');
+    steps[currentStep].style.opacity = '1';
+    steps[currentStep].querySelector('.step-icon').textContent = '✅';
+    // Advance
+    currentStep++;
+    steps[currentStep].classList.add('active-step');
+    steps[currentStep].style.opacity = '1';
+    steps[currentStep].querySelector('.step-text').style.color = '#00D4FF';
+    document.getElementById('podcastLoadingTitle').textContent = titles[currentStep];
+    // Schedule next
+    if (currentStep < steps.length - 1) {
+      _podcastStepTimer = setTimeout(advanceStep, durations[currentStep]);
+    }
+  }
+
+  _podcastStepTimer = setTimeout(advanceStep, durations[0]);
+}
+
+function _stopPodcastStepAnimation() {
+  if (_podcastStepTimer) { clearTimeout(_podcastStepTimer); _podcastStepTimer = null; }
+  // Mark all as done
+  document.querySelectorAll('.podcast-step').forEach(s => {
+    s.classList.remove('active-step');
+    s.classList.add('done-step');
+    s.style.opacity = '1';
+    s.querySelector('.step-icon').textContent = '✅';
+    s.querySelector('.step-text').style.color = '#22C55E';
+  });
+}
 
 async function generatePodcast() {
   if (!currentStock) return;
   const ticker = currentStock;
   currentPodcastTicker = ticker;
 
-  // Show loading
+  // Show loading with animation
   document.getElementById('podcastInit').classList.add('hidden');
   document.getElementById('podcastReady').classList.add('hidden');
   document.getElementById('podcastLoading').classList.remove('hidden');
+  _startPodcastStepAnimation();
 
   try {
     // Start generation (returns immediately)
@@ -2288,13 +2378,15 @@ function _pollPodcastStatus(ticker) {
   if (_podcastPollTimer) clearInterval(_podcastPollTimer);
 
   const pollStart = Date.now();
-  const MAX_POLL_TIME = 5 * 60 * 1000; // 5 minutes max
+  const MAX_POLL_TIME = 6 * 60 * 1000; // 6 minutes max (niqqud step takes time)
+  let notReadyCount = 0; // track consecutive not-generating + not-exists
 
   _podcastPollTimer = setInterval(async () => {
-    // Timeout after 5 minutes
+    // Timeout
     if (Date.now() - pollStart > MAX_POLL_TIME) {
       clearInterval(_podcastPollTimer);
       _podcastPollTimer = null;
+      _stopPodcastStepAnimation();
       document.getElementById('podcastLoading').classList.add('hidden');
       document.getElementById('podcastInit').classList.remove('hidden');
       alert('יצירת הפודקאסט לקחה יותר מדי זמן. נסה שוב.');
@@ -2308,19 +2400,32 @@ function _pollPodcastStatus(ticker) {
       if (data.error && !data.generating) {
         clearInterval(_podcastPollTimer);
         _podcastPollTimer = null;
+        _stopPodcastStepAnimation();
         document.getElementById('podcastLoading').classList.add('hidden');
         document.getElementById('podcastInit').classList.remove('hidden');
         alert('שגיאה ביצירת הפודקאסט: ' + data.error);
         return;
       }
 
-      if (data.generating) return; // Still working, keep polling
+      if (data.generating) { notReadyCount = 0; return; } // Still working
 
       if (data.exists) {
         // Done! Show the player
         clearInterval(_podcastPollTimer);
         _podcastPollTimer = null;
         _showPodcastPlayer(ticker, data);
+        return;
+      }
+
+      // Not generating + not exists + no error = might be between states
+      // Give it a few cycles, then stop
+      notReadyCount++;
+      if (notReadyCount > 3) {
+        clearInterval(_podcastPollTimer);
+        _podcastPollTimer = null;
+        _stopPodcastStepAnimation();
+        document.getElementById('podcastLoading').classList.add('hidden');
+        document.getElementById('podcastInit').classList.remove('hidden');
       }
     } catch (e) {
       console.error('Poll error:', e);
@@ -2329,8 +2434,12 @@ function _pollPodcastStatus(ticker) {
 }
 
 function _showPodcastPlayer(ticker, data) {
-  document.getElementById('podcastLoading').classList.add('hidden');
-  document.getElementById('podcastReady').classList.remove('hidden');
+  _stopPodcastStepAnimation();
+  // Brief delay to show all steps completed before switching
+  setTimeout(() => {
+    document.getElementById('podcastLoading').classList.add('hidden');
+    document.getElementById('podcastReady').classList.remove('hidden');
+  }, 800);
 
   document.getElementById('podcastTitle').textContent = `${data.company || (stockCache[currentStock]||{}).name || ticker} — פודקאסט יומי`;
   document.getElementById('podcastDate').textContent = data.date || new Date().toLocaleDateString('he-IL');
