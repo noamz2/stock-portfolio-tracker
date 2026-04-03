@@ -396,23 +396,92 @@ def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
     return articles
 
 
-def _groq_chat(api_key, messages, max_tokens=1000, system=None):
-    """Call Groq API (OpenAI-compatible)."""
+DEEPSEEK_MODEL = "deepseek-chat"
+GEMINI_MODEL = "gemini-2.0-flash"
+GROQ_MODEL = "llama-3.3-70b-versatile"
+
+
+def _deepseek_chat(api_key, messages, max_tokens=1000, system=None):
+    """Call DeepSeek API (OpenAI-compatible)."""
     from openai import OpenAI
-    client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
-    kwargs = {
-        "model": "llama-3.3-70b-versatile",
-        "max_tokens": max_tokens,
-        "messages": messages,
-    }
+    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+
     if system:
-        kwargs["messages"] = [{"role": "system", "content": system}] + kwargs["messages"]
-    response = client.chat.completions.create(**kwargs)
+        messages = [{"role": "system", "content": system}] + messages
+
+    response = client.chat.completions.create(
+        model=DEEPSEEK_MODEL, max_tokens=max_tokens, messages=messages,
+    )
     return response.choices[0].message.content
 
 
-def summarize_stock_news(ticker, hebrew_name, stock_data, articles, api_key):
-    """Use Groq to summarize news articles for a single stock."""
+def _gemini_chat(api_key, messages, max_tokens=1000, system=None):
+    """Call Google Gemini API."""
+    import google.generativeai as genai
+    genai.configure(api_key=api_key)
+
+    model = genai.GenerativeModel(
+        model_name=GEMINI_MODEL,
+        system_instruction=system if system else None,
+    )
+
+    gemini_contents = []
+    for msg in messages:
+        role = "user" if msg["role"] == "user" else "model"
+        gemini_contents.append({"role": role, "parts": [msg["content"]]})
+
+    response = model.generate_content(
+        gemini_contents,
+        generation_config=genai.types.GenerationConfig(max_output_tokens=max_tokens),
+    )
+    return response.text
+
+
+def _groq_chat(api_key, messages, max_tokens=1000, system=None):
+    """Call Groq API (fallback)."""
+    from openai import OpenAI
+    client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+
+    if system:
+        messages = [{"role": "system", "content": system}] + messages
+
+    response = client.chat.completions.create(
+        model=GROQ_MODEL, max_tokens=max_tokens, messages=messages,
+    )
+    return response.choices[0].message.content
+
+
+def _llm_chat(messages, max_tokens=1000, system=None):
+    """Call LLM — tries DeepSeek first, then Gemini, then Groq."""
+    deepseek_key = os.environ.get('DEEPSEEK_API_KEY', '')
+    gemini_key = os.environ.get('GEMINI_API_KEY', '')
+    groq_key = os.environ.get('GROQ_API_KEY', '')
+
+    # 1. DeepSeek (primary)
+    if deepseek_key:
+        try:
+            return _deepseek_chat(deepseek_key, messages, max_tokens, system)
+        except Exception as e:
+            print(f"    ⚠️  DeepSeek failed: {e}")
+
+    # 2. Gemini (fallback)
+    if gemini_key:
+        try:
+            print(f"    🔄 Trying Gemini...")
+            return _gemini_chat(gemini_key, messages, max_tokens, system)
+        except Exception as e:
+            print(f"    ⚠️  Gemini failed: {e}")
+
+    # 3. Groq (last resort)
+    if groq_key:
+        print(f"    🔄 Trying Groq...")
+        return _groq_chat(groq_key, messages, max_tokens, system)
+
+    raise RuntimeError("No LLM API key configured (set DEEPSEEK_API_KEY, GEMINI_API_KEY, or GROQ_API_KEY)")
+
+
+def summarize_stock_news(ticker, hebrew_name, stock_data, articles):
+    """Summarize news articles for a single stock using LLM."""
     # Only summarize if we have articles with actual content
     articles_with_content = [a for a in articles if a.get('content') and len(a['content']) > 50]
     if not articles_with_content:
@@ -425,33 +494,34 @@ def summarize_stock_news(ticker, hebrew_name, stock_data, articles, api_key):
 
     try:
         change_pct = stock_data.get('change_pct', 0)
-        direction = "עלתה" if change_pct > 0 else "ירדה" if change_pct < 0 else "לא השתנתה"
 
         articles_text = ""
-        for i, a in enumerate(articles_with_content[:6], 1):
-            content = a['content'][:2500]  # More content per article for richer summaries
+        for i, a in enumerate(articles_with_content[:5], 1):
+            content = a['content'][:2000]
             articles_text += f"\n--- כתבה {i}: {a['title']} ({a['source']}) ---\n{content}\n"
 
-        prompt = f"""אתה עיתונאי כלכלי. קרא את הכתבות על מניית {hebrew_name} ({ticker}) וספר מה כתוב בהן.
+        prompt = f"""אתה מגיש פודקאסט כלכלי יומי בעברית. הסגנון שלך כמו מגיש פודקאסט ישראלי טוב — מקצועי, ברור, מדבר בגובה העיניים. לא קריין חדשות רשמי, אבל גם לא חבר'ה מהשכונה.
 
-מחיר נוכחי: {stock_data.get('currency', '$')}{stock_data.get('price', '?')} | שינוי: {change_pct:+.1f}% | המניה {direction}.
+המניה: {hebrew_name} ({ticker})
+מחיר: {stock_data.get('currency', '$')}{stock_data.get('price', '?')} | שינוי: {change_pct:+.1f}%
 
 כתבות:
 {articles_text}
 
-כתוב בעברית, 200-350 מילים. המטרה: לספר למשקיע מה כתוב בכתבות, כאילו אתה מספר לחבר.
+כתוב 200-350 מילים. זה פודקאסט — טקסט שמיועד להקראה בקול.
 
 הנחיות:
-- עבור על כל כתבה שקראת וספר מה היא אומרת — ציטוטים, מספרים, שמות אנשים, החלטות, אירועים
-- אם כתבה אומרת שמישהו מכר מניות — ציין מי, כמה, ולמה
-- אם כתבה מדברת על עסקה — ציין את הפרטים: סכום, חברות, מה בדיוק קורה
-- אם כתבה מצטטת אנליסט — ציין את שמו ומה הוא אמר
-- תרגם הכל לעברית, אל תצטט כותרות באנגלית
-- קשר בין מה שכתוב בכתבות לתנועת המניה
-- אל תחזור על אותו רעיון פעמיים
-- אל תשתמש במונחים טכניים"""
+- ספר את הסיפור של המניה היום כנרטיב אחד זורם. אסור "הכתבה הראשונה", "כתבה נוספת", "לפי כתבה ש..."
+- שזור את כל המידע מהכתבות ביחד — מה קרה, למה, ומה המשמעות
+- ציין פרטים ספציפיים: שמות אנשים, מספרים, סכומים, אירועים
+- אם מישהו מכר מניות — ציין מי, כמה, ולמה. אם אנליסט אמר משהו — ציין שמו ומה אמר
+- תן הקשר — למה זה חשוב, מה זה אומר על החברה
+- סיים עם תובנה אחת — מה הדבר הכי חשוב לזכור מהיום
+- טון: מקצועי אבל נגיש. לא סלנג ("אחי", "מגניב", "ענק"), לא שפה יבשה ("יש לציין", "ראוי להדגיש")
+- תרגם הכל לעברית
+- אסור: כוכביות, מספור, markdown, כותרות באנגלית"""
 
-        summary = _groq_chat(api_key, [{"role": "user", "content": prompt}], max_tokens=1500)
+        summary = _llm_chat([{"role": "user", "content": prompt}], max_tokens=1500)
         return {
             'summary': summary,
             'has_news': True,
@@ -490,7 +560,7 @@ def collect_all():
 
     # Phase 2: Deep news collection + summarization
     print("\n📰 Collecting deep news...")
-    api_key = os.environ.get('GROQ_API_KEY', '')
+    has_llm = os.environ.get('DEEPSEEK_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '') or os.environ.get('GROQ_API_KEY', '')
     for s in stocks:
         if 'error' in s:
             continue
@@ -500,8 +570,8 @@ def collect_all():
         content_count = len([a for a in articles if a.get('content') and len(a['content']) > 50])
         print(f"{len(articles)} articles ({content_count} with content)")
 
-        if api_key and content_count >= 1:
-            s['news_summary'] = summarize_stock_news(s['ticker'], s['hebrew'], s, articles, api_key)
+        if has_llm and content_count >= 1:
+            s['news_summary'] = summarize_stock_news(s['ticker'], s['hebrew'], s, articles)
             if s['news_summary']['has_news']:
                 print(f"    ✅ Summary generated")
         else:
@@ -665,105 +735,151 @@ def generate_text_report(data):
     return '\n'.join(lines)
 
 
-BRIEFING_SYSTEM_PROMPT = """אתה מגיש פודקאסט כלכלי יומי בעברית. התפקיד שלך הוא לקרוא את החדשות ולספר למאזינים מה כתוב בהן — כאילו אתה מספר לחבר טוב מה קראת היום בעיתון הכלכלי.
+BRIEFING_SYSTEM_PROMPT = """אתה מגיש פודקאסט כלכלי יומי בעברית. הסגנון שלך כמו מגיש פודקאסט ישראלי מקצועי — ברור, נגיש, מעניין. לא קריין חדשות רשמי, אבל גם לא סלנג ולא "אחי". מגיש שמכבד את המאזין ומדבר איתו בגובה העיניים.
 
 הסגנון שלך:
-- אתה מספר סיפורים, לא מקריא נתונים. כל מניה היא סיפור שמבוסס על מה שפורסם עליה בחדשות.
-- אם כתבה מספרת שמנכ"ל חברה אמר משהו — תצטט אותו (בעברית). אם אנליסט פרסם דוח — תספר מה הוא כתב. אם מישהו מכר מניות — תספר מי, כמה, ותן הקשר.
-- אתה יוצר עניין. תשאל שאלות רטוריות: "אז מה באמת קורה שם?", "והשאלה הגדולה היא...", "ופה זה נהיה מעניין..."
-- שפה פשוטה ויומיומית, בלי מונחים טכניים כמו RSI, ממוצעים נעים, ווליום
-- תרגם הכל לעברית. אסור לצטט כותרות או משפטים באנגלית
+- אתה מספר את הסיפור של כל מניה — מה קרה, למה, ומה זה אומר
+- אם מנכ"ל אמר משהו — ספר מה. אם מישהו מכר — ספר מי ולמה. פרטים ספציפיים עושים את ההבדל
+- תיצור עניין דרך התוכן עצמו, לא דרך ביטויים מאולצים
+- שפה ברורה ופשוטה, בלי מונחים טכניים, בלי סלנג
+- תרגם הכל לעברית, אסור אנגלית
 
 כללים טכניים:
-- פתח עם: "שלום לכולם, ברוכים הבאים לסיכום היומי של שוק ההון. תזכורת חשובה — זה לא ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
 - אסור: סוגריים מרובעים, כוכביות, סולמית, מספור, markdown
 - אורך מינימלי: 1200 מילים
 - טקסט רציף מוכן להקראה בקול רם
-- מעברים חלקים: "נעבור ל...", "עכשיו בואו נדבר על...", "ומה קורה עם..."
+- אסור: "הכתבה הראשונה", "כתבה נוספת", "לפי כתבה ש..." — שזור את המידע בנרטיב טבעי
 - אל תחזור על אותו רעיון פעמיים"""
 
 
 def generate_podcast_script(data):
-    """Generate Hebrew podcast script — tries Groq API first, falls back to basic."""
-    api_key = os.environ.get('GROQ_API_KEY', '')
+    """Generate Hebrew podcast script — tries LLM API first, falls back to basic."""
+    has_llm = os.environ.get('DEEPSEEK_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '') or os.environ.get('GROQ_API_KEY', '')
 
-    if api_key:
+    if has_llm:
         try:
-            return _generate_podcast_with_groq(data, api_key)
+            return _generate_podcast_with_llm(data)
         except Exception as e:
-            print(f"  ⚠️  Groq API failed for briefing: {e}, using fallback")
+            print(f"  ⚠️  LLM API failed for briefing: {e}, using fallback")
 
     return _generate_podcast_fallback(data)
 
 
-def _generate_podcast_with_groq(data, api_key):
-    """Generate analyst-quality podcast using Groq."""
+def _generate_podcast_with_llm(data):
+    """Hybrid podcast: structured skeleton + LLM for intro/transitions/closing."""
 
     m = data['macro']
     stocks = data['stocks']
     valid_stocks = [s for s in stocks if 'error' not in s]
     date = datetime.fromisoformat(data['date']).strftime('%d/%m/%Y')
 
-    # Build rich context for Groq
-    portfolio_data = {
-        "date": date,
-        "macro": {
-            "fear_greed": m.get('fear_greed', {}),
-            "sp500": m.get('sp500', {}),
-            "vix": m.get('vix'),
-            "usd_ils": m.get('usd_ils'),
-            "ta35": m.get('ta35'),
-        },
-        "stocks": [],
-    }
+    # Sort: biggest movers first
+    valid_stocks.sort(key=lambda s: abs(s.get('change_pct', 0)), reverse=True)
 
-    for s in valid_stocks:
-        news_summary = s.get('news_summary', {})
-        stock_info = {
-            "name_he": s.get('hebrew', s['ticker']),
-            "ticker": s['ticker'],
-            "price": s.get('price'),
-            "currency": s.get('currency', '$'),
-            "change_pct": s.get('change_pct'),
-            "revenue_growth_pct": s.get('revenue_growth'),
-            "earnings_growth_pct": s.get('earnings_growth'),
-            "pe": s.get('pe'),
-            "forward_pe": s.get('forward_pe'),
-            "profit_margin_pct": s.get('profit_margin'),
-            "analyst_target": s.get('target_mean'),
-            "recommendation": s.get('recommendation'),
-            "pct_from_52w_high": s.get('pct_from_high'),
-            "news_summary": news_summary.get('summary', 'אין חדשות זמינות'),
-            "key_headlines": news_summary.get('key_headlines', []),
-            "article_count": news_summary.get('article_count', 0),
-        }
-        portfolio_data["stocks"].append(stock_info)
+    # --- Step 1: Use Groq to generate intro + closing based on the news ---
+    # Build a brief summary of what happened for the intro
+    top_stories = []
+    for s in valid_stocks[:5]:
+        ns = s.get('news_summary', {})
+        if ns.get('has_news') and ns.get('summary'):
+            summary_first_line = ns['summary'].split('\n')[0][:150]
+            top_stories.append(f"{s.get('hebrew', s['ticker'])}: {summary_first_line}")
 
-    prompt = f"""צור פודקאסט יומי בעברית. 1200-1800 מילים. טקסט רציף בלבד, בלי כוכביות או מספור.
+    intro_prompt = f"""כתוב פתיחה לפודקאסט כלכלי יומי בעברית (80-120 מילים).
 
-לכל מניה יש סיכום חדשות מפורט למטה. התפקיד שלך הוא לספר את הסיפורים מהחדשות בצורה מרתקת.
+תאריך: {date}
+S&P 500: {m.get('sp500', {}).get('price', '?')} ({m.get('sp500', {}).get('change_pct', 0):+.1f}%)
+VIX: {m.get('vix', '?')}
+דולר-שקל: {m.get('usd_ils', '?')}
 
-לכל מניה, עשה את הדברים הבאים:
-- ספר מה כתוב בחדשות. לא תקציר כללי, אלא הסיפור עצמו: מי אמר מה, מה קרה, אילו מספרים הוזכרו
-- תן הקשר: למה זה חשוב למשקיע? מה זה אומר על העתיד?
-- שאל שאלה רטורית שיוצרת עניין: "והשאלה היא...", "אז מה זה אומר בפועל?"
-- קשר בין החדשות למחיר המניה
+הסיפורים המרכזיים היום:
+{chr(10).join(top_stories)}
 
-מבנה הפודקאסט:
+מבנה חובה:
+1. פתח עם ברכה קצרה וטבעית + התאריך
+2. מיד אחר כך חובה לומר: "תזכורת חשובה — מה שאני אומר כאן זה לא ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
+3. תאר את מצב הרוח בשוק בשני-שלושה משפטים — כסיפור, לא כרשימת מספרים
+4. תן טיזר קצר — מה הסיפור המעניין ביותר שנדבר עליו היום
 
-פתיחה קצרה — הסיפור הכי מעניין מהחדשות היום. תפתח עם משהו שתופס: "היום פורסם ש...", "הסיפור הגדול היום הוא..."
+טון: מגיש פודקאסט מקצועי ונגיש. לא רשמי מדי, לא קז'ואל מדי.
+אסור: סלנג, "אחי", "שמע". אסור: כוכביות/מספור/markdown/אנגלית."""
 
-מאקרו בקצרה — S&P, שקל-דולר, אווירה בשוק. 3-4 משפטים מקסימום.
+    intro = _llm_chat([{"role": "user", "content": intro_prompt}], max_tokens=500)
 
-ניתוח מניות לפי חדשות (החלק העיקרי!) — לכל מניה: ספר את הסיפור מהחדשות, תן הקשר, ואז מחיר ויעד אנליסטים אם רלוונטי.
+    # --- Step 2: Build the stock sections from the rich news summaries ---
+    stock_sections = []
+    transitions = [
+        "נעבור ל",
+        "ועכשיו ל",
+        "נמשיך ל",
+        "ומה קורה עם",
+        "בואו נדבר על",
+        "נמשיך עם",
+        "ועכשיו נעבור ל",
+    ]
 
-סיכום — מסר אחד מרכזי ליום.
+    for i, s in enumerate(valid_stocks):
+        hebrew = s.get('hebrew', s['ticker'])
+        ticker = s['ticker']
+        price = s.get('price', '?')
+        currency = s.get('currency', '$')
+        change = s.get('change_pct', 0)
+        direction = "עלתה" if change > 0 else "ירדה" if change < 0 else "נסחרת ללא שינוי"
 
-נתוני התיק (כולל סיכומי חדשות מפורטים):
-{json.dumps(portfolio_data, ensure_ascii=False, indent=2)}"""
+        section = ""
 
-    script = _groq_chat(api_key, [{"role": "user", "content": prompt}], max_tokens=6000, system=BRIEFING_SYSTEM_PROMPT)
-    print(f"  ✅ Briefing script generated with Groq ({len(script)} chars)")
+        # Transition
+        if i > 0:
+            t = transitions[i % len(transitions)]
+            if t.endswith("ל") or t.endswith("על") or t.endswith("עם"):
+                section += f"{t}{hebrew}. "
+            else:
+                section += f"{t} {hebrew}. "
+
+        # Price and change — clear and factual with natural tone
+        if abs(change) > 0.5:
+            section += f"{hebrew} {direction} {abs(change):.1f} אחוז ונסחרת ב-{currency}{price}. "
+        else:
+            section += f"{hebrew} נסחרת ב-{currency}{price}, כמעט ללא שינוי. "
+
+        # News summary — the core content
+        ns = s.get('news_summary', {})
+        if ns.get('has_news') and ns.get('summary'):
+            summary = ns['summary'].strip()
+            summary = summary.replace('**', '').replace('*', '').replace('#', '')
+            section += summary + " "
+
+        # Analyst target if significant gap
+        if s.get('target_mean') and s.get('price'):
+            upside = round((s['target_mean'] - s['price']) / s['price'] * 100, 1)
+            if abs(upside) > 20:
+                section += f"יעד האנליסטים עומד על {currency}{s['target_mean']}, פער של {upside:+.0f} אחוז מהמחיר הנוכחי. "
+
+        stock_sections.append(section)
+
+    # --- Step 3: Use Groq for a closing message ---
+    closing_prompt = f"""כתוב סיום קצר לפודקאסט כלכלי יומי (40-70 מילים).
+
+מניות שדיברנו עליהן:
+{chr(10).join(f'- {s.get("hebrew", s["ticker"])}: {s.get("change_pct", 0):+.1f}%' for s in valid_stocks[:5])}
+
+כללים:
+- תובנה אחת מסכמת ליום — מה הנקודה המרכזית
+- סיים עם: "זהו להיום. תודה שהאזנתם, ונשמע שוב מחר."
+- טון מקצועי וחם, כמו מגיש פודקאסט טוב
+- אסור סלנג. אסור "יאללה", "אחי". אסור כוכביות/מספור/אנגלית"""
+
+    closing = _llm_chat([{"role": "user", "content": closing_prompt}], max_tokens=200)
+
+    # --- Step 4: Assemble the full script ---
+    script = intro.strip() + "\n\n"
+    script += "\n\n".join(stock_sections)
+    script += "\n\n" + closing.strip()
+
+    # Final cleanup
+    script = script.replace('**', '').replace('*', '').replace('#', '').replace('[', '').replace(']', '')
+
+    print(f"  ✅ Briefing script generated (hybrid) ({len(script)} chars)")
     return script
 
 
@@ -872,9 +988,108 @@ def _generate_podcast_fallback(data):
     return script
 
 
+def _prepare_text_for_tts(text):
+    """Prepare text for better Hebrew TTS pronunciation."""
+    import re
+
+    # Stock ticker pronunciation map — how to say them in Hebrew
+    ticker_pronunciation = {
+        'META': 'מטא',
+        'MSFT': 'מייקרוסופט',
+        'SOFI': 'סופי',
+        'ADBE': 'אדובי',
+        'AMZN': 'אמזון',
+        'PANW': 'פאלו אלטו',
+        'ONON': 'און',
+        'IREN': 'אירן',
+        'MELI': 'מרקדו ליברה',
+        'NVDA': 'אנבידיה',
+        'GOOGL': 'גוגל',
+        'S&P 500': 'אס אנד פי חמש מאות',
+        'S&P': 'אס אנד פי',
+        'VIX': 'ויקס',
+        'CNBC': 'סי אן בי סי',
+        'IBM': 'איי בי אם',
+        'AMD': 'איי אם די',
+        'GPU': 'ג\'י פי יו',
+        'AI': 'איי איי',
+        'USD': 'דולר',
+        'ILS': 'שקל',
+    }
+
+    # Replace English tickers/terms with Hebrew pronunciation
+    for eng, heb in ticker_pronunciation.items():
+        text = text.replace(eng, heb)
+
+    # Dollar amounts: $34.77 → "34.77 דולר"
+    text = re.sub(r'\$(\d+\.?\d*)', r'\1 דולר', text)
+
+    # Shekel amounts: ₪3.13 → "3.13 שקלים"
+    text = re.sub(r'₪(\d+\.?\d*)', r'\1 שקלים', text)
+
+    # Percentage: +2.0% → "פלוס 2 אחוז"
+    text = re.sub(r'\+(\d+\.?\d*)%', r'פלוס \1 אחוז', text)
+    text = re.sub(r'-(\d+\.?\d*)%', r'מינוס \1 אחוז', text)
+    text = re.sub(r'(\d+\.?\d*)%', r'\1 אחוז', text)
+
+    # Clean up markdown artifacts
+    text = text.replace('**', '').replace('*', '').replace('#', '')
+    text = text.replace('[', '').replace(']', '')
+
+    # Clean up double periods
+    text = text.replace('..', '.')
+
+    return text
+
+
+def _add_niqqud(text):
+    """Add niqqud (vowel diacritics) to Hebrew text using LLM."""
+    try:
+        print("  📝 Adding niqqud...")
+        # Split into chunks if text is very long (LLM token limit)
+        max_chunk = 1500
+        if len(text) <= max_chunk:
+            chunks = [text]
+        else:
+            # Split on paragraph boundaries
+            paragraphs = text.split('\n\n')
+            chunks = []
+            current = ""
+            for p in paragraphs:
+                if len(current) + len(p) > max_chunk and current:
+                    chunks.append(current.strip())
+                    current = p
+                else:
+                    current += ("\n\n" if current else "") + p
+            if current.strip():
+                chunks.append(current.strip())
+
+        result_parts = []
+        for chunk in chunks:
+            nikud = _llm_chat(
+                [{"role": "user", "content": chunk}],
+                max_tokens=4000,
+                system="הוסף ניקוד מלא לטקסט העברי. החזר רק את הטקסט עם ניקוד, בלי שום הסבר, בלי שינויים בתוכן. שמור על כל סימני הפיסוק, מספרים ומילים לועזיות כפי שהם."
+            )
+            result_parts.append(nikud.strip())
+
+        result = '\n\n'.join(result_parts)
+        print(f"  ✅ Niqqud added ({len(result)} chars)")
+        return result
+    except Exception as e:
+        print(f"  ⚠️  Niqqud failed ({e}), using text without niqqud")
+        return text
+
+
 def text_to_speech(text, output_path):
-    """Convert text to speech — tries Edge TTS (neural), falls back to gTTS."""
-    # Try Edge TTS first (free, neural Hebrew voice)
+    """Convert text to speech — Edge TTS with niqqud, falls back to gTTS."""
+    # Step 1: Preprocess (replace tickers, $, % etc)
+    text = _prepare_text_for_tts(text)
+
+    # Step 2: Add niqqud for correct pronunciation
+    text = _add_niqqud(text)
+
+    # Step 3: Try Edge TTS with plain niqqud text
     try:
         import asyncio
         import edge_tts
@@ -882,7 +1097,7 @@ def text_to_speech(text, output_path):
         voice = "he-IL-AvriNeural"
 
         async def _generate():
-            communicate = edge_tts.Communicate(text, voice, rate="+0%", pitch="+0Hz")
+            communicate = edge_tts.Communicate(text, voice, rate="-5%", pitch="-2Hz")
             await communicate.save(str(output_path))
 
         try:
@@ -897,14 +1112,14 @@ def text_to_speech(text, output_path):
             asyncio.run(_generate())
 
         size_kb = os.path.getsize(output_path) / 1024
-        print(f"  🔊 Audio saved (Edge TTS): {output_path.name} ({size_kb:.0f} KB)")
+        print(f"  🔊 Audio saved (Edge TTS + niqqud): {output_path.name} ({size_kb:.0f} KB)")
         return True
     except ImportError:
         print("  ⚠️  edge-tts not installed, falling back to gTTS")
     except Exception as e:
         print(f"  ⚠️  Edge TTS failed ({e}), falling back to gTTS")
 
-    # Fallback to gTTS
+    # Fallback to gTTS (without SSML)
     try:
         from gtts import gTTS
         tts = gTTS(text=text, lang='iw', slow=False)

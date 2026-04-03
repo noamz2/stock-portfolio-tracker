@@ -1691,54 +1691,69 @@ def get_intrinsic_data(ticker):
 
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 PODCAST_DIR = Path(__file__).parent / "briefings"
 PODCAST_SCRIPT = Path(__file__).parent / "daily_briefing.py"
 
+# Track podcast generation state: {ticker: {status, error, ...}}
+_podcast_jobs = {}
+_podcast_lock = threading.Lock()
 
-@app.route('/api/podcast/<ticker>', methods=['POST'])
-def create_podcast(ticker):
-    """Generate a podcast for a ticker."""
+
+def _run_podcast_subprocess(ticker, resolved):
+    """Run podcast generation in background thread."""
     try:
-        ticker = ticker.upper().strip()
-        resolved = resolve_ticker(ticker)
-
-        # Run daily_briefing.py with single ticker as positional arg
-        env = {**dict(__import__('os').environ)}
+        env = {**dict(os.environ)}
         result = subprocess.run(
             [sys.executable, str(PODCAST_SCRIPT), resolved],
-            capture_output=True, text=True, timeout=180,
+            capture_output=True, text=True, timeout=300,
             cwd=str(PODCAST_SCRIPT.parent), env=env,
         )
 
         today = datetime.now().strftime("%Y-%m-%d")
-
-        # daily_briefing.py generates briefing_{date}.mp3
         audio_file = PODCAST_DIR / f"briefing_{today}.mp3"
         script_file = PODCAST_DIR / f"briefing_{today}_script.txt"
 
-        if not audio_file.exists() and not script_file.exists():
-            return jsonify({'error': f'Podcast generation failed: {result.stderr[-300:] if result.stderr else "unknown error"}'}), 500
-
-        # Get company name from yfinance
-        try:
-            company = yf_ticker(resolved).info.get('longName', ticker)
-        except:
-            company = ticker
-
-        script_text = script_file.read_text(encoding='utf-8') if script_file.exists() else ''
-
-        return jsonify({
-            'ticker': ticker,
-            'company': company,
-            'date': today,
-            'script': script_text,
-            'has_audio': audio_file.exists(),
-        })
+        with _podcast_lock:
+            if not audio_file.exists() and not script_file.exists():
+                _podcast_jobs[ticker] = {
+                    'status': 'error',
+                    'error': result.stderr[-300:] if result.stderr else 'unknown error',
+                }
+            else:
+                _podcast_jobs[ticker] = {'status': 'done'}
 
     except subprocess.TimeoutExpired:
-        return jsonify({'error': 'Podcast generation timed out (2 min)'}), 504
+        with _podcast_lock:
+            _podcast_jobs[ticker] = {'status': 'error', 'error': 'Podcast generation timed out (5 min)'}
+    except Exception as e:
+        with _podcast_lock:
+            _podcast_jobs[ticker] = {'status': 'error', 'error': str(e)}
+
+
+@app.route('/api/podcast/<ticker>', methods=['POST'])
+def create_podcast(ticker):
+    """Start podcast generation in background."""
+    try:
+        ticker = ticker.upper().strip()
+        resolved = resolve_ticker(ticker)
+
+        # Check if already generating
+        with _podcast_lock:
+            job = _podcast_jobs.get(ticker)
+            if job and job.get('status') == 'generating':
+                return jsonify({'status': 'generating', 'message': 'Podcast is already being generated'})
+
+            _podcast_jobs[ticker] = {'status': 'generating'}
+
+        # Start background thread
+        thread = threading.Thread(target=_run_podcast_subprocess, args=(ticker, resolved), daemon=True)
+        thread.start()
+
+        return jsonify({'status': 'generating', 'message': 'Podcast generation started'})
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -1766,15 +1781,44 @@ def get_podcast_audio(ticker):
 
 @app.route('/api/podcast/<ticker>/status')
 def podcast_status(ticker):
-    """Check if a podcast exists for today."""
+    """Check if a podcast exists for today, including generation progress."""
     try:
-        ticker_resolved = resolve_ticker(ticker.upper().strip())
+        ticker_upper = ticker.upper().strip()
+        ticker_resolved = resolve_ticker(ticker_upper)
         today = datetime.now().strftime("%Y-%m-%d")
 
         audio_file = PODCAST_DIR / f"briefing_{today}.mp3"
         script_file = PODCAST_DIR / f"briefing_{today}_script.txt"
+        data_file = PODCAST_DIR / f"briefing_{today}_data.json"
 
-        exists = audio_file.exists() or script_file.exists()
+        # Check if this ticker is actually in today's podcast
+        ticker_in_podcast = False
+        if data_file.exists():
+            try:
+                pdata = json.loads(data_file.read_text(encoding='utf-8'))
+                podcast_tickers = [s.get('ticker', '').upper() for s in pdata.get('stocks', [])]
+                ticker_in_podcast = ticker_resolved.upper() in podcast_tickers
+            except Exception:
+                pass
+
+        exists = ticker_in_podcast and (audio_file.exists() or script_file.exists())
+
+        # Check if currently generating
+        with _podcast_lock:
+            job = _podcast_jobs.get(ticker_upper, {})
+        job_status = job.get('status')
+
+        if job_status == 'generating':
+            return jsonify({'exists': False, 'generating': True})
+
+        if job_status == 'error':
+            with _podcast_lock:
+                _podcast_jobs.pop(ticker_upper, None)
+            return jsonify({'exists': False, 'generating': False, 'error': job.get('error', 'Unknown error')})
+
+        if job_status == 'done':
+            with _podcast_lock:
+                _podcast_jobs.pop(ticker_upper, None)
 
         company = ticker
         try:
@@ -1783,12 +1827,13 @@ def podcast_status(ticker):
             pass
 
         script_text = ''
-        if script_file.exists():
+        if exists and script_file.exists():
             script_text = script_file.read_text(encoding='utf-8')
 
         return jsonify({
             'exists': exists,
-            'has_audio': audio_file.exists(),
+            'generating': False,
+            'has_audio': exists and audio_file.exists(),
             'company': company,
             'date': today,
             'script': script_text,

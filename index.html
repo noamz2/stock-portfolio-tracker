@@ -1137,6 +1137,12 @@ async function openStock(ticker) {
     ['Sector', d.sector],
   ].map(([l, v]) => `<div class="metric"><div class="val">${v}</div><div class="lbl">${l}</div></div>`).join('');
 
+  // Reset podcast tab to init state for the new stock
+  if (_podcastPollTimer) { clearInterval(_podcastPollTimer); _podcastPollTimer = null; }
+  document.getElementById('podcastInit').classList.remove('hidden');
+  document.getElementById('podcastReady').classList.add('hidden');
+  document.getElementById('podcastLoading').classList.add('hidden');
+
   // Switch to first tab
   document.querySelector('.tab.active').click();
 
@@ -2243,9 +2249,11 @@ function setSpeed(speed) {
   });
 }
 
+let _podcastPollTimer = null;
+
 async function generatePodcast() {
   if (!currentStock) return;
-  const ticker = currentStock;  // currentStock is a string (ticker symbol)
+  const ticker = currentStock;
   currentPodcastTicker = ticker;
 
   // Show loading
@@ -2254,6 +2262,7 @@ async function generatePodcast() {
   document.getElementById('podcastLoading').classList.remove('hidden');
 
   try {
+    // Start generation (returns immediately)
     const resp = await fetch(`${API}/api/podcast/${ticker}`, { method: 'POST' });
     const data = await resp.json();
 
@@ -2264,29 +2273,8 @@ async function generatePodcast() {
       return;
     }
 
-    // Show player
-    document.getElementById('podcastLoading').classList.add('hidden');
-    document.getElementById('podcastReady').classList.remove('hidden');
-
-    document.getElementById('podcastTitle').textContent = `${data.company || (stockCache[currentStock]||{}).name || ticker} — פודקאסט יומי`;
-    document.getElementById('podcastDate').textContent = data.date || new Date().toLocaleDateString('he-IL');
-
-    const audio = document.getElementById('podcastAudio');
-    audio.src = `${API}/api/podcast/${ticker}/audio?t=${Date.now()}`;
-    audio.load();
-
-    document.getElementById('podcastScript').textContent = data.script || '';
-
-    document.getElementById('podcastDownload').onclick = () => {
-      const a = document.createElement('a');
-      a.href = audio.src;
-      a.download = `${ticker}_podcast.mp3`;
-      a.click();
-    };
-
-    document.getElementById('podcastRefresh').onclick = () => {
-      generatePodcast();
-    };
+    // Poll for completion
+    _pollPodcastStatus(ticker);
 
   } catch (e) {
     console.error('Podcast error:', e);
@@ -2294,6 +2282,75 @@ async function generatePodcast() {
     document.getElementById('podcastInit').classList.remove('hidden');
     alert('שגיאה ביצירת הפודקאסט: ' + e.message);
   }
+}
+
+function _pollPodcastStatus(ticker) {
+  if (_podcastPollTimer) clearInterval(_podcastPollTimer);
+
+  const pollStart = Date.now();
+  const MAX_POLL_TIME = 5 * 60 * 1000; // 5 minutes max
+
+  _podcastPollTimer = setInterval(async () => {
+    // Timeout after 5 minutes
+    if (Date.now() - pollStart > MAX_POLL_TIME) {
+      clearInterval(_podcastPollTimer);
+      _podcastPollTimer = null;
+      document.getElementById('podcastLoading').classList.add('hidden');
+      document.getElementById('podcastInit').classList.remove('hidden');
+      alert('יצירת הפודקאסט לקחה יותר מדי זמן. נסה שוב.');
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${API}/api/podcast/${ticker}/status`);
+      const data = await resp.json();
+
+      if (data.error && !data.generating) {
+        clearInterval(_podcastPollTimer);
+        _podcastPollTimer = null;
+        document.getElementById('podcastLoading').classList.add('hidden');
+        document.getElementById('podcastInit').classList.remove('hidden');
+        alert('שגיאה ביצירת הפודקאסט: ' + data.error);
+        return;
+      }
+
+      if (data.generating) return; // Still working, keep polling
+
+      if (data.exists) {
+        // Done! Show the player
+        clearInterval(_podcastPollTimer);
+        _podcastPollTimer = null;
+        _showPodcastPlayer(ticker, data);
+      }
+    } catch (e) {
+      console.error('Poll error:', e);
+    }
+  }, 3000);
+}
+
+function _showPodcastPlayer(ticker, data) {
+  document.getElementById('podcastLoading').classList.add('hidden');
+  document.getElementById('podcastReady').classList.remove('hidden');
+
+  document.getElementById('podcastTitle').textContent = `${data.company || (stockCache[currentStock]||{}).name || ticker} — פודקאסט יומי`;
+  document.getElementById('podcastDate').textContent = data.date || new Date().toLocaleDateString('he-IL');
+
+  const audio = document.getElementById('podcastAudio');
+  audio.src = `${API}/api/podcast/${ticker}/audio?t=${Date.now()}`;
+  audio.load();
+
+  document.getElementById('podcastScript').textContent = data.script || '';
+
+  document.getElementById('podcastDownload').onclick = () => {
+    const a = document.createElement('a');
+    a.href = audio.src;
+    a.download = `${ticker}_podcast.mp3`;
+    a.click();
+  };
+
+  document.getElementById('podcastRefresh').onclick = () => {
+    generatePodcast();
+  };
 }
 
 // Check if podcast already exists when switching to tab
