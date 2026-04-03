@@ -9,201 +9,169 @@
       "change_pct": 0.11,
       "rsi": 46.2
     },
-    "usd_ils": 3.1262,
+    "usd_ils": 3.1237,
     "ta35": 4189.31
   },
   "stocks": [
     {
-      "ticker": "OKLO",
-      "resolved": "OKLO",
-      "name": "Oklo Inc.",
-      "hebrew": "OKLO",
-      "price": 48.13,
-      "change_pct": 0.12,
+      "ticker": "META",
+      "resolved": "META",
+      "name": "Meta Platforms, Inc.",
+      "hebrew": "מטא",
+      "price": 574.46,
+      "change_pct": -0.82,
       "currency": "$",
-      "pe": null,
-      "forward_pe": -57.0,
-      "eps": -0.72,
-      "forward_eps": -0.84,
-      "revenue_growth": null,
-      "earnings_growth": null,
-      "profit_margin": null,
-      "market_cap": 8353865728,
-      "rsi": 34.9,
-      "ma200": 85.76,
-      "w52_high": 193.84,
-      "w52_low": 17.42,
-      "pct_from_high": -75.2,
-      "target_mean": 91.03,
-      "target_low": 14.0,
-      "target_high": 168.0,
-      "recommendation": "buy",
+      "pe": 24.4,
+      "forward_pe": 16.0,
+      "eps": 23.5,
+      "forward_eps": 35.97,
+      "revenue_growth": 23.8,
+      "earnings_growth": 10.7,
+      "profit_margin": 30.1,
+      "market_cap": 1453128548352,
+      "rsi": 41.3,
+      "ma200": 683.97,
+      "w52_high": 796.25,
+      "w52_low": 479.8,
+      "pct_from_high": -27.9,
+      "target_mean": 861.76,
+      "target_low": 614.0,
+      "target_high": 1144.0,
+      "recommendation": "strong_buy",
       "news": [
         {
-          "title": "Is Oklo the Smartest Investment You Can Make Today?",
-          "link": "https://www.fool.com/investing/2026/04/02/is-oklo-the-smartest-investment-you-can-make/?.tsrc=rss",
-          "published": "Thu, 02 Apr 2026 19:05:00 +0000"
+          "title": "Wingstop upgraded, Wix downgraded: Wall Street’s top analyst calls",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/wingstop-upgraded-wix-downgraded-wall-134544557.html?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:45:44 +0000"
         },
         {
-          "title": "Nuclear's Pullback: A Generational Buying Opportunity?",
-          "link": "https://www.marketbeat.com/originals/nuclears-pullback-a-generational-buying-opportunity/?utm_source=yahoofinance&utm_medium=yahoofinance&.tsrc=rss",
-          "published": "Thu, 02 Apr 2026 12:20:00 +0000"
+          "title": "Amplify’s QDVO Turned Magnificent Seven Stocks Into a 10.7% Income Machine",
+          "link": "https://247wallst.com/investing/2026/04/03/amplifys-qdvo-turned-magnificent-seven-stocks-into-a-10-7-income-machine/?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:40:40 +0000"
         },
         {
-          "title": "2 Nuclear Stocks Energy That Might Be Worth Buying on the Dip",
-          "link": "https://247wallst.com/investing/2026/04/01/2-nuclear-stocks-energy-that-might-be-worth-buying-on-the-dip/?.tsrc=rss",
-          "published": "Wed, 01 Apr 2026 15:06:17 +0000"
+          "title": "Fidelity’s Active Large-Cap Growth ETF FFLG Is Winning the Battle but Losing the War",
+          "link": "https://247wallst.com/investing/2026/04/03/fidelitys-active-large-cap-growth-etf-fflg-is-winning-the-battle-but-losing-the-war/?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:18:22 +0000"
         },
         {
-          "title": "Oklo and Blykalla Join Forces to Accelerate Next-Gen Nuclear Energy",
-          "link": "https://finance.yahoo.com/sectors/energy/articles/oklo-blykalla-join-forces-accelerate-131900328.html?.tsrc=rss",
-          "published": "Wed, 01 Apr 2026 13:19:00 +0000"
+          "title": "The S&P 500 Without Big Tech Is Quietly Beating the Full Index in 2026",
+          "link": "https://247wallst.com/investing/2026/04/03/the-sp-500-without-big-tech-is-quietly-beating-the-full-index-in-2026/?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:18:14 +0000"
         },
         {
-          "title": "Oklo (OKLO): Does Blykalla’s US Commitment Reframe the Fast Reactor Commercialization Story?",
-          "link": "https://finance.yahoo.com/sectors/energy/articles/oklo-oklo-does-blykalla-us-081812973.html?.tsrc=rss",
-          "published": "Wed, 01 Apr 2026 08:18:12 +0000"
+          "title": "Meta Platforms (META) Slid on Mixed Quarterly Results",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/meta-platforms-meta-slid-mixed-131745101.html?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:17:45 +0000"
         }
       ],
       "news_deep": [
         {
-          "title": "Is Oklo the Smartest Investment You Can Make Today?",
+          "title": "Wingstop upgraded, Wix downgraded: Wall Street’s top analyst calls",
           "source": "Yahoo Finance",
-          "url": "https://www.fool.com/investing/2026/04/02/is-oklo-the-smartest-investment-you-can-make/?.tsrc=rss",
-          "published": "Thu, 02 Apr 2026 19:05:00 +0000",
-          "content": "![The Motley Fool](https://g.foolcdn.com/misc-assets/logo-tmf-primary-1-magenta-purple-reversed.svg?_w=320)\n![The Motley Fool](https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Fmisc-assets%2Ftmf_holdingco_logo_stacked_magenta_royalpurple_rev.png&w=96&op=resize)\n\n# Is Oklo the Smartest Investment You Can Make Today?\n\nThe microreactor maker could generate massive gains over the next decade.\n\n## Key Points\n\n**Oklo** ([OKLO](/quote/nyse/oklo/) +0.17%), a developer of microreactors for modular nuclear power plants, went public through a merger with a special purpose acquisition company (SPAC) nearly two years ago. It opened at $15.50 per share on its first day, and it now trades at about $48.\n\nOklo's stock [more than tripled](https://www.fool.com/investing/how-to-invest/stocks/how-to-invest-in-oklo-stock/) even though it hasn't deployed any of its microreactors or generated any meaningful revenue yet. But could this speculative nuclear energy stock actually be one of the smartest long-term investments you can make today?\n\n![A digital illustration of an atom.](https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Feditorial%2Fimages%2F862920%2Fnuclear-power.jpg&w=3840&op=resize)\n\nImage source: Getty Images.\n\n## Why are investors excited about Oklo?\n\nOver the past few years, the rapid growth of the power-hungry cloud, data center, and AI markets has driven more countries to revisit [nuclear power](https://www.fool.com/investing/stock-market/market-sectors/energy/nuclear/) as an alternative to fossil fuels. However, conventional nuclear reactors are large and expensive, and they need to be refueled in stages every two years. They're also hard to deploy in remote areas.\n\nOklo addresses those challenges with its Aurora microreactor, which generates only 1.5 MWe on its own but can be chained with more reactors to deliver up to 75 MWe per deployment. That modular design makes them ideal for deploying remote and off-grid nuclear power plants.\n\n![Oklo Stock Quote](https://g.foolcdn.com/image/?url=https%3A%2F%2Fg.foolcdn.com%2Fart%2Fcompanylogos%2Fmark%2FOKLO.png&w=128&op=resize)\n\n## [NYSE: OKLO](/quote/nyse/oklo/)\n\n### Key Data Points\n\nThe Aurora also uses metallic uranium fuel pellets, which are denser, more resistant to high temperatures, and cheaper to fabricate than the uranium dioxide fuel pellets used in conventional reactors. It also reprocesses and recycles that fuel in a closed loop, allowing it to last about a decade without refueling.\n\n## How fast could Oklo grow?\n\nOklo broke ground on its first Powerhouse reactor in Idaho last September, with a maximum capacity of 75 MWe. The U.S. Department of Defense also selected it to build a small reactor for Eielson Air Force Base in Alaska last June.\n\nTo support that expansion, Oklo has been working with Siemens Energy to produce steam turbine and generator systems, and **Centrus Energy** ([LEU](/quote/nyse/leu/) +0.03%) to provide its nuclear fuel services through a joint venture. The U"
+          "url": "https://finance.yahoo.com/markets/stocks/articles/wingstop-upgraded-wix-downgraded-wall-134544557.html?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:45:44 +0000",
+          "content": "The most talked about and market moving research calls around Wall Street are now in one place. Here are today’s research calls that investors need to know, as compiled by The Fly.End of Quarter Sale - 50% Off TipRanksUnlock hedge fund-level data and powerful investing tools for smarter, sharper decisions Discover top-performing stock ideas and upgrade to a portfolio of market leaders with Smart Investor Picks Top 5 Upgrades: Erste Group upgraded Walmart (WMT) to Buy from Hold. Increased sales a"
         },
         {
-          "title": "Nuclear's Pullback: A Generational Buying Opportunity?",
+          "title": "Amplify’s QDVO Turned Magnificent Seven Stocks Into a 10.7% Income Machine",
           "source": "Yahoo Finance",
-          "url": "https://www.marketbeat.com/originals/nuclears-pullback-a-generational-buying-opportunity/?utm_source=yahoofinance&utm_medium=yahoofinance&.tsrc=rss",
-          "published": "Thu, 02 Apr 2026 12:20:00 +0000",
-          "content": "The nuclear sector's pullback contrasts with increased power demand, creating a potential opportunity for investors in uranium and reactor technology."
+          "url": "https://247wallst.com/investing/2026/04/03/amplifys-qdvo-turned-magnificent-seven-stocks-into-a-10-7-income-machine/?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:40:40 +0000",
+          "content": "Monthly income checks from a portfolio of NVIDIA, Apple, Microsoft, and Alphabet sound appealing until you realize those same stocks have compounded at extraordinary rates for a decade. The investor’s dilemma is real: collect premiums now or let the position run. Amplify CWP Growth & Income ETF (NYSEARCA:QDVO) is built around a specific answer to ... Amplify’s QDVO Turned Magnificent Seven Stocks Into a 10.7% Income Machine"
         },
         {
-          "title": "2 Nuclear Stocks Energy That Might Be Worth Buying on the Dip",
+          "title": "Fidelity’s Active Large-Cap Growth ETF FFLG Is Winning the Battle but Losing the War",
           "source": "Yahoo Finance",
-          "url": "https://247wallst.com/investing/2026/04/01/2-nuclear-stocks-energy-that-might-be-worth-buying-on-the-dip/?.tsrc=rss",
-          "published": "Wed, 01 Apr 2026 15:06:17 +0000",
-          "content": "![24/7 Wall Street Logo](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/logo.svg)\n\n### Trending Articles\n\n![Amplify’s QDVO Turned Magnificent Seven Stocks Into a 10.7% Income Machine](https://247wallst.com/wp-content/uploads/2025/12/shutterstock-2655961293-huge-licensed-scaled-150x96.jpg)\n\n## Amplify’s QDVO Turned Magnificent Seven Stocks Into a 10.7% Income Machine\n\n![How Physical Gold ETF SGOL Fits Into a Portfolio Built to Survive Inflation](https://247wallst.com/wp-content/uploads/2022/06/imageForEntry44-KPm.jpg)\n\n## How Physical Gold ETF SGOL Fits Into a Portfolio Built to Survive Inflation\n\n![Mobile Menu](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/mobile-menu-icon.svg)\n![](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/icon-circle-down.svg)\n![](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/icon-circle-down.svg)\n![](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/icon-circle-down.svg)\n![](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/icon-circle-down.svg)\n![](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/icon-circle-up.svg)\n![](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/icon-circle-up.svg)\n![](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/icon-category-tag.svg)\n\n[Investing](https://247wallst.com/./investing/)\n\n# 2 Nuclear Stocks Energy That Might Be Worth Buying on the Dip\n\n![Photo of Joey Frenette](https://secure.gravatar.com/avatar/532b61ea9241b6be2939a723837c48a8?s=120&d=mm&r=g)\n\n### Quick Read\n\nConstellation Energy (CEG) and Oklo (OKLO) are nuclear energy stocks that have declined significantly (down 30% and 71%, respectively) due to investor sentiment shifts, but patient buyers may view the weakness as a long-term opportunity given the AI-driven power demand thesis.\n\nNuclear energy stocks have sold off as near-term enthusiasm fades and geopolitical risks mount, but the long-term AI revolution thesis supporting power demand remains intact.\n\nAre you ahead, or behind on retirement? [SmartAsset's free tool](https://247wallst.com/go/smartasset?i=35f20912-1445-4a6c-b127-4cb861770ea8&p=b4521e20-1778-43ce-8785-eac54fd73ce3&pos=keypoints) can match you with a financial advisor in minutes to help you answer that today. Each advisor has been carefully vetted, and must act in your best interests. Don't waste another minute; [learn more here.](https://247wallst.com/go/smartasset?i=35f20912-1445-4a6c-b127-4cb861770ea8&p=b4521e20-1778-43ce-8785-eac54fd73ce3&pos=keypoints)(Sponsor)\n\n### How to Add Us to Google News\n\n![Add to Google News](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/social/gnews-desktop-follow.png)\n![Add to Google News](https://247wallst.com/wp-content/themes/247wallst-theme-2025/assets/images/social/gnews-follow.gif)\n\nSending You to Google News in "
+          "url": "https://247wallst.com/investing/2026/04/03/fidelitys-active-large-cap-growth-etf-fflg-is-winning-the-battle-but-losing-the-war/?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:18:22 +0000",
+          "content": "Active management in large-cap growth has a credibility problem. Most active funds charge more, trade more, and deliver less than the index over time. Fidelity Fundamental Large Cap Growth ETF (NYSEARCA:FFLG) is trying to change that narrative, and its recent results give it a real argument. Whether it belongs in a portfolio depends on what ... Fidelity’s Active Large-Cap Growth ETF FFLG Is Winning the Battle but Losing the War"
         },
         {
-          "title": "Oklo and Blykalla Join Forces to Accelerate Next-Gen Nuclear Energy",
+          "title": "The S&P 500 Without Big Tech Is Quietly Beating the Full Index in 2026",
           "source": "Yahoo Finance",
-          "url": "https://finance.yahoo.com/sectors/energy/articles/oklo-blykalla-join-forces-accelerate-131900328.html?.tsrc=rss",
-          "published": "Wed, 01 Apr 2026 13:19:00 +0000",
-          "content": "OKLO expands Blykalla partnership to fast-track reactor commercialization, targeting $100-$200M investment and boosting U.S. clean energy deployment."
+          "url": "https://247wallst.com/investing/2026/04/03/the-sp-500-without-big-tech-is-quietly-beating-the-full-index-in-2026/?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:18:14 +0000",
+          "content": "Stripping the Magnificent 7 from the S&amp;P 500 sounds like a contrarian bet, but it has quietly outperformed the full index so far in 2026. The question for income-focused investors is whether the dividend that comes with this strategy is worth building around. Defiance Large Cap ex-Mag 7 ETF (NASDAQ:XMAG) holds the S&amp;P 500 with ... The S&amp;P 500 Without Big Tech Is Quietly Beating the Full Index in 2026"
         },
         {
-          "title": "Oklo (OKLO): Does Blykalla’s US Commitment Reframe the Fast Reactor Commercialization Story?",
+          "title": "Meta Platforms (META) Slid on Mixed Quarterly Results",
           "source": "Yahoo Finance",
-          "url": "https://finance.yahoo.com/sectors/energy/articles/oklo-oklo-does-blykalla-us-081812973.html?.tsrc=rss",
-          "published": "Wed, 01 Apr 2026 08:18:12 +0000",
-          "content": "Oops, something went wrong\n\n[Skip to navigation](#navigation-container)  [Skip to right column](#right-rail) \n\n\n### \n\n* [Today's news](https://www.yahoo.com/news/)\n* [US](https://www.yahoo.com/news/us/)\n* [Politics](https://www.yahoo.com/news/politics/)\n* [World](https://www.yahoo.com/news/world/)\n* [Weather](https://weather.yahoo.com/)\n* [Climate change](https://www.yahoo.com/issues/climate-change/)\n* [Health](https://health.yahoo.com/)\n  + [Wellness](https://health.yahoo.com/wellness/) \n    - [Mental health](https://health.yahoo.com/wellness/mental-health/)\n    - [Sexual health](https://health.yahoo.com/wellness/sexual-health/)\n    - [Dermatology](https://health.yahoo.com/wellness/dermatology/)\n    - [Oral health](https://health.yahoo.com/wellness/oral-health/)\n    - [Hair loss](https://health.yahoo.com/wellness/hair-loss/)\n    - [Foot health](https://health.yahoo.com/wellness/foot-health/)\n  + [Nutrition](https://health.yahoo.com/nutrition/) \n    - [Healthy eating](https://health.yahoo.com/nutrition/healthy-eating/)\n    - [Meal delivery](https://health.yahoo.com/nutrition/meal-delivery/)\n    - [Weight loss](https://health.yahoo.com/nutrition/weight-loss/)\n    - [Vitamins and supplements](https://health.yahoo.com/nutrition/vitamins-supplements/)\n  + [Fitness](https://health.yahoo.com/fitness/) \n    - [Equipment](https://health.yahoo.com/fitness/equipment/)\n    - [Exercise](https://health.yahoo.com/fitness/exercise/)\n  + [Women's health](https://health.yahoo.com/womens-health/)\n  + [Sleep](https://health.yahoo.com/sleep/) \n    - [Best mattress](https://health.yahoo.com/wellness/sleep/mattresses/article/best-mattresses-000155774.html)\n  + [Healthy aging](https://health.yahoo.com/healthy-aging/) \n    - [Hearing](https://health.yahoo.com/healthy-aging/hearing/)\n    - [Mobility](https://health.yahoo.com/healthy-aging/mobility/)\n* [Science](https://www.yahoo.com/news/science/)\n* [Originals](https://www.yahoo.com/guides/originals/)\n* [Newsletters](https://news.yahoo.com/newsletters/)\n* [Games](https://www.yahoo.com/games)\n\n### \n\n* [Health](https://health.yahoo.com/)\n  + [Wellness](https://health.yahoo.com/wellness/) \n    - [Nutrition](https://health.yahoo.com/wellness/nutrition/)\n    - [Fitness](https://health.yahoo.com/wellness/fitness/)\n    - [Healthy aging](https://health.yahoo.com/wellness/healthy-aging/)\n    - [Sleep](https://health.yahoo.com/wellness/sleep/)\n  + [Your body](https://health.yahoo.com/your-body/) \n    - [Children's health](https://health.yahoo.com/your-body/childrens-health/)\n    - [Dermatology](https://health.yahoo.com/your-body/dermatology/)\n    - [Foot health](https://health.yahoo.com/your-body/foot-health/)\n    - [Hair loss](https://health.yahoo.com/your-body/hair-loss/)\n    - [Oral health](https://health.yahoo.com/your-body/oral-health/)\n    - [Sexual health](https://health.yahoo.com/your-body/sexual-health/)\n    - [Weight management](https://health.yahoo.com/your-body/weight-management/)\n    - [Women's health](https://health."
+          "url": "https://finance.yahoo.com/markets/stocks/articles/meta-platforms-meta-slid-mixed-131745101.html?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:17:45 +0000",
+          "content": "Magellan Asset Management, an investment management company, released the fourth quarter 2025 investor letter for “Magellan Global Fund”. A copy of the letter can be downloaded here. The fund focuses on investing in outstanding companies at attractive prices and, at the same time, leverages a deep understanding of the macroeconomic landscape to manage risk. As […]"
         },
         {
-          "title": "Oklo's Stock Could Have Massive Upside, but Is It Worth the Risk?",
+          "title": "YMAG ETF Pays Weekly but the Share Price Tells a Harder Story",
           "source": "Yahoo Finance",
-          "url": "https://www.fool.com/investing/2026/03/31/oklos-stock-could-have-massive-upside-but-is-it-wo/?.tsrc=rss",
-          "published": "Tue, 31 Mar 2026 18:50:00 +0000",
-          "content": "Oklo's powerhouses could be critical in helping meet the future energy needs of data centers."
+          "url": "https://247wallst.com/investing/2026/04/03/ymag-etf-pays-weekly-but-the-share-price-tells-a-harder-story/?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:10:39 +0000",
+          "content": "Weekly income checks from a basket of the world’s most powerful tech companies sound appealing, but the mechanics behind YieldMax Magnificent 7 Fund of Option Income ETFs (NYSEARCA:YMAG) are more complicated than the distribution schedule suggests. Understanding what drives those payouts, and what they cost, is the real starting point for any portfolio decision. A ... YMAG ETF Pays Weekly but the Share Price Tells a Harder Story"
         },
         {
-          "title": "Cathie Wood Goes Bargain Hunting: 3 Stocks She Just Bought",
+          "title": "Corning (GLW) Is Up 9.3% After $6 Billion Meta AI Fiber Deal - Has The Bull Case Changed?",
           "source": "Yahoo Finance",
-          "url": "https://www.fool.com/investing/2026/03/31/cathie-wood-goes-bargain-hunting-3-stocks-she-just/?.tsrc=rss",
-          "published": "Tue, 31 Mar 2026 15:42:00 +0000",
-          "content": "Ark Invest added to three existing positions that have plunged at least 49% form their 52-week highs."
+          "url": "https://finance.yahoo.com/markets/stocks/articles/corning-glw-9-3-6-130730496.html?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 13:07:30 +0000",
+          "content": "Corning Incorporated and Meta Platforms recently broke ground on a major expansion of Corning’s optical cable manufacturing capacity in Hickory, North Carolina, under a multiyear agreement worth up to US$6.00 billion to supply advanced fiber, cable, and connectivity solutions for AI data centers. This expansion deepens Meta’s role as an anchor customer while underscoring Corning’s growing U.S. manufacturing footprint in optical infrastructure critical to AI workloads. We’ll now examine how..."
         },
         {
-          "title": "Cathie Wood Buys $3.1 Million of Nvidia-Backed Tech Stock",
+          "title": "Why Meta Platforms Fell in March",
           "source": "Yahoo Finance",
-          "url": "https://finance.yahoo.com/markets/stocks/articles/cathie-wood-buys-3-1-151115988.html?.tsrc=rss",
-          "published": "Tue, 31 Mar 2026 15:11:15 +0000",
-          "content": "Cathie Wood Dumps Teradyne. She's Turning to AI and Nuclear Bets"
+          "url": "https://www.fool.com/investing/2026/04/03/why-meta-platforms-fell-in-march/?.tsrc=rss",
+          "published": "Fri, 03 Apr 2026 12:20:00 +0000",
+          "content": "Meta lost two high-profile court cases that could point to future risks."
         },
         {
-          "title": "Is Oklo Stock a Buy Now? - The Motley Fool",
-          "source": "The Motley Fool",
-          "url": "https://news.google.com/rss/articles/CBMidEFVX3lxTFBNdVVPT0pPLUtaaGFndDl2MldocXQ3eWRBNmVsYW96eUs4Q2FNbmE5V0FRa09zanFQemw3aEoyUWJmWm0tOUktT3F5TTV5NHFvcmhkeFJsYXVqUWpVVEtUcXdVT0ZLakZvcXlZenhKRlNwMWYt?oc=5",
-          "published": "Mon, 30 Mar 2026 17:30:00 GMT",
-          "content": "<a href=\"https://news.google.com/rss/articles/CBMidEFVX3lxTFBNdVVPT0pPLUtaaGFndDl2MldocXQ3eWRBNmVsYW96eUs4Q2FNbmE5V0FRa09zanFQemw3aEoyUWJmWm0tOUktT3F5TTV5NHFvcmhkeFJsYXVqUWpVVEtUcXdVT0ZLakZvcXlZenhKRlNwMWYt?oc=5\" target=\"_blank\">Is Oklo Stock a Buy Now?</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">The Motley Fool</font>"
+          "title": "Meta and Alphabet Suffered a Reputational Blow. Earnings Could Be the Next Stock Catalyst. - Barron's",
+          "source": "Barron's",
+          "url": "https://news.google.com/rss/articles/CBMizwNBVV95cUxQQ2R2emoyRzZISmRONXJqWXUzMDlZckxZVUlpNnVrVGZhQ20wVDNURmFGem01QW9qVTNEYWlRYnQzV1E0aW83MWdoX0dJdHBWekRGMDNZcDVqSVBSZXNnWjZIeFFwZy1uTmE1Z1dSV2xfV3A3WDI2Tm1nUnUzYmp4NXpzbGRGTTVKWkpBTFJIQU51UXVrUUctYVYyNHpPSW4tUkhBcGVzcXFHTENLZllQREpQTFVGVC05TjI3SW9RQ0ZLYUd6SFJrUnlNLVVHZjYyRjVncHFJZkM2N0N6bVFJc3QtTGdzNFdYcjREUmQ5eDFUOXNXY2tob0otV2xMUWNyRC1ybVR2NWlOS0ZldUR5VnIwM2JsRzhJOG9XdWxsc3dSUk95Z091TExTN1dWR05rMXdxelFKaFRsdXlmOVZMOF9MUnhGZ09jWDFfcVZOSU5TbFhIRlp1TmxIcmVyOHZ1NWE2Sm0wTlFRMnlBNE4zZFNJWTQ2a2NBOEplUHFYTmRZOFdzMmFJTjB3cTZMcC01bnlYeUphSkc1QlA1bjdHeVBoWUgyemd2YlZ2NGsycnA0M1FIOWVQeHozbGdhemt3S3FRWGdVWENjeVZDZ0hR?oc=5",
+          "published": "Thu, 02 Apr 2026 17:11:00 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMizwNBVV95cUxQQ2R2emoyRzZISmRONXJqWXUzMDlZckxZVUlpNnVrVGZhQ20wVDNURmFGem01QW9qVTNEYWlRYnQzV1E0aW83MWdoX0dJdHBWekRGMDNZcDVqSVBSZXNnWjZIeFFwZy1uTmE1Z1dSV2xfV3A3WDI2Tm1nUnUzYmp4NXpzbGRGTTVKWkpBTFJIQU51UXVrUUctYVYyNHpPSW4tUkhBcGVzcXFHTENLZllQREpQTFVGVC05TjI3SW9RQ0ZLYUd6SFJrUnlNLVVHZjYyRjVncHFJZkM2N0N6bVFJc3QtTGdzNFdYcjREUmQ5eDFUOXNXY2tob0otV2xMUWNyRC1ybVR2NWlOS0ZldUR5VnIwM2JsRzhJOG9XdWxsc3dSUk95Z091TExTN1dWR05rMXdxelFKaFRsdXlmOVZMOF9MUnhGZ09jWDFfcVZOSU5TbFhIRlp1TmxIcmVyOHZ1NWE2Sm0wTlFRMnlBNE4zZFNJWTQ2a2NBOEplUHFYTmRZOFdzMmFJTjB3cTZMcC01bnlYeUphSkc1QlA1bjdHeVBoWUgyemd2YlZ2NGsycnA0M1FIOWVQeHozbGdhemt3S3FRWGdVWENjeVZDZ0hR?oc=5\" target=\"_blank\">Meta and Alphabet Suffered a Reputational Blow. Earnings Could Be the Next Stock Catalyst.</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Barron's</font>"
         },
         {
-          "title": "Oklo’s Atomic Alchemy Announces U.S. Department of Energy Approval for Nuclear Safety Design Agreement of its Groves Isotopes Test Reactor - Oklo Inc.",
-          "source": "Oklo Inc.",
-          "url": "https://news.google.com/rss/articles/CBMinwJBVV95cUxPWlNkazBzRmxNY0RRUzlrWXNvV2RfaEhSa2Y1YV9nT0hQaUlQWVNaS2EwY0VLV3BHTzBhY1ZkV3M1cWVwbDY0c0IyaDBhQUUxVUNMSHNFdHRVRFlSQjljUURqOS1keGloWHdEYUFwOGtWd0d1Y1RzYTFQem5FRG5aUDFFZTJHQVJCUmdrU3JIQVJ0UGJOdG1meHk3RHQ1QjlKV29LQ3JWUTlrNmVRUzlQLWNQNHRhYjdBM0wxU3BIOWExX1ZGYVZ3SDN6VXh5OHJIQ1lVU0FZSUFOV2taZXZTSE5yUDViTkpTWEIzdkdYS01oalNxeXB2Qzl6NWNsWDdCUUx0Ym5sTzdITkp5RTRBSXhoaVNYM2JralVScnlETQ?oc=5",
-          "published": "Tue, 17 Mar 2026 07:00:00 GMT",
-          "content": "<a href=\"https://news.google.com/rss/articles/CBMinwJBVV95cUxPWlNkazBzRmxNY0RRUzlrWXNvV2RfaEhSa2Y1YV9nT0hQaUlQWVNaS2EwY0VLV3BHTzBhY1ZkV3M1cWVwbDY0c0IyaDBhQUUxVUNMSHNFdHRVRFlSQjljUURqOS1keGloWHdEYUFwOGtWd0d1Y1RzYTFQem5FRG5aUDFFZTJHQVJCUmdrU3JIQVJ0UGJOdG1meHk3RHQ1QjlKV29LQ3JWUTlrNmVRUzlQLWNQNHRhYjdBM0wxU3BIOWExX1ZGYVZ3SDN6VXh5OHJIQ1lVU0FZSUFOV2taZXZTSE5yUDViTkpTWEIzdkdYS01oalNxeXB2Qzl6NWNsWDdCUUx0Ym5sTzdITkp5RTRBSXhoaVNYM2JralVScnlETQ?oc=5\" target=\"_blank\">Oklo’s Atomic Alchemy Announces U.S. Department of Energy Approval for Nuclear Safety Design Agreement of its Groves Isotopes Test Reactor</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Oklo Inc.</font>"
+          "title": "Morgan Stanley says it’s “time to buy” California-based tech giant - thestreet.com",
+          "source": "thestreet.com",
+          "url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxOREc2SGNKSzY4UUpXcXpkczlJdUFZN2tWc2FmdDBoWDl0WmVtbnV2R2FTa3hFMHF0b0FURE1fQ1JsMFFGRUJMVlgzZHltVUVBOUhUSnoyTE50Y3Q5eEg5X2lQQ2ZXNm9iYUs4RVpxNlN0Y21rN25ud2p4eE1BX3VyM09TTGpYWHN4RHdzR2tCMlN3UEgzdmUtbi1Ybmo0ZzNERHVxakwzUXpqZTlWeDJFWQ?oc=5",
+          "published": "Wed, 01 Apr 2026 13:47:00 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMisAFBVV95cUxOREc2SGNKSzY4UUpXcXpkczlJdUFZN2tWc2FmdDBoWDl0WmVtbnV2R2FTa3hFMHF0b0FURE1fQ1JsMFFGRUJMVlgzZHltVUVBOUhUSnoyTE50Y3Q5eEg5X2lQQ2ZXNm9iYUs4RVpxNlN0Y21rN25ud2p4eE1BX3VyM09TTGpYWHN4RHdzR2tCMlN3UEgzdmUtbi1Ybmo0ZzNERHVxakwzUXpqZTlWeDJFWQ?oc=5\" target=\"_blank\">Morgan Stanley says it’s “time to buy” California-based tech giant</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">thestreet.com</font>"
         },
         {
-          "title": "2 Nuclear Stocks Energy That Might Be Worth Buying on the Dip - Yahoo Finance",
+          "title": "Meta (META) Stock Trades Up, Here Is Why - Yahoo Finance",
           "source": "Yahoo Finance",
-          "url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxQQkxKWjhmTV92N281dVhXZm1pUHlsX0h4aWJuTFM1QngwMU9fR3RqOS1zSzZuel9XSHRYTEl2NHlBemtGRzJjQ2hzMGp2Mk9TMkxKRmtZSnNEQU9nNGRPZVAyb3dHS1ptUklCZ3dBbHkwUXpCY2puYjJzLXc1bGFhSldIT29TUnlxN0hYanlMUE5zODU5Y2lHS2p3?oc=5",
-          "published": "Wed, 01 Apr 2026 15:06:17 GMT",
-          "content": "<a href=\"https://news.google.com/rss/articles/CBMimgFBVV95cUxQQkxKWjhmTV92N281dVhXZm1pUHlsX0h4aWJuTFM1QngwMU9fR3RqOS1zSzZuel9XSHRYTEl2NHlBemtGRzJjQ2hzMGp2Mk9TMkxKRmtZSnNEQU9nNGRPZVAyb3dHS1ptUklCZ3dBbHkwUXpCY2puYjJzLXc1bGFhSldIT29TUnlxN0hYanlMUE5zODU5Y2lHS2p3?oc=5\" target=\"_blank\">2 Nuclear Stocks Energy That Might Be Worth Buying on the Dip</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Yahoo Finance</font>"
+          "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPRGJlbnlocHJnZmUxc0NjWnFZSUNIdUlEbjdSQzk3ODJCMTl6M0RwY2RsaFc3SlpXbXMtWkpJRGgwTnZPajVjdFFMVjR0NE81ZTMxTkVuNnZNazBZell5UFItaHNoMzh0Y2RmUlA4cFJ2VS01MFo4bnVmWTY4UFJBdTVfdjdneVQ2VHp2b20xSFdpb2xyWUE?oc=5",
+          "published": "Tue, 31 Mar 2026 22:45:19 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMilgFBVV95cUxPRGJlbnlocHJnZmUxc0NjWnFZSUNIdUlEbjdSQzk3ODJCMTl6M0RwY2RsaFc3SlpXbXMtWkpJRGgwTnZPajVjdFFMVjR0NE81ZTMxTkVuNnZNazBZell5UFItaHNoMzh0Y2RmUlA4cFJ2VS01MFo4bnVmWTY4UFJBdTVfdjdneVQ2VHp2b20xSFdpb2xyWUE?oc=5\" target=\"_blank\">Meta (META) Stock Trades Up, Here Is Why</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Yahoo Finance</font>"
         },
         {
-          "title": "Oklo Stock Hits 9-Month Low: What Investors Need To Know - Oklo (NYSE:OKLO) - Benzinga",
+          "title": "Meta Platforms, Inc. $META Stock Position Lessened by Spire Wealth Management - MarketBeat",
+          "source": "MarketBeat",
+          "url": "https://news.google.com/rss/articles/CBMi0AFBVV95cUxNVVZ4LWpoaWluanJPNVl3WHk1NEVLZzJwWTRUVFBmNk5GQWhWem5qdDFYRFh5RUdjUWF3cDQ4cURzVnJFNUk4MlkybU1abFBRa21rb05kcXRKQk04UjY4bE93RnpuY1VCQk8xTHpCbk43SWprYTNEU2hxRl9lTFRUQUtST29fT2ppT0pRQTdXMTZYanE2Y3NNc3AwalplejhsemxnQ0FlOC1uajlaQkFzeUpLQ25VRFczODBBSmVqbHFTaTk1R2VJeldCcVBUUjhI?oc=5",
+          "published": "Fri, 03 Apr 2026 09:20:06 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMi0AFBVV95cUxNVVZ4LWpoaWluanJPNVl3WHk1NEVLZzJwWTRUVFBmNk5GQWhWem5qdDFYRFh5RUdjUWF3cDQ4cURzVnJFNUk4MlkybU1abFBRa21rb05kcXRKQk04UjY4bE93RnpuY1VCQk8xTHpCbk43SWprYTNEU2hxRl9lTFRUQUtST29fT2ppT0pRQTdXMTZYanE2Y3NNc3AwalplejhsemxnQ0FlOC1uajlaQkFzeUpLQ25VRFczODBBSmVqbHFTaTk1R2VJeldCcVBUUjhI?oc=5\" target=\"_blank\">Meta Platforms, Inc. $META Stock Position Lessened by Spire Wealth Management</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">MarketBeat</font>"
+        },
+        {
+          "title": "What's Behind The Bounce In Meta Stock? - Meta Platforms (NASDAQ:META) - Benzinga",
           "source": "Benzinga",
-          "url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxNLUdlVGhMcUwxS3lKUzZiYVpLMkRDSnZ6TEE4QkZDX3h3OFBYOUNKZDdMSzNIcXZoNnpqQXZxcWtDUXdUZjNzaDJsN0dFYURFOU1QVllZNXVXVkMxcU1wUW5pRUQ3cjRFam44WHVBWE1lUlllWFVta2NYNmd4d1RqazFLNnNUVldVN2xiMHJ2bHF0WVF6M21CU3VYRG5DeExuVGdQTDhwUnpZcnR4RXF6TFFkWWx5TFk?oc=5",
-          "published": "Mon, 30 Mar 2026 18:25:14 GMT",
-          "content": "<a href=\"https://news.google.com/rss/articles/CBMitwFBVV95cUxNLUdlVGhMcUwxS3lKUzZiYVpLMkRDSnZ6TEE4QkZDX3h3OFBYOUNKZDdMSzNIcXZoNnpqQXZxcWtDUXdUZjNzaDJsN0dFYURFOU1QVllZNXVXVkMxcU1wUW5pRUQ3cjRFam44WHVBWE1lUlllWFVta2NYNmd4d1RqazFLNnNUVldVN2xiMHJ2bHF0WVF6M21CU3VYRG5DeExuVGdQTDhwUnpZcnR4RXF6TFFkWWx5TFk?oc=5\" target=\"_blank\">Oklo Stock Hits 9-Month Low: What Investors Need To Know - Oklo (NYSE:OKLO)</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Benzinga</font>"
+          "url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxQS3BCd294d0xXMXBIVEpMNnJNdDIwTFFMa3pVV0VhOGRZUVRfbjN0RVFTejlnY0s0ZkFTdUJJX3BVTWl6bWp3QkJ6d1lidFJPWHFpTE1hYmh2VWpxQ0dWWGFROUJaX3YwNk5jenlTU0IxWFJLb0lZUmwyQzluV1VFUDNHeXFMNTJJUWplSlBTZjVNTE1sN2FHN2s4c0REcVU?oc=5",
+          "published": "Wed, 01 Apr 2026 16:24:32 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMinwFBVV95cUxQS3BCd294d0xXMXBIVEpMNnJNdDIwTFFMa3pVV0VhOGRZUVRfbjN0RVFTejlnY0s0ZkFTdUJJX3BVTWl6bWp3QkJ6d1lidFJPWHFpTE1hYmh2VWpxQ0dWWGFROUJaX3YwNk5jenlTU0IxWFJLb0lZUmwyQzluV1VFUDNHeXFMNTJJUWplSlBTZjVNTE1sN2FHN2s4c0REcVU?oc=5\" target=\"_blank\">What's Behind The Bounce In Meta Stock? - Meta Platforms (NASDAQ:META)</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Benzinga</font>"
         },
         {
-          "title": "OKLO Stock Is Down 56% in 6 Months — Should You Buy the Dip? - TipRanks",
-          "source": "TipRanks",
-          "url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxPbzV2Y3c5enhuSW1XNktFVEdncVVPUkpIODNBdEoyODJJOWtvMVo5dkc4d0MyT29qckZGeTVDRVY2NTFDbGE5Ym9JSHRYVVhER3d6NG4ydFdFMVVHV1pXQ3RvRGZ5MWJvSmhrLWxJR3dOTUVvNjlFbW1VTkRUanVlWWROdk4zczJiZHJOaUNHWQ?oc=5",
-          "published": "Mon, 30 Mar 2026 05:59:30 GMT",
-          "content": "<a href=\"https://news.google.com/rss/articles/CBMijwFBVV95cUxPbzV2Y3c5enhuSW1XNktFVEdncVVPUkpIODNBdEoyODJJOWtvMVo5dkc4d0MyT29qckZGeTVDRVY2NTFDbGE5Ym9JSHRYVVhER3d6NG4ydFdFMVVHV1pXQ3RvRGZ5MWJvSmhrLWxJR3dOTUVvNjlFbW1VTkRUanVlWWROdk4zczJiZHJOaUNHWQ?oc=5\" target=\"_blank\">OKLO Stock Is Down 56% in 6 Months — Should You Buy the Dip?</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">TipRanks</font>"
-        },
-        {
-          "title": "Oklo: This Fallout May Just Be Getting Started (Rating Downgrade) (NYSE:OKLO) - Seeking Alpha",
-          "source": "Seeking Alpha",
-          "url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxNaTFNNjJNNHpkZGpycTZpTmVidThTcjNyeVJvdERPazk1Vjc0enBEQkJ5RWtuZmJ4VXc0V1lJRmtBTFBvM2JRYnl6SXVGNXlTa0gxWGtIUzJEMlpYc1U3V0VVdmdLQjRXUUs3a3hXb1hxbXN3UTNnR01rblVJMzlfVFJLLXlzR25Ibm9zRGpTVQ?oc=5",
-          "published": "Sat, 21 Mar 2026 07:00:00 GMT",
-          "content": "<a href=\"https://news.google.com/rss/articles/CBMijwFBVV95cUxNaTFNNjJNNHpkZGpycTZpTmVidThTcjNyeVJvdERPazk1Vjc0enBEQkJ5RWtuZmJ4VXc0V1lJRmtBTFBvM2JRYnl6SXVGNXlTa0gxWGtIUzJEMlpYc1U3V0VVdmdLQjRXUUs3a3hXb1hxbXN3UTNnR01rblVJMzlfVFJLLXlzR25Ibm9zRGpTVQ?oc=5\" target=\"_blank\">Oklo: This Fallout May Just Be Getting Started (Rating Downgrade) (NYSE:OKLO)</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">Seeking Alpha</font>"
-        },
-        {
-          "title": "Oklo, Blykalla to Expand Strategic Partners... - News - Stock Titan",
-          "source": "Tavily",
-          "url": "https://www.stocktitan.net/news/OKLO/",
-          "published": "",
-          "content": "# Latest OKLO News - Oklo, Blykalla to Expand Strategic Partners...\n\n[![Image 1: stocktitan logo](https://www.stocktitan.net/img/logo/stock-titan-logo-header-free.png) STOCK TITAN](https://www.stocktitan.net/)\n*   [Login](https://www.stocktitan.net/news/OKLO/#)\n*   [Sign up](https://www.stocktitan.net/news/OKLO/#)\n*   [](https://www.stocktitan.net/news/OKLO/#)[Login](https://www.stocktitan.net/news/OKLO/#)[Sign up](https://www.stocktitan.net/news/OKLO/#) \n\n0\n\n*   [NEWS FEED](https://www.stocktitan.net/news/live.html)[Stock News Live](https://www.stocktitan.net/news/live.html)[Stock News Today](https://www.stocktitan.net/news/today)[Trending News](https://www.stocktitan.net/news/trending.html) [AI news](https://www.stocktitan.net/news/ai.html)[FDA Approvals](https://www.stocktitan.net/news/fda-approvals.html)[Clinical Trials](https://www.stocktitan.net/news/clinical-trials.html)[Crypto News](https://www.stocktitan.net/news/crypto.html)[Merger & Acquisitions](https://www.stocktitan.net/news/acquisitions.html)[Earnings](https://www.stocktitan.net/news/earnings.html)[Offerings](https://www.stocktitan.net/news/offerings.html)[IPO News](https://www.stocktitan.net/news/ipo.html)[Stock Splits](https://www.stocktitan.net/news/stock-splits.html) [Top News - Gainers](https://www.stocktitan.net/rankings/top-news/gainers/2026-04)[Top News - Losers](https://www.stocktitan.net/rankings/top-news/losers/2026-04) \n*   [SEC FILINGS](https://www.stocktitan.net/sec-filings/live.html)[SEC Filings Live](https://www.stocktitan.net/sec-filings/live.html)[SEC Filings Today](https://www.stocktitan.net/sec-filings/today) [Form 4 - Insider Trading](https://www.stocktitan.net/sec-filings/form-4.html)[8-K - Material Events](https://www.stocktitan.net/sec-filings/8-k.html)[10-K - Annual Reports](https://www.stocktitan.net/sec-filings/10-k.html)[10-Q - Quarterly Reports](https://www.stocktitan.net/sec-filings/10-q.html)[DEF 14A - Proxy Statements](https://www.stocktitan.net/sec-filings/def-14a.html)[S-1 - IPO Registration](https://www.stocktitan.net/sec-filings/s-1.html)[S-3 - Shelf Registration](https://www.stocktitan.net/sec-filings/s-3.html) \n*   [STOCKS](https://www.stocktitan.net/stocks/themes)[All Stock Themes](https://www.stocktitan.net/stocks/themes) [AI Stocks](https://www.stocktitan.net/stocks/themes/ai-stocks)[EV Stocks](https://www.stocktitan.net/stocks/themes/ev-stocks)[Renewable Energy](https://www.stocktitan.net/stocks/themes/renewable-energy-stocks)[Crypto Stocks](https://www.stocktitan.net/stocks/themes/crypto-stocks)[Cybersecurity](https://www.stocktitan.net/stocks/themes/cybersecurity-stocks)[Oil & Gas](https://www.stocktitan.net/stocks/themes/oil-gas-stocks)[Defense & Military](https://www.stocktitan.net/stocks/themes/defense-military-stocks)[Space & Satellite](https://www.stocktitan.net/stocks/themes/space-stocks) [Financials](https://www.stocktitan.net/financials/) [All Stock Rankings](https://www.stocktitan.net/rankings)[Largest Companies by Market Cap](ht"
-        },
-        {
-          "title": "OKLO Stock Price Quote - Morningstar",
-          "source": "Tavily",
-          "url": "https://www.morningstar.com/stocks/xnys/oklo/quote",
-          "published": "",
-          "content": "# OKLO Stock Price Quote | Morningstar\n\n Advertisement \n\n Morningstar brands and products \n\n Company \n\n[![Image 1: Morningstar](https://www.morningstar.com/assets/img/morningstar.d826858.svg)](https://www.morningstar.com/)\n\n[](https://www.morningstar.com/login?destination=https://www.morningstar.com/stocks/xnys/oklo/quote)\n\n Get 7 Days Free \n\n*   [Portfolio](https://www.morningstar.com/tools/portfolio)\n*   Tools   \n\n*   Sections   \n*   Markets   \n*   [Funds](https://www.morningstar.com/funds)\n*   [ETFs](https://www.morningstar.com/topics/etfs)\n*   [Stocks](https://www.morningstar.com/stocks)\n*   [Bonds](https://www.morningstar.com/bonds)\n\n*   Investing Ideas   \n\n*   [Home](https://www.morningstar.com/)\n\n*   \nTools\n\n    *   [Portfolio](https://www.morningstar.com/tools/portfolio)\n    *   [Watchlists](https://www.morningstar.com/tools/watchlists)\n    *   [Screener](https://www.morningstar.com/tools/screener)\n    *   [Chart](https://www.morningstar.com/tools/chart)\n    *   [Rating Changes](https://www.morningstar.com/tools/rating-changes)\n\n*   Sections \n*   Markets \n*   [Funds](https://www.morningstar.com/funds)\n*   [ETFs](https://www.morningstar.com/topics/etfs)\n*   [Stocks](https://www.morningstar.com/stocks)\n*   [Bonds](https://www.morningstar.com/bonds)\n\n*   Investing Ideas \n\n*   Media \n\n*   [Help](https://www.morningstar.com/help-center)\n*   [What’s New](https://www.morningstar.com/whats-new)\n*   [Notifications](https://www.morningstar.com/notifications)\n\n*   Products for Investors \n*   [All Products and Services](https://www.morningstar.com/business)\n\n1.   [Home](https://www.morningstar.com/)\n2.   [Stocks](https://www.morningstar.com/stocks)\n3.   Oklo Inc Class A Shares \n\n# Oklo Inc Class A Shares OKLO\n\n Morningstar Rating \n\n[Unlock](https://www.morningstar.com/mm/investor/stock-analysis?utm_source=mstar&utm_medium=reports.stocks&utm_campaign=evergreen)\n\nStock XNYS Rating as of Apr 2, 2026\n\n Download PDF \n\n More Actions \n\n*   [Summary](https://www.morningstar.com/stocks/xnys/oklo/quote)\n*   [Chart](https://www.morningstar.com/stocks/xnys/oklo/chart)\n*   [News](https://www.morningstar.com/stocks/xnys/oklo/news)\n*   [Price vs Fair Value](https://www.morningstar.com/stocks/xnys/oklo/price-fair-value)\n*   [Sustainability](https://www.morningstar.com/stocks/xnys/oklo/sustainability)\n*   [Trailing Returns](https://www.morningstar.com/stocks/xnys/oklo/trailing-returns)\n*   [Key Metrics](https://www.morningstar.com/stocks/xnys/oklo/key-metrics)\n*   [Financials](https://www.morningstar.com/stocks/xnys/oklo/financials)\n*   [Earnings Transcript](https://www.morningstar.com/stocks/xnys/oklo/earnings-transcript)\n*   [Valuation](https://www.morningstar.com/stocks/xnys/oklo/valuation)\n*   [Dividends](https://www.morningstar.com/stocks/xnys/oklo/dividends)\n*   [Ownership](https://www.morningstar.com/stocks/xnys/oklo/ownership)\n*   [Executive](https://www.morningstar.com/stocks/xnys/oklo/executive)\n\n$48.13+0.06 (0.12%) \n\n[View Full Chart](https://www.morningst"
-        },
-        {
-          "title": "OKLO Stock Quote Price and Forecast - CNN",
-          "source": "Tavily",
-          "url": "https://www.cnn.com/markets/stocks/OKLO",
-          "published": "",
-          "content": "# OKLO Stock Quote Price and Forecast | CNN\n\n### CNN values your feedback\n\n 1. How relevant is this ad to you? \n\n 2. Did you encounter any technical issues? \n\n- [x]  No\n\n Video player was slow to load content - [x]   Video content never loaded - [x]   Ad froze or did not finish loading - [x]   Video content did not start after ad - [x]   Audio on ad was too loud - [x]   Other issues - [x]  \n\n Ad never loaded - [x]   Ad prevented/slowed the page from loading - [x]   Content moved around while ad loaded - [x]   Ad was repetitive to ads I've seen previously - [x]   Other issues - [x]  \n\n Cancel  Submit \n\nThank You!\n\n Your effort and contribution in providing this feedback is much appreciated. \n\n Close \n\nAd Feedback\n\n[](https://www.cnn.com/ \"CNN logo\")[Business](https://www.cnn.com/business)\n\n[Markets](https://www.cnn.com/markets)\n\n[Tech](https://www.cnn.com/business/tech)\n\n[Media](https://www.cnn.com/business/media)\n\n[Calculators](https://www.cnn.com/business/financial-calculators)\n\n[Videos](https://www.cnn.com/business/videos)\n\n[More](https://www.cnn.com/markets/stocks/OKLO)\n\n[Markets](https://www.cnn.com/markets)[Tech](https://www.cnn.com/business/tech)[Media](https://www.cnn.com/business/media)[Calculators](https://www.cnn.com/business/financial-calculators)[Videos](https://www.cnn.com/business/videos)\n\n[Watch](https://www.cnn.com/subscription/all-access)[Listen](https://www.cnn.com/audio)Subscribe\n\n Sign in \n\n My Account \n\n*   [Settings](https://www.cnn.com/account/settings)\n*   [Newsletters](https://www.cnn.com/newsletters)\n*   [Topics you follow](https://www.cnn.com/follow?iid=fw_var-nav)\n*   [Sign out](https://www.cnn.com/markets/stocks/OKLO#)\n\nYour CNN account Sign in to your CNN account\n\n[](https://www.cnn.com/account/log-in)\n\n* * *\n\n Sign in \n\n My Account \n\n*   [Settings](https://www.cnn.com/account/settings)\n*   [Newsletters](https://www.cnn.com/newsletters)\n*   [Topics you follow](https://www.cnn.com/follow?iid=fw_var-nav)\n*   [Sign out](https://www.cnn.com/markets/stocks/OKLO#)\n\nYour CNN account Sign in to your CNN account\n\n[](https://www.cnn.com/account/log-in)\n\n* * *\n\n[Listen](https://www.cnn.com/audio)[Watch](https://www.cnn.com/subscription/all-access)\n\n* * *\n\n Edition \n\n[US](https://us.cnn.com/?hpt=header_edition-picker)\n\n[International](https://edition.cnn.com/?hpt=header_edition-picker)\n\n[Arabic](https://arabic.cnn.com/?hpt=header_edition-picker)\n\n[Español](https://cnnespanol.cnn.com/?hpt=header_edition-picker)\n\n Edition\n\n*   [US](https://us.cnn.com/?hpt=header_edition-picker)\n*   [International](https://edition.cnn.com/?hpt=header_edition-picker)\n*   [Arabic](https://arabic.cnn.com/?hpt=header_edition-picker)\n*   [Español](https://cnnespanol.cnn.com/?hpt=header_edition-picker)\n\n* * *\n\n[Markets](https://www.cnn.com/markets)\n\n[Tech](https://www.cnn.com/business/tech)\n\n[Media](https://www.cnn.com/business/media)\n\n[Calculators](https://www.cnn.com/business/financial-calculators)\n\n[Videos](https://www.cnn.com/business/videos)\n\n* * *\n"
-        },
-        {
-          "title": "OKLO Stock Price Quote & News - Robinhood",
-          "source": "Tavily",
-          "url": "https://robinhood.com/us/en/stocks/OKLO/",
-          "published": "",
-          "content": "# Oklo: OKLO Stock Price Quote & News | Robinhood\n\n[](https://robinhood.com/)\n\n[Log In](https://robinhood.com/login/?symbolOrId=OKLO)[Sign Up](https://robinhood.com/signup/?symbolOrId=OKLO)\n\n[](https://robinhood.com/)\n\n[Learn](https://robinhood.com/learn/)[Blog](https://newsroom.aboutrobinhood.com/)[Careers](https://careers.robinhood.com/)[Help](https://robinhood.com/support/)[Log In](https://robinhood.com/login/?symbolOrId=OKLO)[Sign Up](https://robinhood.com/signup/?symbolOrId=OKLO)\n\n# Oklo\n\n## $4 8.0 8\n\n9\n\n8\n\n7\n\n6\n\n5\n\n4\n\n3\n\n2\n\n1\n\n0\n\n-\n\n$\n\n,\n\n.\n\n9\n\n8\n\n7\n\n6\n\n5\n\n4\n\n3\n\n2\n\n1\n\n0\n\n-\n\n$\n\n,\n\n.\n\n9\n\n8\n\n7\n\n6\n\n5\n\n4\n\n3\n\n2\n\n1\n\n0\n\n-\n\n$\n\n,\n\n.\n\n9\n\n8\n\n7\n\n6\n\n5\n\n4\n\n3\n\n2\n\n1\n\n0\n\n-\n\n$\n\n,\n\n.\n\n9\n\n8\n\n7\n\n6\n\n5\n\n4\n\n3\n\n2\n\n1\n\n0\n\n-\n\n$\n\n,\n\n.\n\n9\n\n8\n\n7\n\n6\n\n5\n\n4\n\n3\n\n2\n\n1\n\n0\n\n-\n\n$\n\n,\n\n.\n\n9\n\n8\n\n7\n\n6\n\n5\n\n4\n\n3\n\n2\n\n1\n\n0\n\n-\n\n$\n\n,\n\n.\n\n+$0.03 (+0.06%)Today\n\n-$0.02 (-0.04%)After-hours\n\n1D\n\n1W\n\n1M\n\n3M\n\nYTD\n\n1Y\n\n5Y\n\nALL\n\n![Image 1](https://cdn.robinhood.com/assets/generated_assets/brand/_next/static/images/referral-gift-up-day__d1c129ca5203746b2b22de4d35c89df79b8d5b2552b034a5d2aa5eed9c7ef1a8.svg)\n\n#### Trade Oklo 24 hours a day, five days a week on Robinhood.\n\nRobinhood gives you the tools to revolutionize your trading experience. Use the streamlined mobile app, or access advanced charts and execute precise trades on our browser-based platform, [Robinhood Legend](https://robinhood.com/us/en/legend/). Risks and limitations apply.\n\n[Sign up and join over 25 million investors.](https://robinhood.com/signup)\n\n## About OKLO\n\n### Oklo, Inc. engages in the development of fission reactors. It provides clean energy through the design and deployment of fast fission power plants.Show more\n\nCEO Jacob DeWitte\n\nCEO Jacob DeWitte\n\nEmployees 205\n\nEmployees 205\n\nHeadquarters Santa Clara, California\n\nHeadquarters Santa Clara, California\n\nFounded 2013\n\nFounded 2013\n\nEmployees 205\n\nEmployees 205\n\n## OKLO Key Statistics\n\nMarket cap 8.35B\n\nMarket cap 8.35B\n\nPrice-Earnings ratio-67.08\n\nPrice-Earnings ratio-67.08\n\nDividend yield—\n\nDividend yield—\n\nAverage volume 8.66M\n\nAverage volume 8.66M\n\nHigh today$49.05\n\nHigh today$49.05\n\nLow today$45.36\n\nLow today$45.36\n\nOpen price$45.90\n\nOpen price$45.90\n\nVolume 5.53M\n\nVolume 5.53M\n\n52 Week high$193.84\n\n52 Week high$193.84\n\n52 Week low$17.42\n\n52 Week low$17.42\n\n## Stock Snapshot\n\nThe current Oklo(OKLO) stock price is $48.08, with a market capitalization of 8.35B. The stock trades at a price-to-earnings (P/E) ratio of -67.08.\n\nAs of 2026-04-03, Oklo(OKLO) stock has fluctuated between $45.36 and $49.05. The current price stands at $48.08, placing the stock +6.0% above today's low and -2.0% off the high.\n\nThe Oklo(OKLO)'s current trading volume is 5.53M, compared to an average daily volume of 8.66M.\n\nDuring the past year, Oklo(OKLO) stock moved between $17.42 at its lowest and $193.84 at its peak.\n\nDuring the past year, Oklo(OKLO) stock moved between $17.42 at its lowest and $193.84 at its peak.\n\nSee More\n\n## Analyst ratings\n\n## 65%\n\nof 20 ratings\n\nBuy\n\n65%\n\nHold\n\n30%\n\nSell\n\n5%"
+          "title": "Microsoft vs Meta: Both AI Stocks Have Been Hit Hard, But One Is a Better Buy Now - 24/7 Wall St.",
+          "source": "24/7 Wall St.",
+          "url": "https://news.google.com/rss/articles/CBMiwAFBVV95cUxOR0hmQ2dySm1jaDF3WnF5RXRkVG1Nclpjc053eW9URDYyMURqN3BPaWxuY3M4N084T2ZJUXZDcnRwVDZUR2VMUDRaSUI3OF92bHBGSUJ1THJoVUxGVE9odnRKTnlUZnhNWFh5LTM4V0pMTDFnUEJ0M1FDeDFlQkR1U2hlVTFIRFF3Q2dXMGN2Mmh6NnpyaFJaX0VBVzh0LXhGWHctUkdVZ2lNaVU4TlVFYkc2OU96c3FpeG1hbHdsUVk?oc=5",
+          "published": "Wed, 01 Apr 2026 12:54:52 GMT",
+          "content": "<a href=\"https://news.google.com/rss/articles/CBMiwAFBVV95cUxOR0hmQ2dySm1jaDF3WnF5RXRkVG1Nclpjc053eW9URDYyMURqN3BPaWxuY3M4N084T2ZJUXZDcnRwVDZUR2VMUDRaSUI3OF92bHBGSUJ1THJoVUxGVE9odnRKTnlUZnhNWFh5LTM4V0pMTDFnUEJ0M1FDeDFlQkR1U2hlVTFIRFF3Q2dXMGN2Mmh6NnpyaFJaX0VBVzh0LXhGWHctUkdVZ2lNaVU4TlVFYkc2OU96c3FpeG1hbHdsUVk?oc=5\" target=\"_blank\">Microsoft vs Meta: Both AI Stocks Have Been Hit Hard, But One Is a Better Buy Now</a>&nbsp;&nbsp;<font color=\"#6f6f6f\">24/7 Wall St.</font>"
         }
       ],
       "news_summary": {
-        "summary": "שומעים יקרים, שלום.\n\nהיום אנחנו מדברים על חברת האנרגיה הגרעינית OKLO, שמנייתה נסחרת סביב 48 דולר, עם עלייה מזערית של עשירית האחוז. אבל מאחורי השקט הזה מסתתר סיפור די סוער.\n\nהחברה, שמפתחת כורים גרעיניים מודולריים קטנים בשם Aurora, נסחרת היום פי שלושה ממחיר הפתיחה שלה אחרי ההנפקה לפני כשנתיים – 15.50 דולר. זה קרה למרות שעדיין לא הפעילה אף כור ולא מייצרת הכנסות משמעותיות. אז מה מרתיח את העניין?\n\nהתשובה נמצאת בשתי מגמות ענקיות. הראשונה היא הביקוש האדיר לחשמל ממרכזי נתונים ובינה מלאכותית. השנייה היא החיפוש הגלובלי אחר אלטרנטיבות יציבות לדלקים מאובנים. הכורים הגדולים והמסורתיים הם יקרים, מורכבים להקמה, ופחות מתאימים לאזורים מרוחקים. OKLO מציעה כורים קטנים של 1.5 מגה-וואט שניתן לשרשר יחד, פתרון שמתאים בדיוק לצרכים החדשים האלה.\n\nאבל השבוע, הסיפור קיבל תפנית מעניינת. OKLO הודיעה על הרחבת השותפות האסטרטגית שלה עם החברה השוודית Blykalla, שמפתחת כורים מהירים מתקדמים. המטרה היא להאיץ את הפיתוח המסחרי, עם יעד גיוס של 100 עד 200 מיליון דולר. חשוב מכך, Blykalla מתחייבת להעביר פעילות משמעותית לארה\"ב, מה שמחזק את הנרטיב של OKLO כמובילת חדשנות גרעינית מקומית.\n\nעם זאת, חשוב לשים לב להקשר הרחב יותר. מניות רבות בענף האנרגיה הגרעינית, כולל ענקית התחום Constellation Energy, נמצאות בנסיגה חדה בשבועות האחרונים – חלקם ירדו ב-30% ואף יותר. OKLO עצמה רחוקה משיאי השנה. אנליסטים מציינים שזו תגובה לשינוי בסנטימנט המשקיעים, אבל חלקם רואים בזה דווקא הזדמנות לרכישה לטווח ארוך, במיוחד לאור סיפור הצמיחה של הביקוש לחשמל.\n\nאז מה לוקחים מכל זה? OKLO היא עדיין סיפור סופר-ספקולטיבי, אבל היא מציבה את עצמה בצומת דרכים קריטית: בין הבום בביקוש לחשמל לבין החדשנות הטכנולוגית שמבטיחה לספק אותו. ההתקדמות עם Blykalla היא צעד חשוב בהפיכת החזון למציאות. הדבר הכי חשוב לזכור מהיום הוא שכאן לא משקיעים ברווחים של מחר, אלא בהבטחה של מחרתיים. זה סיכון גבוה, עם פוטנציאל גבוה לא פחות.\n\nזה הכל להיום. תודה שהקשבתם.",
-        "has_news": true,
-        "article_count": 18,
-        "key_headlines": [
-          "Is Oklo the Smartest Investment You Can Make Today?",
-          "Nuclear's Pullback: A Generational Buying Opportunity?",
-          "2 Nuclear Stocks Energy That Might Be Worth Buying on the Dip"
-        ]
+        "summary": "",
+        "has_news": false,
+        "article_count": 14,
+        "key_headlines": []
       }
     }
   ],
-  "date": "2026-04-03T16:58:02.175437"
+  "date": "2026-04-03T17:16:27.688830"
 }
