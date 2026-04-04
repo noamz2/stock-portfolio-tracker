@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <style>
 /* ═══ Ultra-Premium FinTech Theme ═══ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap');
@@ -302,17 +304,130 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
   border-radius: 50%;
 }
 
+
+/* Hero & 3D Redesign Styles */
+:root {
+  --bg: #030509;
+  --surface: #0b101a;
+  --card: rgba(14, 20, 32, 0.6);
+  --border: rgba(255, 255, 255, 0.08);
+  --accent: #B388FF;
+  --accent-glow: rgba(179, 136, 255, 0.3);
+  --cyan: #00E5FF;
+  --cyan-glow: rgba(0, 229, 255, 0.5);
+  --glass: rgba(11, 16, 26, 0.45);
+}
+
+body {
+  background-image: 
+    radial-gradient(ellipse at 20% 0%, rgba(179,136,255,0.15) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 50%, rgba(0,229,255,0.1) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 100%, rgba(0,230,118,0.1) 0%, transparent 50%);
+}
+
+.main-header {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 32px;
+  background: var(--glass);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+}
+
+.logo-brand {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #00E5FF, #B388FF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+#hero-3d-scene {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  perspective: 1200px;
+}
+
+.coin {
+  position: absolute;
+  width: 140px; height: 140px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex; justify-content: center; align-items: center;
+  font-size: 40px; font-weight: 800; font-family: 'Inter', sans-serif;
+  box-shadow: inset 0 0 40px rgba(255,255,255,0.05), 0 20px 40px rgba(0,0,0,0.4);
+  transform-style: preserve-3d;
+}
+
+.coin::before {
+  content: ''; position: absolute; inset: -2px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.coin-btc { top: 20%; left: 15%; color: #f59e0b; border-color: rgba(245,158,11,0.3); text-shadow: 0 0 20px rgba(245,158,11,0.5); font-size:60px;}
+.coin-tsla { top: 15%; left: 75%; color: #ef4444; border-color: rgba(239,68,68,0.3); text-shadow: 0 0 20px rgba(239,68,68,0.5); }
+.coin-aapl { top: 60%; left: 10%; color: #F8FAFC; border-color: rgba(255,255,255,0.3); text-shadow: 0 0 20px rgba(255,255,255,0.3); }
+.coin-nvda { top: 55%; left: 80%; color: #22c55e; border-color: rgba(34,197,94,0.3); text-shadow: 0 0 20px rgba(34,197,94,0.5); }
+.coin-amzn { top: 85%; left: 45%; color: #f59e0b; border-color: rgba(245,158,11,0.3); text-shadow: 0 0 20px rgba(245,158,11,0.5); }
+
+.hero-landing {
+  min-height: 80vh;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  position: relative; z-index: 10; text-align: center;
+  padding: 24px;
+}
+
+.hero-title {
+  font-size: 5.5rem; font-weight: 900; letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #FFF, #00E5FF, #B388FF);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 20px; font-family: 'Inter', sans-serif;
+}
+
+.hero-subtitle {
+  font-size: 1.4rem; color: #94A3B8; max-width: 600px;
+  margin-bottom: 40px; font-weight: 500; font-family: 'Assistant', sans-serif;
+  line-height:1.6;
+}
+
+.card {
+  backdrop-filter: blur(20px);
+  background: linear-gradient(135deg, rgba(14,20,32,0.8), rgba(10,13,20,0.9));
+}
+
+@media(max-width: 768px) {
+  .hero-title { font-size: 3rem; }
+  .coin { width: 80px; height: 80px; font-size: 30px; }
+  .main-header { flex-direction: column; gap:12px; }
+}
+
 </style>
 </head>
 <body>
 
-<header>
-  <h1>📊 Stock Portfolio Tracker</h1>
-  <div class="input-group">
-    <input type="text" id="tickerInput" placeholder="Enter tickers: AAPL, MSFT, GOOGL..." dir="ltr">
+<header class="main-header">
+  <div class="logo-brand">ASTRA FINANCE</div>
+  <div class="input-group" style="max-width:400px">
+    <input type="text" id="tickerInput" placeholder="Add ticker: AAPL, MSFT..." dir="ltr">
     <button class="btn btn-primary" onclick="addTickers()">Add</button>
   </div>
+  <div style="display:flex; align-items:center; gap: 16px; margin-left:16px;">
+    <span style="color:#B388FF; font-weight:700;">Hi, {{ username }}</span>
+    <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+  </div>
 </header>
+
+
 
 <div class="container">
   <!-- Portfolio Dashboard -->
@@ -2571,5 +2686,46 @@ if (Object.keys(portfolio).length) loadPortfolio();
   </div>
   <div id="newsContent"></div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof gsap !== 'undefined') {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Initial float animation (infinite)
+    gsap.to(".coin", {
+      y: "+=30",
+      rotationX: "+=10",
+      rotationY: "+=15",
+      duration: 4,
+      yoyo: true,
+      repeat: -1,
+      ease: "sine.inOut",
+      stagger: 0.3
+    });
+
+    // Scroll parallax logic for each coin
+    gsap.to(".coin-btc", { scrollTrigger: { trigger: "body", start: "top top", end: "bottom top", scrub: 1 }, y: -800, rotationY: 720, rotationZ: 100 });
+    gsap.to(".coin-tsla", { scrollTrigger: { trigger: "body", start: "top top", end: "bottom top", scrub: 1.5 }, y: -600, rotationX: 360, x: -100 });
+    gsap.to(".coin-aapl", { scrollTrigger: { trigger: "body", start: "top top", end: "bottom top", scrub: 1.2 }, y: -700, rotationY: -360, x: 200 });
+    gsap.to(".coin-nvda", { scrollTrigger: { trigger: "body", start: "top top", end: "bottom top", scrub: 1.8 }, y: -1000, rotationZ: 360, rotationX: -180 });
+    gsap.to(".coin-amzn", { scrollTrigger: { trigger: "body", start: "top top", end: "bottom top", scrub: 1.1 }, y: -500, rotationY: 200, x: -200 });
+
+    // Fade out hero content on scroll
+    gsap.to(".hero-content", {
+      scrollTrigger: { trigger: ".hero-landing", start: "top top", end: "center top", scrub: true },
+      opacity: 0,
+      y: 150,
+      scale: 0.9
+    });
+  }
+});
+</script>
+<script>
+async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/';
+}
+</script>
 </body>
 </html>

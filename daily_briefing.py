@@ -17,10 +17,16 @@ from pathlib import Path
 import numpy as np
 import requests
 import yfinance as yf
-from dotenv import load_dotenv
 
 # Load .env file if it exists
-load_dotenv()
+_env_path = Path(__file__).parent / '.env'
+if _env_path.exists():
+    with open(_env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _key, _val = _line.split('=', 1)
+                os.environ.setdefault(_key.strip(), _val.strip())
 
 try:
     import feedparser

@@ -3,13 +3,13 @@
 import json
 import traceback
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, render_template, session, redirect
+from werkzeug.security import generate_password_hash, check_password_hash
+import sqlite3
 from flask_cors import CORS
 import yfinance as yf
 import numpy as np
 import os
-from dotenv import load_dotenv
-load_dotenv()
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -651,9 +651,78 @@ def get_historical_pe(ticker_obj, info, years=5):
 
 # ─── API Routes ───
 
+
+# ─── Authentication & Database ───
+app.secret_key = 'astra_super_secret_key_change_me'
+
+def get_db():
+    conn = sqlite3.connect('users.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    with get_db() as db:
+        db.execute('''CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )''')
+        db.commit()
+
+init_db()
+
 @app.route('/')
-def index():
-    return send_file('index.html')
+def landing():
+    if 'user_id' in session:
+        return redirect('/dashboard')
+    return render_template('landing.html')
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect('/')
+    return render_template('dashboard.html', username=session.get('username'))
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    if not email or not password:
+        return jsonify({'error': 'Missing email or password'}), 400
+    try:
+        with get_db() as db:
+            db.execute("INSERT INTO users (email, password) VALUES (?, ?)",
+                       (email.lower().strip(), generate_password_hash(password, method='pbkdf2:sha256')))
+            db.commit()
+
+            # Auto-login after register
+            user = db.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),)).fetchone()
+            session['user_id'] = user['id']
+            session['username'] = user['email']
+
+        return jsonify({'success': True})
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Email already exists'}), 409
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    with get_db() as db:
+        user = db.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),)).fetchone()
+        if user and check_password_hash(user['password'], password):
+            session['user_id'] = user['id']
+            session['username'] = user['email']
+            return jsonify({'success': True})
+    return jsonify({'error': 'Invalid credentials'}), 401
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'success': True})
+
 
 
 @app.route('/api/health')
@@ -726,6 +795,42 @@ def search_ticker(query):
 
     return jsonify(results[:10])
 
+
+_prices_cache = {}
+_prices_cache_ts = 0
+
+@app.route('/api/prices')
+def get_prices():
+    """Lightweight endpoint: return current prices (cached 5 min server-side)."""
+    import time as _t
+    global _prices_cache, _prices_cache_ts
+    tickers_param = request.args.get('tickers', '')
+    tickers = [t.strip().upper() for t in tickers_param.split(',') if t.strip()]
+    if not tickers:
+        return jsonify({}), 400
+
+    # Return server cache if fresh (5 min)
+    if _prices_cache and (_t.time() - _prices_cache_ts) < 300:
+        result = {t: _prices_cache[t] for t in tickers if t in _prices_cache}
+        if len(result) == len(tickers):
+            return jsonify(result)
+
+    result = {}
+    for ticker in tickers[:15]:
+        try:
+            t = yf_ticker(ticker)
+            info = t.info
+            price = safe(info, 'currentPrice', safe(info, 'regularMarketPrice', 0))
+            prev_close = safe(info, 'previousClose', price)
+            change_pct = ((price - prev_close) / prev_close * 100) if prev_close else 0
+            result[ticker] = {'price': price, 'changePct': round(change_pct, 2)}
+        except Exception:
+            pass
+
+    if result:
+        _prices_cache.update(result)
+        _prices_cache_ts = _t.time()
+    return jsonify(result)
 
 @app.route('/api/stock/<ticker>')
 def get_stock(ticker):

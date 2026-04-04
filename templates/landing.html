@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Astra Finance - The Future of Portfolio Tracking</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Assistant:wght@400;600;700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <style>
+    :root {
+      --bg: #010308;
+      --surface: #0a0d14;
+      --glass: rgba(8, 12, 18, 0.6);
+      --border: rgba(255, 255, 255, 0.08);
+      --cyan: #00E5FF;
+      --purple: #B388FF;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(circle at 15% 50%, rgba(179, 136, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(0, 229, 255, 0.06) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    /* Subtle static grid */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 40%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 40%, transparent 100%);
+    }
+
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 24px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+      background: linear-gradient(180deg, rgba(1, 3, 8, 0.95), transparent);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #00E5FF, #B388FF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.3));
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 15px;
+      transition: all 0.3s;
+    }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: #fff;
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2962FF, #003cdb);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(41, 98, 255, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 30px rgba(41, 98, 255, 0.6);
+      transform: translateY(-2px);
+    }
+
+    /* Coins container */
+    #hero-3d-scene {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .coin {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: rgba(10, 15, 25, 0.7);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.05), 0 20px 40px rgba(0, 0, 0, 0.5);
+      will-change: transform, opacity;
+      gap: 8px;
+    }
+
+    /* No pseudo backface thickness for now to avoid rendering artifacts on mobile/safari, just deep shadows */
+    .coin img {
+      width: 55px;
+      height: 55px;
+      object-fit: contain;
+    }
+
+    .coin-data {
+      text-align: center;
+    }
+
+    .coin-tick {
+      font-size: 13px;
+      color: #cbd5e1;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    /* PRICE IS STRICTLY GREEN */
+    .coin-price {
+      font-size: 18px;
+      font-weight: 900;
+      color: #22c55e;
+      text-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+      font-family: monospace;
+    }
+
+    .price-pulse {
+      animation: pulseGreenTrue 1.5s infinite alternate;
+    }
+
+    @keyframes pulseGreenTrue {
+      from {
+        color: #22c55e;
+        text-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+      }
+
+      to {
+        color: #4ade80;
+        text-shadow: 0 0 20px rgba(74, 222, 128, 0.8);
+      }
+    }
+
+    /* 10 Coins — arranged around edges, clear center for hero text */
+    /* Left column (top→bottom) */
+    .coin-1 {
+      /* AAPL */
+      top: 12vh;
+      left: 3vw;
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .coin-3 {
+      /* NVDA */
+      top: 35vh;
+      left: 1vw;
+      border-color: rgba(34, 197, 94, 0.6);
+    }
+
+    .coin-5 {
+      /* MSFT */
+      top: 58vh;
+      left: 3vw;
+      border-color: rgba(0, 229, 255, 0.6);
+    }
+
+    .coin-7 {
+      /* META */
+      top: 76vh;
+      left: 6vw;
+      border-color: rgba(6, 104, 225, 0.6);
+    }
+
+    /* Right column (top→bottom) */
+    .coin-2 {
+      /* TSLA */
+      top: 15vh;
+      right: 3vw;
+      border-color: rgba(239, 68, 68, 0.6);
+    }
+
+    .coin-4 {
+      /* AMZN */
+      top: 38vh;
+      right: 1vw;
+      border-color: rgba(245, 158, 11, 0.6);
+    }
+
+    .coin-6 {
+      /* GOOGL */
+      top: 60vh;
+      right: 3vw;
+      border-color: rgba(234, 67, 53, 0.6);
+    }
+
+    .coin-8 {
+      /* NFLX */
+      top: 78vh;
+      right: 6vw;
+      border-color: rgba(229, 9, 20, 0.6);
+    }
+
+    /* Bottom center — below button, spaced apart */
+    .coin-9 {
+      /* AMD */
+      top: 74vh;
+      left: 28vw;
+      border-color: rgba(237, 28, 36, 0.6);
+    }
+
+    .coin-10 {
+      /* INTC */
+      top: 74vh;
+      right: 28vw;
+      border-color: rgba(0, 113, 197, 0.6);
+    }
+
+    /* Scroll structure */
+    .scroll-container {
+      position: relative;
+      z-index: 10;
+      overflow-x: hidden;
+    }
+
+    section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 24px;
+      position: relative;
+    }
+
+    .hero-content {
+      margin-top: -10vh;
+    }
+
+    .hero-content h1 {
+      font-size: 7vw;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #FFF, #00E5FF, #B388FF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 24px;
+      filter: drop-shadow(0 0 30px rgba(179, 136, 255, 0.2));
+    }
+
+    .hero-content p {
+      font-size: 1.5rem;
+      color: #94A3B8;
+      max-width: 650px;
+      margin: 0 auto 40px auto;
+      font-weight: 500;
+      line-height: 1.6;
+    }
+
+
+    /* Glass Cards */
+    .info-card {
+      background: linear-gradient(135deg, rgba(20, 25, 35, 0.85), rgba(10, 13, 20, 0.95));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+      border-radius: 30px;
+      padding: 60px 50px;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      text-align: left;
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+
+    .info-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 30px;
+      background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.1), transparent 50%);
+      pointer-events: none;
+    }
+
+    .info-card-inner {
+      position: relative;
+    }
+
+    .info-card h2 {
+      font-size: 3.5rem;
+      margin-bottom: 24px;
+      color: #fff;
+      letter-spacing: -0.02em;
+      text-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .info-card p {
+      font-size: 1.25rem;
+      color: #cbd5e1;
+      line-height: 1.8;
+      margin-bottom: 32px;
+      font-weight: 500;
+    }
+
+    .feature-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .feat {
+      background: rgba(255, 255, 255, 0.02);
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .feat:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(0, 229, 255, 0.2);
+    }
+
+    .feat h3 {
+      color: var(--cyan);
+      margin-bottom: 12px;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feat p {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #94A3B8;
+      margin: 0;
+    }
+
+    /* Auth Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(1, 3, 8, 0.85);
+      backdrop-filter: blur(16px);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+      perspective: 1000px;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: linear-gradient(135deg, rgba(20, 25, 35, 0.95), rgba(10, 13, 20, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 40px 100px rgba(0, 0, 0, 1), 0 0 40px rgba(0, 229, 255, 0.1);
+      border-radius: 24px;
+      padding: 48px;
+      width: 100%;
+      max-width: 420px;
+      transform: translateY(40px) rotateX(10deg) scale(0.9);
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform-style: preserve-3d;
+    }
+
+    .modal-overlay.active .modal {
+      transform: translateY(0) rotateX(0) scale(1);
+    }
+
+    .modal h2 {
+      margin-bottom: 32px;
+      font-size: 2rem;
+      text-align: center;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      transform: translateZ(20px);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      transform: translateZ(10px);
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #94A3B8;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-radius: 12px;
+      font-size: 16px;
+      outline: none;
+      transition: all 0.3s;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 4px rgba(0, 229, 255, 0.15);
+      background: rgba(0, 229, 255, 0.05);
+      transform: translateZ(5px);
+    }
+
+    .modal-footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 14px;
+      color: #94A3B8;
+      transform: translateZ(10px);
+    }
+
+    .modal-footer a {
+      color: var(--cyan);
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: 700;
+      transition: color 0.2s;
+    }
+
+    .modal-footer a:hover {
+      color: #fff;
+      text-shadow: 0 0 8px var(--cyan-glow);
+    }
+
+    @media(max-width: 768px) {
+      .hero-content h1 {
+        font-size: 15vw;
+      }
+
+      .coin {
+        width: 90px;
+        height: 90px;
+      }
+
+      .coin img {
+        width: 25px;
+        height: 25px;
+      }
+
+      .coin-tick {
+        font-size: 10px;
+      }
+
+      .coin-price {
+        font-size: 12px;
+      }
+
+      .info-card {
+        padding: 30px 20px;
+      }
+
+      .info-card h2 {
+        font-size: 2.2rem;
+      }
+
+      .feature-list {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="grid-bg"></div>
+
+  <header class="header">
+    <div class="logo">ASTRA</div>
+    <div style="display:flex; gap:16px;">
+      <button class="btn btn-outline" onclick="openModal('login')">Log In</button>
+      <button class="btn btn-primary" onclick="openModal('register')">Get Started</button>
+    </div>
+  </header>
+
+  <div id="hero-3d-scene">
+    <div class="coin coin-1" style="transform: translateZ(0px);">
+      <img src="https://cdn.simpleicons.org/apple/white" alt="AAPL">
+      <div class="coin-data">
+        <div class="coin-tick">AAPL</div>
+        <div class="coin-price" id="pr-AAPL">--</div>
+      </div>
+    </div>
+    <div class="coin coin-2" style="transform: translateZ(50px);">
+      <img src="https://cdn.simpleicons.org/tesla/E31937" alt="TSLA">
+      <div class="coin-data">
+        <div class="coin-tick">TSLA</div>
+        <div class="coin-price" id="pr-TSLA">--</div>
+      </div>
+    </div>
+    <div class="coin coin-3" style="transform: translateZ(-50px);">
+      <img src="https://cdn.simpleicons.org/nvidia/76B900" alt="NVDA">
+      <div class="coin-data">
+        <div class="coin-tick">NVDA</div>
+        <div class="coin-price" id="pr-NVDA">--</div>
+      </div>
+    </div>
+    <div class="coin coin-4" style="transform: translateZ(0px);">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg"
+        style="transform: scale(1.3) translateZ(40px);" alt="Amazon">
+      <div class="coin-data" style="margin-top:12px;">
+        <div class="coin-tick">AMZN</div>
+        <div class="coin-price" id="pr-AMZN">--</div>
+      </div>
+    </div>
+    <div class="coin coin-5" style="transform: translateZ(100px);">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" alt="Microsoft">
+      <div class="coin-data">
+        <div class="coin-tick">MSFT</div>
+        <div class="coin-price" id="pr-MSFT">--</div>
+      </div>
+    </div>
+    <div class="coin coin-6" style="transform: translateZ(-100px);">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg"
+        style="transform: scale(1.4) translateZ(40px);" alt="Google">
+      <div class="coin-data">
+        <div class="coin-tick">GOOGL</div>
+        <div class="coin-price" id="pr-GOOGL">--</div>
+      </div>
+    </div>
+    <div class="coin coin-7" style="transform: translateZ(0px);">
+      <img src="https://cdn.simpleicons.org/meta/0668E1" alt="META">
+      <div class="coin-data">
+        <div class="coin-tick">META</div>
+        <div class="coin-price" id="pr-META">--</div>
+      </div>
+    </div>
+    <div class="coin coin-8" style="transform: translateZ(50px);">
+      <img src="https://cdn.simpleicons.org/netflix/E50914" alt="NFLX">
+      <div class="coin-data">
+        <div class="coin-tick">NFLX</div>
+        <div class="coin-price" id="pr-NFLX">--</div>
+      </div>
+    </div>
+    <div class="coin coin-9" style="transform: translateZ(-150px);">
+      <img src="https://cdn.simpleicons.org/amd/ED1C24" alt="AMD">
+      <div class="coin-data">
+        <div class="coin-tick">AMD</div>
+        <div class="coin-price" id="pr-AMD">--</div>
+      </div>
+    </div>
+    <div class="coin coin-10" style="transform: translateZ(150px);">
+      <img src="https://cdn.simpleicons.org/intel/0071C5" alt="INTC">
+      <div class="coin-data" style="margin-top:12px;">
+        <div class="coin-tick">INTC</div>
+        <div class="coin-price" id="pr-INTC">--</div>
+      </div>
+    </div>
+  </div>
+
+  <main class="scroll-container">
+    <section class="hero-section" id="sec-hero">
+      <div class="hero-content gs-reveal-hero">
+        <h1>ASTRA FINANCE</h1>
+        <p>Institutional-grade quantitative analysis, intrinsic value multi-models, and true 3D portfolio tracking
+          powered by real-time data.</p>
+        <button class="btn btn-primary" style="font-size:1.2rem; padding:18px 48px; border-radius:30px;"
+          onclick="openModal('register')">Enter The Terminal</button>
+      </div>
+    </section>
+
+    <section class="explain-section" style="margin-top:20vh;">
+      <div class="info-card js-tilt gs-reveal-up">
+        <div class="info-card-inner">
+          <h2
+            style="background: linear-gradient(90deg, #22c55e, #00E5FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            Smarter Financial Analysis</h2>
+          <p>Astra isn't just a portfolio tracker. We integrate <strong>deep quantitative models</strong> natively.
+            Understand exactly why a stock is priced the way it is without flipping between a dozen tabs. Everything
+            operates in a highly visual 3D environment.</p>
+          <div class="feature-list gs-reveal-stagger">
+            <div class="feat">
+              <h3>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#diamond-grad)" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"
+                  style="filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.5));">
+                  <defs>
+                    <linearGradient id="diamond-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#B388FF" />
+                      <stop offset="100%" stop-color="#00E5FF" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M6 3h12l4 6-10 12L2 9l4-6z"></path>
+                  <path d="M2 9h20"></path>
+                  <path d="M12 21V9"></path>
+                  <path d="M6 3l6 6"></path>
+                  <path d="M18 3l-6 6"></path>
+                </svg>
+                Intrinsic Value Engine
+              </h3>
+              <p>Automated 20-year Discounted Cash Flow (DCF) net-income projections using live financial metrics.</p>
+            </div>
+            <div class="feat">
+              <h3>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#chart-grad)" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"
+                  style="filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.5));">
+                  <defs>
+                    <linearGradient id="chart-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#00E5FF" />
+                      <stop offset="100%" stop-color="#22c55e" />
+                    </linearGradient>
+                  </defs>
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                Live Macro Dashboard
+              </h3>
+              <p>Keep your finger on the pulse with Fear & Greed indexes, VIX volatility, and global risk metrics
+                reacting live.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="explain-section" style="margin-top:10vh;">
+      <div class="info-card js-tilt gs-reveal-up"
+        style="border-top: 4px solid #B388FF; border-bottom: 4px solid #00E5FF;">
+        <div class="info-card-inner">
+          <h2
+            style="background: linear-gradient(90deg, #B388FF, #FF1744); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            Your Daily AI Podcast</h2>
+          <p>Who has time to read 10K prospectuses? Astra automatically aggregates the latest news and analyst revisions
+            for your specific portfolio and generates a <strong>custom daily Audio Briefing</strong> via cutting-edge
+            LLMs and neural Text-to-Speech technology. Listen to the market on your commute.</p>
+          <button class="btn btn-primary"
+            style="margin-top:24px; border-radius:30px; font-size:1.1rem; padding: 16px 40px;"
+            onclick="openModal('register')">Create Your Portfolio</button>
+        </div>
+      </div>
+    </section>
+
+    <footer style="margin-top: 20vh; padding: 40px; text-align: center; color: rgba(255,255,255,0.2);">
+      ASTRA FINANCE © 2026. Built with GSAP & Flask.
+    </footer>
+  </main>
+
+  <div class="modal-overlay" id="authOverlay" onclick="if(event.target===this) closeModals()">
+    <div class="modal" id="loginModal" style="display:none;">
+      <h2>Welcome Back</h2>
+      <form id="loginForm" onsubmit="handleAuth(event, 'login')">
+        <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="you@example.com"
+            required></div>
+        <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••"
+            required></div>
+        <div class="error-msg" id="loginError"></div>
+        <button type="submit" class="btn btn-primary"
+          style="width:100%; margin-top:12px; padding:16px; font-size:1.1rem; border-radius:12px;">Secure Log
+          In</button>
+        <div class="modal-footer">Don't have an account? <a onclick="openModal('register')">Sign Up Here</a></div>
+      </form>
+    </div>
+
+    <div class="modal" id="registerModal" style="display:none;">
+      <h2>Join Astra Phase-2</h2>
+      <form id="registerForm" onsubmit="handleAuth(event, 'register')">
+        <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="you@example.com"
+            required></div>
+        <div class="form-group"><label>Choose Password</label><input type="password" id="regPassword"
+            placeholder="Minimum 6 characters" required></div>
+        <div class="error-msg" id="registerError"></div>
+        <button type="submit" class="btn btn-primary"
+          style="width:100%; margin-top:12px; padding:16px; font-size:1.1rem; border-radius:12px;">Launch
+          Dashboard</button>
+        <div class="modal-footer">Already a member? <a onclick="openModal('login')">Log In</a></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Auth logic
+    function openModal(type) {
+      document.getElementById('authOverlay').classList.add('active');
+      document.getElementById('loginModal').style.display = type === 'login' ? 'block' : 'none';
+      document.getElementById('registerModal').style.display = type === 'register' ? 'block' : 'none';
+      document.getElementById(type + 'Error').textContent = '';
+    }
+    function closeModals() { document.getElementById('authOverlay').classList.remove('active'); }
+
+    async function handleAuth(e, action) {
+      e.preventDefault();
+      const eId = action === 'login' ? 'loginEmail' : 'regEmail';
+      const pId = action === 'login' ? 'loginPassword' : 'regPassword';
+      const email = document.getElementById(eId).value;
+      const password = document.getElementById(pId).value;
+      const errorEl = document.getElementById(action + 'Error');
+      errorEl.textContent = 'Authenticating...';
+      try {
+        const res = await fetch(`/api/auth/${action}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) window.location.href = '/dashboard';
+        else errorEl.textContent = data.error || 'Authentication rejected';
+      } catch (err) { errorEl.textContent = 'Neural connection failed.'; }
+    }
+
+    // Price system: show cached/fallback instantly, then update with live data
+    const LANDING_TICKERS = ['AAPL', 'TSLA', 'NVDA', 'AMZN', 'MSFT', 'GOOGL', 'META', 'NFLX', 'AMD', 'INTC'];
+    const FALLBACK_PRICES = { AAPL: 255, TSLA: 360, NVDA: 177, AMZN: 210, MSFT: 373, GOOGL: 296, META: 574, NFLX: 1150, AMD: 218, INTC: 50 };
+
+    function showPrices(data) {
+      for (const [tick, info] of Object.entries(data)) {
+        const el = document.getElementById('pr-' + tick);
+        if (!el) continue;
+        const price = info.price || info;
+        el.textContent = '$' + (typeof price === 'number' ? price.toFixed(2) : price);
+        if (info.changePct !== undefined) {
+          if (info.changePct >= 0) {
+            el.style.color = '#22c55e';
+            el.style.textShadow = '0 0 10px rgba(34, 197, 94, 0.4)';
+          } else {
+            el.style.color = '#ef4444';
+            el.style.textShadow = '0 0 10px rgba(239, 68, 68, 0.4)';
+          }
+        }
+      }
+    }
+
+    // 1) Immediately show cached prices from localStorage, or fallbacks
+    const cached = JSON.parse(localStorage.getItem('landingPrices') || 'null');
+    if (cached) {
+      showPrices(cached);
+    } else {
+      showPrices(Object.fromEntries(LANDING_TICKERS.map(t => [t, { price: FALLBACK_PRICES[t], changePct: 0 }])));
+    }
+
+    // 2) Fetch live prices in background and update
+    async function fetchLivePrices() {
+      try {
+        const res = await fetch('/api/prices?tickers=' + LANDING_TICKERS.join(','));
+        if (!res.ok) return;
+        const data = await res.json();
+        localStorage.setItem('landingPrices', JSON.stringify(data));
+        showPrices(data);
+      } catch (e) { console.warn('Price fetch error:', e); }
+    }
+    fetchLivePrices();
+    setInterval(fetchLivePrices, 60000);
+
+    // 10-COIN NO-OVERLAP GSAP LOGIC
+    document.addEventListener('DOMContentLoaded', () => {
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Initial Reveal
+      gsap.from(".gs-reveal-hero > *", { y: 60, opacity: 0, duration: 1.2, ease: "power3.out", stagger: 0.1, delay: 0.2 });
+
+      // Idle Bobbing — GPU-friendly (only Y translate)
+      gsap.to(".coin", {
+        y: "+=15", duration: 2.5, yoyo: true, repeat: -1, ease: "sine.inOut", stagger: 0.2
+      });
+
+      // Scroll Parallax — only Y + opacity, no rotations
+      const tl = gsap.timeline({ scrollTrigger: { trigger: ".scroll-container", start: "top top", end: "bottom bottom", scrub: 3 } });
+
+      tl.to(".coin-1", { y: -500, opacity: 0 }, 0)
+        .to(".coin-3", { y: -400, opacity: 0 }, 0)
+        .to(".coin-5", { y: -300, opacity: 0 }, 0)
+        .to(".coin-7", { y: -200, opacity: 0 }, 0)
+        .to(".coin-2", { y: -600, opacity: 0 }, 0)
+        .to(".coin-4", { y: -450, opacity: 0 }, 0)
+        .to(".coin-6", { y: -300, opacity: 0 }, 0)
+        .to(".coin-8", { y: -200, opacity: 0 }, 0)
+        .to(".coin-9", { y: -150, opacity: 0 }, 0)
+        .to(".coin-10", { y: -150, opacity: 0 }, 0)
+        .to(".hero-content", { opacity: 0, y: 80 }, 0);
+
+      // Cards
+      gsap.utils.toArray('.gs-reveal-up').forEach((card) => {
+        gsap.from(card, {
+          scrollTrigger: { trigger: card, start: "top 85%", toggleActions: "play none none none" },
+          y: 100, opacity: 0, duration: 1, ease: "power3.out"
+        });
+      });
+
+      // Features
+      gsap.utils.toArray('.gs-reveal-stagger .feat').forEach((feat, i) => {
+        gsap.from(feat, {
+          scrollTrigger: { trigger: feat, start: "top 90%", toggleActions: "play none none none" },
+          y: 30, opacity: 0, duration: 0.6, delay: i * 0.1, ease: "power2.out"
+        });
+      });
+
+      // Vanilla JS Tilt
+      const cards = document.querySelectorAll('.js-tilt');
+      cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const rotX = -((y / rect.height) - 0.5) * 15;
+          const rotY = ((x / rect.width) - 0.5) * 15;
+          card.style.transform = `perspective(1800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale3d(1.02, 1.02, 1.02)`;
+          card.style.transition = 'none';
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = `perspective(1800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+          card.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>
