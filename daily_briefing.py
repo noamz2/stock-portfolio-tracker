@@ -11,7 +11,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -288,6 +288,78 @@ def _tavily_extract_urls(tavily_client, urls):
         return {}
 
 
+def collect_social(ticker):
+    """Collect social sentiment — StockTwits (free API) + Nitter RSS (X/Twitter).
+    No API key required for either source.
+    """
+    social = {'stocktwits': [], 'twitter': [], 'sentiment': None}
+
+    # ── StockTwits (free public API, no key needed) ──
+    try:
+        r = requests.get(
+            f'https://api.stocktwits.com/api/2/streams/symbol/{ticker}.json',
+            headers={'User-Agent': 'Mozilla/5.0'}, timeout=10
+        )
+        if r.status_code == 200:
+            messages = r.json().get('messages', [])
+            bullish = sum(1 for m in messages
+                         if m.get('entities', {}).get('sentiment', {}).get('basic') == 'Bullish')
+            bearish = sum(1 for m in messages
+                         if m.get('entities', {}).get('sentiment', {}).get('basic') == 'Bearish')
+            total = bullish + bearish
+            if total > 0:
+                social['sentiment'] = {
+                    'bullish': bullish,
+                    'bearish': bearish,
+                    'bullish_pct': round(bullish / total * 100),
+                    'bearish_pct': round(bearish / total * 100),
+                    'total_messages': len(messages),
+                }
+            # Top messages (prefer those with sentiment tags)
+            tagged = [m for m in messages if m.get('entities', {}).get('sentiment', {}).get('basic')]
+            rest = [m for m in messages if m not in tagged]
+            for m in (tagged + rest)[:8]:
+                body = m.get('body', '').strip()
+                if body and len(body) > 15:
+                    social['stocktwits'].append({
+                        'text': body,
+                        'sentiment': m.get('entities', {}).get('sentiment', {}).get('basic', ''),
+                        'user': m.get('user', {}).get('username', ''),
+                    })
+    except Exception as e:
+        print(f"    ⚠️  StockTwits failed for {ticker}: {e}")
+
+    # ── Nitter RSS — X/Twitter cashtag search ──
+    if feedparser:
+        nitter_instances = [
+            'https://nitter.poast.org',
+            'https://nitter.privacydev.net',
+            'https://nitter.1d4.us',
+            'https://nitter.nl',
+        ]
+        for instance in nitter_instances:
+            try:
+                feed = feedparser.parse(
+                    f'{instance}/search/rss?q=%24{ticker}&f=tweets',
+                    request_headers={'User-Agent': 'Mozilla/5.0'},
+                )
+                if feed.entries:
+                    for entry in feed.entries[:6]:
+                        text = entry.get('title', '').strip()
+                        if text and len(text) > 20:
+                            social['twitter'].append({
+                                'text': text,
+                                'published': entry.get('published', ''),
+                                'author': entry.get('author', ''),
+                            })
+                    if social['twitter']:
+                        break  # got results — stop trying instances
+            except Exception:
+                continue
+
+    return social
+
+
 def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
     """Collect news from 3 sources with actual article content."""
     articles = []
@@ -481,11 +553,13 @@ def _llm_chat(messages, max_tokens=1000, system=None):
     raise RuntimeError("No LLM API key configured (set DEEPSEEK_API_KEY, GEMINI_API_KEY, or GROQ_API_KEY)")
 
 
-def summarize_stock_news(ticker, hebrew_name, stock_data, articles):
-    """Summarize news articles for a single stock using LLM."""
-    # Only summarize if we have articles with actual content
+def summarize_stock_news(ticker, hebrew_name, stock_data, articles, social=None):
+    """Summarize news articles + social sentiment for a single stock using LLM."""
     articles_with_content = [a for a in articles if a.get('content') and len(a['content']) > 50]
-    if not articles_with_content:
+    social = social or {}
+    has_social = bool(social.get('stocktwits') or social.get('twitter'))
+
+    if not articles_with_content and not has_social:
         return {
             'summary': '',
             'has_news': False,
@@ -501,19 +575,36 @@ def summarize_stock_news(ticker, hebrew_name, stock_data, articles):
             content = a['content'][:2000]
             articles_text += f"\n--- כתבה {i}: {a['title']} ({a['source']}) ---\n{content}\n"
 
+        # Build social section for prompt
+        social_text = ""
+        sent = social.get('sentiment')
+        if sent:
+            social_text += f"\nסנטימנט StockTwits ({sent['total_messages']} הודעות): {sent['bullish_pct']}% Bullish | {sent['bearish_pct']}% Bearish\n"
+        st_posts = social.get('stocktwits', [])
+        if st_posts:
+            social_text += "\nציוצים בולטים מ-StockTwits:\n"
+            for p in st_posts[:4]:
+                tag = f" [{p['sentiment']}]" if p.get('sentiment') else ""
+                social_text += f"- {p['text'][:200]}{tag}\n"
+        tw_posts = social.get('twitter', [])
+        if tw_posts:
+            social_text += "\nציוצים מ-X/Twitter:\n"
+            for p in tw_posts[:4]:
+                social_text += f"- {p['text'][:200]}\n"
+
         prompt = f"""אתה מגיש פודקאסט כלכלי יומי בעברית. הסגנון שלך כמו מגיש פודקאסט ישראלי טוב — מקצועי, ברור, מדבר בגובה העיניים. לא קריין חדשות רשמי, אבל גם לא חבר'ה מהשכונה.
 
 המניה: {hebrew_name} ({ticker})
 מחיר: {stock_data.get('currency', '$')}{stock_data.get('price', '?')} | שינוי: {change_pct:+.1f}%
-
-כתבות:
-{articles_text}
+{articles_text}{social_text}
 
 כתוב 200-350 מילים. זה פודקאסט — טקסט שמיועד להקראה בקול.
 
 הנחיות:
 - ספר את הסיפור של המניה היום כנרטיב אחד זורם. אסור "הכתבה הראשונה", "כתבה נוספת", "לפי כתבה ש..."
 - שזור את כל המידע מהכתבות ביחד — מה קרה, למה, ומה המשמעות
+- אם הסנטימנט ברשת חריג (80%+ Bullish או Bearish) — ציין זאת כחלק מהסיפור
+- אם יש ציוצים שמדברים על משהו שלא מופיע בכתבות — זה ג'וס, שלב אותו
 - ציין פרטים ספציפיים: שמות אנשים, מספרים, סכומים, אירועים
 - אם מישהו מכר מניות — ציין מי, כמה, ולמה. אם אנליסט אמר משהו — ציין שמו ומה אמר
 - תן הקשר — למה זה חשוב, מה זה אומר על החברה
@@ -571,8 +662,20 @@ def collect_all():
         content_count = len([a for a in articles if a.get('content') and len(a['content']) > 50])
         print(f"{len(articles)} articles ({content_count} with content)")
 
-        if has_llm and content_count >= 1:
-            s['news_summary'] = summarize_stock_news(s['ticker'], s['hebrew'], s, articles)
+        # Social sentiment (free — StockTwits + Nitter)
+        print(f"  🐦 {s['ticker']} social...", end=" ", flush=True)
+        social = collect_social(s['ticker'])
+        s['social'] = social
+        st_count = len(social.get('stocktwits', []))
+        tw_count = len(social.get('twitter', []))
+        sent = social.get('sentiment')
+        sent_str = f" | {sent['bullish_pct']}% 🟢 {sent['bearish_pct']}% 🔴" if sent else ""
+        print(f"StockTwits:{st_count} X:{tw_count}{sent_str}")
+
+        social = s.get('social', {})
+        has_social = bool(social.get('stocktwits') or social.get('twitter'))
+        if has_llm and (content_count >= 1 or has_social):
+            s['news_summary'] = summarize_stock_news(s['ticker'], s['hebrew'], s, articles, social)
             if s['news_summary']['has_news']:
                 print(f"    ✅ Summary generated")
         else:
@@ -679,7 +782,6 @@ def generate_text_report(data, positions=None):
     # ─── Summary signal ───
     fg_score = fg.get('score') or 50
     vix_val = m.get('vix') or 20
-    sp_rsi = sp.get('rsi') or 50
 
     if fg_score < 20 and vix_val > 30:
         lines.append("⚠️  אזהרה: פחד קיצוני בשוק — VIX גבוה + Fear & Greed נמוך מאוד")
@@ -765,6 +867,18 @@ def generate_text_report(data, positions=None):
         if s.get('target_mean'):
             upside = round((s['target_mean'] - s['price']) / s['price'] * 100, 1)
             lines.append(f"    🎯 יעד אנליסטים: {s['currency']}{s['target_mean']} ({upside:+.1f}% upside) | המלצה: {s.get('recommendation', '—')}")
+
+        # Social sentiment
+        social = s.get('social', {})
+        sent = social.get('sentiment')
+        if sent:
+            bull_bar = '█' * (sent['bullish_pct'] // 10) + '░' * (10 - sent['bullish_pct'] // 10)
+            lines.append(f"    🐦 סנטימנט ({sent['total_messages']} הודעות): 🟢{sent['bullish_pct']}% {bull_bar} 🔴{sent['bearish_pct']}%")
+        tw_posts = social.get('twitter', [])
+        if tw_posts:
+            lines.append(f"    𝕏 ציוצים בולטים:")
+            for p in tw_posts[:2]:
+                lines.append(f"      • {p['text'][:120]}")
 
         # News summary
         news_summary = s.get('news_summary', {})
@@ -869,7 +983,6 @@ VIX: {m.get('vix', '?')}
 
     for i, s in enumerate(valid_stocks):
         hebrew = s.get('hebrew', s['ticker'])
-        ticker = s['ticker']
         price = s.get('price', '?')
         currency = s.get('currency', '$')
         change = s.get('change_pct', 0)
@@ -1186,7 +1299,7 @@ def text_to_speech(text, output_path):
 def run(portfolio=None):
     """Run the daily briefing."""
     if portfolio:
-        global PORTFOLIO
+        global PORTFOLIO  # noqa: PLW0603
         PORTFOLIO = portfolio
 
     today = datetime.now().strftime('%Y-%m-%d')
