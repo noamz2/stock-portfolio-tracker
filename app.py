@@ -667,6 +667,14 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL
         )''')
+        db.execute('''CREATE TABLE IF NOT EXISTS portfolios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            ticker TEXT NOT NULL,
+            shares REAL NOT NULL DEFAULT 0,
+            UNIQUE(user_id, ticker),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )''')
         db.commit()
 
 init_db()
@@ -723,6 +731,53 @@ def logout():
     session.clear()
     return jsonify({'success': True})
 
+
+
+@app.route('/api/portfolio', methods=['GET'])
+def get_portfolio():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    with get_db() as db:
+        rows = db.execute("SELECT ticker, shares FROM portfolios WHERE user_id = ?", (session['user_id'],)).fetchall()
+    return jsonify({row['ticker']: {'shares': row['shares']} for row in rows})
+
+@app.route('/api/portfolio', methods=['POST'])
+def add_to_portfolio():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json
+    ticker = data.get('ticker', '').upper().strip()
+    shares = float(data.get('shares', 0))
+    if not ticker:
+        return jsonify({'error': 'Missing ticker'}), 400
+    with get_db() as db:
+        db.execute(
+            "INSERT INTO portfolios (user_id, ticker, shares) VALUES (?, ?, ?) ON CONFLICT(user_id, ticker) DO UPDATE SET shares = excluded.shares",
+            (session['user_id'], ticker, shares)
+        )
+        db.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/portfolio/<ticker>', methods=['DELETE'])
+def remove_from_portfolio(ticker):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    with get_db() as db:
+        db.execute("DELETE FROM portfolios WHERE user_id = ? AND ticker = ?", (session['user_id'], ticker.upper()))
+        db.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/portfolio/<ticker>/shares', methods=['PATCH'])
+def update_shares(ticker):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json
+    shares = float(data.get('shares', 0))
+    with get_db() as db:
+        db.execute("UPDATE portfolios SET shares = ? WHERE user_id = ? AND ticker = ?",
+                   (shares, session['user_id'], ticker.upper()))
+        db.commit()
+    return jsonify({'success': True})
 
 
 @app.route('/api/health')

@@ -202,7 +202,7 @@
     .coin-7 {
       /* META */
       top: 76vh;
-      left: 6vw;
+      left: 10vw;
       border-color: rgba(6, 104, 225, 0.6);
     }
 
@@ -215,10 +215,10 @@
     }
 
     .coin-4 {
-      /* AMZN */
+      /* IREN */
       top: 38vh;
       right: 1vw;
-      border-color: rgba(245, 158, 11, 0.6);
+      border-color: rgba(0, 180, 216, 0.6);
     }
 
     .coin-6 {
@@ -231,7 +231,7 @@
     .coin-8 {
       /* NFLX */
       top: 78vh;
-      right: 6vw;
+      right: 10vw;
       border-color: rgba(229, 9, 20, 0.6);
     }
 
@@ -269,28 +269,67 @@
     }
 
     .hero-content {
-      margin-top: -10vh;
+      margin-top: -8vh;
     }
 
     .hero-content h1 {
-      font-size: 7vw;
+      font-size: 6.5vw;
       font-weight: 900;
       letter-spacing: -0.03em;
       background: linear-gradient(135deg, #FFF, #00E5FF, #B388FF);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
       filter: drop-shadow(0 0 30px rgba(179, 136, 255, 0.2));
     }
 
     .hero-content p {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       color: #94A3B8;
-      max-width: 650px;
-      margin: 0 auto 40px auto;
+      max-width: 600px;
+      margin: 0 auto 32px auto;
       font-weight: 500;
       line-height: 1.6;
     }
+
+    .terminal-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 40px;
+      background: transparent;
+      border: 1.5px solid rgba(0, 229, 255, 0.7);
+      color: #00E5FF;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.15), inset 0 0 20px rgba(0, 229, 255, 0.05);
+    }
+    .terminal-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 229, 255, 0.08);
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+    }
+    .terminal-btn:hover::before { transform: translateX(0); }
+    .terminal-btn:hover {
+      box-shadow: 0 0 35px rgba(0, 229, 255, 0.35), inset 0 0 20px rgba(0, 229, 255, 0.1);
+      border-color: rgba(0, 229, 255, 1);
+      color: #fff;
+    }
+    .terminal-btn .btn-arrow {
+      font-size: 1.1rem;
+      transition: transform 0.3s ease;
+    }
+    .terminal-btn:hover .btn-arrow { transform: translateX(4px); }
 
 
     /* Glass Cards */
@@ -546,11 +585,10 @@
       </div>
     </div>
     <div class="coin coin-4" style="transform: translateZ(0px);">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg"
-        style="transform: scale(1.3) translateZ(40px);" alt="Amazon">
-      <div class="coin-data" style="margin-top:12px;">
-        <div class="coin-tick">AMZN</div>
-        <div class="coin-price" id="pr-AMZN">--</div>
+      <img src="/static/logos/iren.png" alt="IREN">
+      <div class="coin-data">
+        <div class="coin-tick">IREN</div>
+        <div class="coin-price" id="pr-IREN">--</div>
       </div>
     </div>
     <div class="coin coin-5" style="transform: translateZ(100px);">
@@ -583,7 +621,7 @@
       </div>
     </div>
     <div class="coin coin-9" style="transform: translateZ(-150px);">
-      <img src="https://cdn.simpleicons.org/amd/ED1C24" alt="AMD">
+      <img src="/static/logos/amd.svg" alt="AMD">
       <div class="coin-data">
         <div class="coin-tick">AMD</div>
         <div class="coin-price" id="pr-AMD">--</div>
@@ -600,12 +638,15 @@
 
   <main class="scroll-container">
     <section class="hero-section" id="sec-hero">
-      <div class="hero-content gs-reveal-hero">
-        <h1>ASTRA FINANCE</h1>
-        <p>Institutional-grade quantitative analysis, intrinsic value multi-models, and true 3D portfolio tracking
-          powered by real-time data.</p>
-        <button class="btn btn-primary" style="font-size:1.2rem; padding:18px 48px; border-radius:30px;"
-          onclick="openModal('register')">Enter The Terminal</button>
+      <div class="hero-content">
+        <div class="gs-reveal-hero">
+          <h1>ASTRA FINANCE</h1>
+          <p>Institutional-grade quantitative analysis, intrinsic value multi-models, and true 3D portfolio tracking
+            powered by real-time data.</p>
+        </div>
+        <button class="terminal-btn" onclick="openModal('register')">
+          Enter The Terminal <span class="btn-arrow">→</span>
+        </button>
       </div>
     </section>
 
@@ -747,8 +788,8 @@
     }
 
     // Price system: show cached/fallback instantly, then update with live data
-    const LANDING_TICKERS = ['AAPL', 'TSLA', 'NVDA', 'AMZN', 'MSFT', 'GOOGL', 'META', 'NFLX', 'AMD', 'INTC'];
-    const FALLBACK_PRICES = { AAPL: 255, TSLA: 360, NVDA: 177, AMZN: 210, MSFT: 373, GOOGL: 296, META: 574, NFLX: 1150, AMD: 218, INTC: 50 };
+    const LANDING_TICKERS = ['AAPL', 'TSLA', 'NVDA', 'IREN', 'MSFT', 'GOOGL', 'META', 'NFLX', 'AMD', 'INTC'];
+    const FALLBACK_PRICES = { AAPL: 255, TSLA: 360, NVDA: 177, IREN: 8, MSFT: 373, GOOGL: 296, META: 574, NFLX: 1150, AMD: 218, INTC: 50 };
 
     function showPrices(data) {
       for (const [tick, info] of Object.entries(data)) {
@@ -796,9 +837,16 @@
       // Initial Reveal
       gsap.from(".gs-reveal-hero > *", { y: 60, opacity: 0, duration: 1.2, ease: "power3.out", stagger: 0.1, delay: 0.2 });
 
-      // Idle Bobbing — GPU-friendly (only Y translate)
-      gsap.to(".coin", {
-        y: "+=15", duration: 2.5, yoyo: true, repeat: -1, ease: "sine.inOut", stagger: 0.2
+      // Idle Bobbing — uses yPercent so it doesn't conflict with scroll's y
+      document.querySelectorAll('.coin').forEach((coin, i) => {
+        gsap.to(coin, {
+          yPercent: 8 + (i % 3) * 3,
+          duration: 2.5 + (i % 4) * 0.4,
+          yoyo: true,
+          repeat: -1,
+          ease: "sine.inOut",
+          delay: i * 0.3
+        });
       });
 
       // Scroll Parallax — only Y + opacity, no rotations

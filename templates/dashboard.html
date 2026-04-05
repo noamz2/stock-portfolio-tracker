@@ -106,6 +106,56 @@ header h1 {
   outline: none; background: rgba(0, 229, 255, 0.05); border-color: var(--cyan); box-shadow: 0 0 0 4px var(--cyan-glow);
 }
 .input-group input::placeholder { color: var(--muted); }
+.ticker-dropdown {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 60px;
+  background: #141c2e; border: 1px solid rgba(0,229,255,0.15); border-radius: 14px;
+  overflow: hidden; z-index: 1000; box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+  opacity: 0; transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+.ticker-dropdown.open {
+  opacity: 1; transform: translateY(0); pointer-events: all;
+}
+.ticker-dropdown-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+  cursor: pointer; transition: background 0.12s; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.ticker-dropdown-item:last-child { border-bottom: none; }
+.ticker-dropdown-item:hover, .ticker-dropdown-item.selected {
+  background: rgba(0, 229, 255, 0.07);
+}
+.ticker-dropdown-item.in-portfolio { opacity: 0.5; cursor: default; }
+.ticker-dropdown-item .sym {
+  font-weight: 800; color: var(--cyan); font-size: 13px; min-width: 54px; letter-spacing: 0.03em;
+}
+.ticker-dropdown-item .sym mark {
+  background: none; color: #fff; text-decoration: underline;
+}
+.ticker-dropdown-item .meta { flex: 1; overflow: hidden; }
+.ticker-dropdown-item .name {
+  color: #94a3b8; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ticker-dropdown-item .exch {
+  display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
+  background: rgba(255,255,255,0.06); color: #64748b; border-radius: 4px; padding: 1px 5px; margin-top: 2px;
+}
+.ticker-dropdown-item .price { font-size: 12px; font-weight: 600; color: #e2e8f0; min-width: 52px; text-align: right; }
+.ticker-dropdown-item .in-badge {
+  font-size: 10px; color: var(--cyan); background: rgba(0,229,255,0.1);
+  border-radius: 6px; padding: 2px 7px; font-weight: 700; white-space: nowrap;
+}
+.ticker-dropdown-loading, .ticker-dropdown-empty {
+  padding: 14px 16px; text-align: center; color: var(--muted); font-size: 13px;
+}
+.ticker-dropdown-loading { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.ticker-dropdown-loading .dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--cyan);
+  animation: dd-pulse 1.2s ease-in-out infinite;
+}
+.ticker-dropdown-loading .dot:nth-child(2) { animation-delay: 0.2s; }
+.ticker-dropdown-loading .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dd-pulse { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
 
 .btn {
   padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-size: 14px;
@@ -417,9 +467,10 @@ body {
 
 <header class="main-header">
   <div class="logo-brand">ASTRA FINANCE</div>
-  <div class="input-group" style="max-width:400px">
-    <input type="text" id="tickerInput" placeholder="Add ticker: AAPL, MSFT..." dir="ltr">
+  <div class="input-group" style="max-width:400px; position:relative">
+    <input type="text" id="tickerInput" placeholder="Search: AAPL, Apple..." dir="ltr" autocomplete="off">
     <button class="btn btn-primary" onclick="addTickers()">Add</button>
+    <div id="tickerDropdown" class="ticker-dropdown" style="display:none;max-height:320px;overflow-y:auto"></div>
   </div>
   <div style="display:flex; align-items:center; gap: 16px; margin-left:16px;">
     <span style="color:#B388FF; font-weight:700;">Hi, {{ username }}</span>
@@ -1043,7 +1094,7 @@ body {
 
 <script>
 const API = '';
-let portfolio = JSON.parse(localStorage.getItem('portfolio') || '{}');
+let portfolio = {};
 let stockCache = {};
 let stockCacheTime = {};  // timestamp per ticker
 const CACHE_TTL = 60 * 60 * 1000;  // 1 hour cache
@@ -1105,32 +1156,179 @@ function getLogoHtml(ticker, size=36) {
 
 // ─── Portfolio Management ───
 
-function addTickers() {
+async function addTickers() {
   const input = document.getElementById('tickerInput');
   const tickers = input.value.split(/[,\s]+/).map(t => t.trim().toUpperCase()).filter(t => t);
   if (!tickers.length) return;
   input.value = '';
-  tickers.forEach(t => { if (!portfolio[t]) portfolio[t] = { shares: 0 }; });
-  savePortfolio();
+  const newTickers = tickers.filter(t => !portfolio[t]);
+  newTickers.forEach(t => { portfolio[t] = { shares: 0 }; });
+  await Promise.all(newTickers.map(t =>
+    fetch(`${API}/api/portfolio`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ticker: t, shares: 0})
+    })
+  ));
   loadPortfolio();
 }
 
-document.getElementById('tickerInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTickers(); });
+// ─── Ticker Autocomplete ───
+(function() {
+  const input = document.getElementById('tickerInput');
+  const dropdown = document.getElementById('tickerDropdown');
+  let searchTimer = null;
+  let selectedIndex = -1;
+  let currentResults = [];
+  let abortCtrl = null;
+  const queryCache = {};
 
-function removeTicker(ticker) {
+  function highlight(text, query) {
+    if (!text || !query) return text || '';
+    const idx = text.toUpperCase().indexOf(query.toUpperCase());
+    if (idx === -1) return text;
+    return text.slice(0, idx) + '<mark>' + text.slice(idx, idx + query.length) + '</mark>' + text.slice(idx + query.length);
+  }
+
+  function fmtDropdownPrice(r) {
+    if (r.price == null) return '';
+    return '$' + Number(r.price).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+
+  function openDropdown() { dropdown.style.display = ''; requestAnimationFrame(() => dropdown.classList.add('open')); }
+  function closeDropdown() {
+    dropdown.classList.remove('open');
+    dropdown.addEventListener('transitionend', () => { dropdown.style.display = 'none'; }, {once: true});
+  }
+
+  function showLoading() {
+    dropdown.innerHTML = `<div class="ticker-dropdown-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    openDropdown();
+  }
+
+  function showEmpty(q) {
+    dropdown.innerHTML = `<div class="ticker-dropdown-empty">No results for "<strong>${q}</strong>"</div>`;
+    openDropdown();
+  }
+
+  function showResults(results, q) {
+    currentResults = results;
+    selectedIndex = -1;
+    if (!results.length) { showEmpty(q); return; }
+    dropdown.innerHTML = results.map((r, i) => {
+      const alreadyIn = !!portfolio[r.symbol];
+      return `<div class="ticker-dropdown-item${alreadyIn ? ' in-portfolio' : ''}" data-index="${i}"
+          onmousedown="event.preventDefault()"
+          onclick="${alreadyIn ? '' : 'selectDropdownItem(' + i + ')'}">
+        ${getLogoHtml(r.symbol, 28)}
+        <span class="sym">${highlight(r.symbol, q)}</span>
+        <span class="meta">
+          <div class="name">${r.name || ''}</div>
+          ${r.exchange ? `<span class="exch">${r.exchange}</span>` : ''}
+        </span>
+        ${alreadyIn ? '<span class="in-badge">✓ In portfolio</span>' : `<span class="price">${fmtDropdownPrice(r)}</span>`}
+      </div>`;
+    }).join('');
+    openDropdown();
+  }
+
+  window.selectDropdownItem = function(i) {
+    const r = currentResults[i];
+    if (!r || portfolio[r.symbol]) return;
+    input.value = r.symbol;
+    closeDropdown();
+    addTickers();
+  };
+
+  function highlightItem(idx) {
+    document.querySelectorAll('.ticker-dropdown-item').forEach((el, i) => el.classList.toggle('selected', i === idx));
+  }
+
+  function sortResults(results, q) {
+    const uq = q.toUpperCase();
+    return [...results].sort((a, b) => {
+      const ia = a.symbol.toUpperCase().indexOf(uq);
+      const ib = b.symbol.toUpperCase().indexOf(uq);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+  }
+
+  async function doSearch(q) {
+    if (queryCache[q]) { showResults(sortResults(queryCache[q], q), q); return; }
+    showLoading();
+    if (abortCtrl) abortCtrl.abort();
+    abortCtrl = new AbortController();
+    try {
+      const res = await fetch(`${API}/api/search/${encodeURIComponent(q)}`, {signal: abortCtrl.signal});
+      if (res.ok) {
+        const data = await res.json();
+        queryCache[q] = data;
+        showResults(sortResults(data, q), q);
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') closeDropdown();
+    }
+  }
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    if (!q) { closeDropdown(); return; }
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => doSearch(q), 200);
+  });
+
+  input.addEventListener('keydown', e => {
+    const items = dropdown.querySelectorAll('.ticker-dropdown-item:not(.in-portfolio)');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+      highlightItem(selectedIndex);
+      items[selectedIndex]?.scrollIntoView({block: 'nearest'});
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = Math.max(selectedIndex - 1, -1);
+      highlightItem(selectedIndex);
+      items[selectedIndex]?.scrollIntoView({block: 'nearest'});
+    } else if (e.key === 'Enter') {
+      const selectable = currentResults.filter(r => !portfolio[r.symbol]);
+      if (selectedIndex >= 0 && selectable[selectedIndex]) {
+        e.preventDefault();
+        const realIdx = currentResults.indexOf(selectable[selectedIndex]);
+        selectDropdownItem(realIdx);
+      } else {
+        closeDropdown();
+        addTickers();
+      }
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+      input.blur();
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if (!input.contains(e.target) && !dropdown.contains(e.target)) closeDropdown();
+  });
+})();
+
+async function removeTicker(ticker) {
   delete portfolio[ticker];
   delete stockCache[ticker];
-  savePortfolio();
+  await fetch(`${API}/api/portfolio/${ticker}`, {method: 'DELETE'});
   renderPortfolioTable();
 }
 
 function savePortfolio() {
-  localStorage.setItem('portfolio', JSON.stringify(portfolio));
+  // Portfolio is saved to server on each mutation; this is a no-op kept for compatibility
 }
 
-function updateShares(ticker, val) {
-  portfolio[ticker].shares = parseFloat(val) || 0;
-  savePortfolio();
+async function updateShares(ticker, val) {
+  const shares = parseFloat(val) || 0;
+  portfolio[ticker].shares = shares;
+  await fetch(`${API}/api/portfolio/${ticker}/shares`, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({shares})
+  });
   updatePortfolioValue();
 }
 
@@ -2674,7 +2872,15 @@ function closeNewsPanel() {
 }
 
 // ─── Init ───
-if (Object.keys(portfolio).length) loadPortfolio();
+(async () => {
+  try {
+    const res = await fetch(`${API}/api/portfolio`);
+    if (res.ok) {
+      portfolio = await res.json();
+    }
+  } catch (e) {}
+  loadPortfolio();
+})();
 </script>
 
 <!-- News Side Panel -->
