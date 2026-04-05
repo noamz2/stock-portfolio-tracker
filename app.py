@@ -2519,26 +2519,28 @@ def generate_briefing():
     try:
         data = request.get_json() or {}
         tickers = data.get('tickers', [])
+        positions = data.get('positions', {})  # {ticker: {shares: N}}
         if not tickers:
             return jsonify({'error': 'No tickers provided'}), 400
 
-        from daily_briefing import collect_all, generate_text_report, generate_podcast_script, text_to_speech, TICKER_MAP, HEBREW_NAMES
+        from daily_briefing import collect_all, generate_text_report, generate_podcast_script, text_to_speech
         import daily_briefing
         daily_briefing.PORTFOLIO = tickers
 
         all_data = collect_all()
-        report = generate_text_report(all_data)
+        report = generate_text_report(all_data, positions)
         script = generate_podcast_script(all_data)
 
         today = datetime.now().strftime('%Y-%m-%d')
         briefings_dir = os.path.join(os.path.dirname(__file__), 'briefings')
         os.makedirs(briefings_dir, exist_ok=True)
 
-        # Save files
-        report_path = os.path.join(briefings_dir, f'briefing_{today}.txt')
-        script_path = os.path.join(briefings_dir, f'briefing_{today}_script.txt')
-        audio_path = os.path.join(briefings_dir, f'briefing_{today}.mp3')
-        data_path = os.path.join(briefings_dir, f'briefing_{today}_data.json')
+        user_id = session.get('user_id', 'anon')
+        prefix = f'briefing_{user_id}_{today}'
+        report_path = os.path.join(briefings_dir, f'{prefix}.txt')
+        script_path = os.path.join(briefings_dir, f'{prefix}_script.txt')
+        audio_path  = os.path.join(briefings_dir, f'{prefix}.mp3')
+        data_path   = os.path.join(briefings_dir, f'{prefix}_data.json')
 
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write(report)
@@ -2563,12 +2565,14 @@ def generate_briefing():
 
 @app.route('/api/briefing/latest')
 def get_latest_briefing():
-    """Get the latest briefing if it exists."""
+    """Get the latest briefing for the current user if it exists."""
     briefings_dir = os.path.join(os.path.dirname(__file__), 'briefings')
     today = datetime.now().strftime('%Y-%m-%d')
-    report_path = os.path.join(briefings_dir, f'briefing_{today}.txt')
-    script_path = os.path.join(briefings_dir, f'briefing_{today}_script.txt')
-    audio_path = os.path.join(briefings_dir, f'briefing_{today}.mp3')
+    user_id = session.get('user_id', 'anon')
+    prefix = f'briefing_{user_id}_{today}'
+    report_path = os.path.join(briefings_dir, f'{prefix}.txt')
+    script_path = os.path.join(briefings_dir, f'{prefix}_script.txt')
+    audio_path  = os.path.join(briefings_dir, f'{prefix}.mp3')
 
     if not os.path.exists(report_path):
         return jsonify({'exists': False})
@@ -2592,9 +2596,10 @@ def get_latest_briefing():
 
 @app.route('/api/briefing/audio')
 def serve_briefing_audio():
-    """Serve the latest briefing audio file."""
+    """Serve the briefing audio file for the current user."""
     date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
-    audio_path = os.path.join(os.path.dirname(__file__), 'briefings', f'briefing_{date}.mp3')
+    user_id = session.get('user_id', 'anon')
+    audio_path = os.path.join(os.path.dirname(__file__), 'briefings', f'briefing_{user_id}_{date}.mp3')
     if os.path.exists(audio_path):
         return send_file(audio_path, mimetype='audio/mpeg')
     return jsonify({'error': 'No audio found'}), 404

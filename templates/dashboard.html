@@ -3075,6 +3075,13 @@ async function generateBriefing() {
   const tickers = Object.keys(portfolio);
   if (!tickers.length) { alert('הוסף מניות לפורטפוליו קודם'); return; }
 
+  // Build positions: shares per ticker (only if has shares)
+  const positions = {};
+  tickers.forEach(t => {
+    const shares = portfolio[t]?.shares || 0;
+    if (shares > 0) positions[t] = { shares };
+  });
+
   // Open panel
   briefingOpen = true;
   document.getElementById('briefingContent').style.display = 'block';
@@ -3087,32 +3094,36 @@ async function generateBriefing() {
   document.getElementById('briefingGenBtn').disabled = true;
   document.getElementById('briefingGenBtn').textContent = '⏳ מייצר...';
 
-  // Progress animation
-  let step = 0;
-  const steps = ['📊 אוסף נתוני מאקרו...', '📈 מנתח מניות...', '✍️ כותב סיכום...', '🎙️ מייצר פודקאסט...'];
+  // Smart progress — one step per ticker + fixed steps
   const progressEl = document.getElementById('briefingLoadingProgress');
-  const progInterval = setInterval(() => {
-    progressEl.textContent = steps[step % steps.length];
-    step++;
-  }, 8000);
+  const steps = [
+    { label: '📊 אוסף נתוני מאקרו...', ms: 3000 },
+    ...tickers.map(t => ({ label: `📈 מנתח ${t}...`, ms: 5000 })),
+    { label: '📰 אוסף חדשות...', ms: tickers.length * 3000 },
+    { label: '✍️ כותב סיכום...', ms: 6000 },
+    { label: '🎙️ מייצר פודקאסט...', ms: 15000 },
+  ];
+  let progTimeout = null;
+  function runStep(i) {
+    if (i >= steps.length) return;
+    progressEl.textContent = steps[i].label;
+    progTimeout = setTimeout(() => runStep(i + 1), steps[i].ms);
+  }
+  runStep(0);
 
   try {
     const resp = await fetch(`${API}/api/briefing/generate`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({tickers}),
+      body: JSON.stringify({ tickers, positions }),
     });
     const d = await resp.json();
-
-    if (d.error) {
-      alert('שגיאה: ' + d.error);
-      return;
-    }
+    if (d.error) { alert('שגיאה: ' + d.error); return; }
     showBriefingResult(d);
   } catch(e) {
     alert('שגיאה ביצירת סיכום: ' + e.message);
   } finally {
-    clearInterval(progInterval);
+    clearTimeout(progTimeout);
     document.getElementById('briefingLoading').style.display = 'none';
     document.getElementById('briefingGenBtn').disabled = false;
     document.getElementById('briefingGenBtn').textContent = '🎙️ צור סיכום';

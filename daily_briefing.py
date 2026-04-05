@@ -256,6 +256,7 @@ def collect_stock(ticker):
         'target_high': round(target_high / div, 2) if target_high else None,
         'recommendation': recommendation,
         'news': news,
+        'prev_price': round(prev / div, 2),
     }
 
 
@@ -594,8 +595,8 @@ def format_large(v):
     return f'{v:,.0f}'
 
 
-def generate_text_report(data):
-    """Generate Hebrew text report."""
+def generate_text_report(data, positions=None):
+    """Generate Hebrew text report. positions = {ticker: {shares: N}}"""
     m = data['macro']
     stocks = data['stocks']
     date = datetime.fromisoformat(data['date']).strftime('%d/%m/%Y')
@@ -605,6 +606,44 @@ def generate_text_report(data):
     lines.append(f"📊 סיכום יומי לתיק ההשקעות — {date}")
     lines.append(f"{'='*60}")
     lines.append("")
+
+    # ─── Portfolio P&L summary ───
+    if positions:
+        valid_pos = {t: v for t, v in positions.items() if v.get('shares', 0) > 0}
+        if valid_pos:
+            total_value = 0
+            total_pnl = 0
+            pnl_rows = []
+            for s in [s for s in stocks if 'error' not in s and s['ticker'] in valid_pos]:
+                shares = valid_pos[s['ticker']]['shares']
+                prev = s.get('prev_price', s['price'])
+                pnl = shares * (s['price'] - prev)
+                value = shares * s['price']
+                total_pnl += pnl
+                total_value += value
+                s['_dollar_impact'] = pnl
+                s['_shares'] = shares
+                pnl_rows.append((s, shares, pnl, value))
+
+            pnl_sign = '+' if total_pnl >= 0 else ''
+            pnl_emoji = '🟢' if total_pnl >= 0 else '🔴'
+            lines.append("💼 תמצית תיק ההשקעות היום")
+            lines.append("─" * 40)
+            lines.append(f"  💰 שווי כולל:   ${total_value:,.0f}")
+            lines.append(f"  {pnl_emoji} שינוי יומי:  {pnl_sign}${total_pnl:,.0f}  ({pnl_sign}{(total_pnl/total_value*100) if total_value else 0:.2f}%)")
+            lines.append("")
+
+            # Top movers by dollar impact
+            pnl_rows_sorted = sorted(pnl_rows, key=lambda x: x[2])
+            if any(r[2] < 0 for r in pnl_rows_sorted):
+                lines.append("  📉 הכי השפיעו לרעה:")
+                for s, shares, pnl, value in [r for r in pnl_rows_sorted if r[2] < 0][:3]:
+                    lines.append(f"    {s['hebrew']} ({s['ticker']}): {pnl:+,.0f}$ ({s['change_pct']:+.1f}% × {shares:g} מניות)")
+            if any(r[2] > 0 for r in pnl_rows_sorted):
+                lines.append("  📈 הכי השפיעו לטובה:")
+                for s, shares, pnl, value in sorted([r for r in pnl_rows_sorted if r[2] > 0], key=lambda x: -x[2])[:3]:
+                    lines.append(f"    {s['hebrew']} ({s['ticker']}): {pnl:+,.0f}$ ({s['change_pct']:+.1f}% × {shares:g} מניות)")
+            lines.append("")
 
     # ─── Macro ───
     lines.append("🌍 מאקרו — תמונת מצב השוק")
@@ -654,25 +693,35 @@ def generate_text_report(data):
     lines.append("📈 ניתוח מניות בתיק")
     lines.append("─" * 40)
 
-    # Sort by change
     valid_stocks = [s for s in stocks if 'error' not in s]
-    valid_stocks.sort(key=lambda s: s.get('change_pct', 0))
+    # Sort by dollar impact if positions provided, else by % change
+    if positions and any('_dollar_impact' in s for s in valid_stocks):
+        valid_stocks.sort(key=lambda s: s.get('_dollar_impact', 0))
+    else:
+        valid_stocks.sort(key=lambda s: s.get('change_pct', 0))
 
     # Winners & Losers
     winners = [s for s in valid_stocks if s.get('change_pct', 0) > 0]
     losers = [s for s in valid_stocks if s.get('change_pct', 0) <= 0]
 
+    def fmt_stock_line(s):
+        base = f"    {s['hebrew']} ({s['ticker']}): {s['currency']}{s['price']} ({s['change_pct']:+.1f}%)"
+        if '_dollar_impact' in s and '_shares' in s:
+            impact = s['_dollar_impact']
+            base += f"  →  {'+' if impact >= 0 else ''}{impact:,.0f}$"
+        return base
+
     if losers:
         lines.append("")
         lines.append("  🔴 ירידות:")
         for s in losers:
-            lines.append(f"    {s['hebrew']} ({s['ticker']}): {s['currency']}{s['price']} ({s['change_pct']:+.1f}%)")
+            lines.append(fmt_stock_line(s))
 
     if winners:
         lines.append("")
         lines.append("  🟢 עליות:")
         for s in reversed(winners):
-            lines.append(f"    {s['hebrew']} ({s['ticker']}): {s['currency']}{s['price']} ({s['change_pct']:+.1f}%)")
+            lines.append(fmt_stock_line(s))
 
     lines.append("")
 
