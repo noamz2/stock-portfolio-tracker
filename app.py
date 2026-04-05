@@ -443,6 +443,211 @@ TICKER_ALIASES = {
     'NOVA': 'NVMI.TA',
 }
 
+# ─── Peer Comparison Map ───
+# Curated: true business-model peers, not just same sector.
+# Each entry is researched for genuine comparability.
+PEER_MAP = {
+    # Payment Networks (card rails, not banks)
+    'V':    ['MA', 'AXP', 'PYPL', 'FIS', 'FISV'],
+    'MA':   ['V', 'AXP', 'PYPL', 'FIS', 'FISV'],
+    # Digital Payments / Buy-Now-Pay-Later
+    'PYPL': ['SQ', 'V', 'MA', 'AFRM', 'FIS'],
+    'SQ':   ['PYPL', 'V', 'MA', 'AFRM', 'FOUR'],
+    'AFRM': ['SOFI', 'UPST', 'FOUR', 'LC', 'SQ'],
+    # Consumer Finance / Credit Cards
+    'AXP':  ['V', 'MA', 'DFS', 'COF', 'SYF'],
+    'DFS':  ['AXP', 'COF', 'SYF', 'V', 'MA'],
+    'COF':  ['AXP', 'DFS', 'SYF', 'JPM', 'BAC'],
+    # FinTech / Neobank
+    'SOFI': ['UPST', 'LC', 'AFRM', 'NU', 'SQ'],
+    'UPST': ['SOFI', 'LC', 'AFRM', 'FOUR', 'SQ'],
+    # Large Banks
+    'JPM':  ['BAC', 'WFC', 'C', 'GS', 'MS'],
+    'BAC':  ['JPM', 'WFC', 'C', 'USB', 'GS'],
+    'WFC':  ['JPM', 'BAC', 'C', 'USB', 'TFC'],
+    'GS':   ['MS', 'JPM', 'C', 'BAC', 'WFC'],
+    'MS':   ['GS', 'JPM', 'C', 'BAC', 'BLK'],
+    # Asset Management
+    'BLK':  ['TROW', 'IVZ', 'BEN', 'AMP', 'SCHW'],
+    # Mega-cap Tech (diversified)
+    'AAPL': ['MSFT', 'GOOGL', 'META', 'AMZN', 'NVDA'],
+    'MSFT': ['AAPL', 'GOOGL', 'AMZN', 'ORCL', 'CRM'],
+    'GOOGL': ['META', 'MSFT', 'SNAP', 'AMZN', 'TTD'],
+    'GOOG':  ['META', 'MSFT', 'SNAP', 'AMZN', 'TTD'],
+    'META':  ['GOOGL', 'SNAP', 'PINS', 'MSFT', 'TTD'],
+    'AMZN': ['MSFT', 'GOOGL', 'WMT', 'SHOP', 'BABA'],
+    # E-commerce
+    'SHOP': ['AMZN', 'BABA', 'MELI', 'SE', 'ETSY'],
+    'MELI': ['AMZN', 'BABA', 'SE', 'SHOP', 'CPNG'],
+    'BABA': ['AMZN', 'JD', 'PDD', 'SE', 'MELI'],
+    'SE':   ['MELI', 'SHOP', 'GRAB', 'BABA', 'CPNG'],
+    # Semiconductors — GPU / AI
+    'NVDA': ['AMD', 'INTC', 'AVGO', 'QCOM', 'MRVL'],
+    'AMD':  ['NVDA', 'INTC', 'AVGO', 'QCOM', 'MRVL'],
+    # Semiconductors — CPU / Networking
+    'INTC': ['AMD', 'NVDA', 'AVGO', 'QCOM', 'TSM'],
+    'AVGO': ['QCOM', 'NVDA', 'AMD', 'MRVL', 'INTC'],
+    'QCOM': ['AVGO', 'MRVL', 'INTC', 'AMD', 'SWKS'],
+    'MRVL': ['AVGO', 'QCOM', 'AMD', 'NVDA', 'INTC'],
+    'TSM':  ['INTC', 'SSNLF', 'AMAT', 'LRCX', 'UMC'],
+    # Semiconductor Equipment
+    'ASML': ['AMAT', 'LRCX', 'KLAC', 'TER', 'ONTO'],
+    'AMAT': ['ASML', 'LRCX', 'KLAC', 'TER', 'ONTO'],
+    'LRCX': ['AMAT', 'ASML', 'KLAC', 'TER', 'ONTO'],
+    'KLAC': ['AMAT', 'LRCX', 'ASML', 'TER', 'ONTO'],
+    # Enterprise SaaS / Cloud
+    'CRM':  ['NOW', 'WDAY', 'MSFT', 'ORCL', 'SAP'],
+    'NOW':  ['CRM', 'WDAY', 'MSFT', 'ORCL', 'SAP'],
+    'WDAY': ['CRM', 'NOW', 'ORCL', 'SAP', 'ADP'],
+    'ORCL': ['MSFT', 'CRM', 'SAP', 'NOW', 'IBM'],
+    'SAP':  ['ORCL', 'CRM', 'NOW', 'WDAY', 'MSFT'],
+    # Data & Analytics
+    'SNOW': ['MDB', 'ORCL', 'AMZN', 'MSFT', 'GOOGL'],
+    'MDB':  ['SNOW', 'ORCL', 'MSFT', 'AMZN', 'ESTC'],
+    # Creative / Design Software
+    'ADBE': ['MSFT', 'CRM', 'NOW', 'ADSK', 'ORCL'],
+    # Engineering Software
+    'ADSK': ['ADBE', 'PTC', 'ANSS', 'CDNS', 'SNPS'],
+    'CDNS': ['SNPS', 'ANSS', 'ADSK', 'PTC', 'MENT'],
+    'SNPS': ['CDNS', 'ANSS', 'ADSK', 'PTC', 'MENT'],
+    # Cybersecurity
+    'PANW': ['CRWD', 'FTNT', 'ZS', 'S', 'CYBR'],
+    'CRWD': ['PANW', 'FTNT', 'ZS', 'S', 'CYBR'],
+    'FTNT': ['PANW', 'CRWD', 'ZS', 'S', 'CSCO'],
+    'ZS':   ['PANW', 'CRWD', 'FTNT', 'S', 'CYBR'],
+    'S':    ['CRWD', 'PANW', 'ZS', 'FTNT', 'CYBR'],
+    'CYBR': ['PANW', 'CRWD', 'ZS', 'S', 'FTNT'],
+    # Streaming / Content
+    'NFLX': ['DIS', 'AMZN', 'GOOGL', 'PARA', 'SPOT'],
+    'SPOT': ['NFLX', 'AMZN', 'AAPL', 'GOOGL', 'IHRT'],
+    # Social / Ad Networks
+    'SNAP': ['META', 'PINS', 'GOOGL', 'TTD', 'AMZN'],
+    'PINS': ['META', 'SNAP', 'GOOGL', 'TTD', 'AMZN'],
+    'TTD':  ['GOOGL', 'META', 'AMZN', 'MGNI', 'PUB'],
+    # EV / Auto
+    'TSLA': ['RIVN', 'LCID', 'NIO', 'GM', 'F'],
+    # Athletic Apparel / Footwear
+    'NKE':  ['ADDYY', 'ONON', 'LULU', 'DECK', 'UAA'],
+    'ONON': ['NKE', 'ADDYY', 'LULU', 'DECK', 'UAA'],
+    'LULU': ['NKE', 'ONON', 'UAA', 'DECK', 'VFC'],
+    # Bitcoin Mining
+    'IREN': ['MARA', 'RIOT', 'CLSK', 'BTBT', 'HUT'],
+    'MARA': ['IREN', 'RIOT', 'CLSK', 'BTBT', 'HUT'],
+    'RIOT': ['IREN', 'MARA', 'CLSK', 'BTBT', 'HUT'],
+    # Pharma — GLP-1 / Large-cap
+    'LLY':  ['NVO', 'ABBV', 'MRK', 'JNJ', 'PFE'],
+    'NVO':  ['LLY', 'ABBV', 'MRK', 'JNJ', 'PFE'],
+    'ABBV': ['LLY', 'NVO', 'MRK', 'JNJ', 'PFE'],
+    'MRK':  ['LLY', 'NVO', 'ABBV', 'JNJ', 'PFE'],
+    'PFE':  ['MRK', 'ABBV', 'LLY', 'JNJ', 'AMGN'],
+    'JNJ':  ['ABBV', 'LLY', 'MRK', 'PFE', 'MDT'],
+    # Retail
+    'WMT':  ['AMZN', 'TGT', 'COST', 'KR', 'DG'],
+    'COST': ['WMT', 'TGT', 'BJ', 'AMZN', 'KR'],
+    'TGT':  ['WMT', 'COST', 'AMZN', 'KR', 'DG'],
+    # Energy
+    'XOM':  ['CVX', 'BP', 'SHEL', 'COP', 'EOG'],
+    'CVX':  ['XOM', 'BP', 'SHEL', 'COP', 'EOG'],
+    # Aerospace & Defense
+    'LMT':  ['RTX', 'NOC', 'BA', 'GD', 'HII'],
+    'RTX':  ['LMT', 'NOC', 'BA', 'GD', 'HII'],
+    'NOC':  ['LMT', 'RTX', 'BA', 'GD', 'HII'],
+    'BA':   ['LMT', 'RTX', 'NOC', 'GD', 'AIR'],
+    # Israel-listed
+    'CHKP.TA': ['PANW', 'FTNT', 'CSCO', 'CRWD', 'ZS'],
+    'NICE.TA': ['VERINT', 'MSFT', 'CRM', 'AVAYA', 'NICE'],
+    'LUMI.TA': ['POLI.TA', 'DSCT.TA', 'MZTF.TA', 'FIBIH.TA'],
+    'POLI.TA': ['LUMI.TA', 'DSCT.TA', 'MZTF.TA', 'FIBIH.TA'],
+}
+
+# Industry-based fallback peers (when not in PEER_MAP)
+INDUSTRY_PEERS = {
+    'Software—Application':           ['MSFT', 'ORCL', 'SAP', 'CRM', 'NOW'],
+    'Software—Infrastructure':         ['MSFT', 'ORCL', 'VMW', 'CSCO', 'IBM'],
+    'Semiconductors':                  ['NVDA', 'AMD', 'INTC', 'AVGO', 'QCOM'],
+    'Semiconductor Equipment & Materials': ['AMAT', 'ASML', 'LRCX', 'KLAC', 'TER'],
+    'Internet Content & Information':  ['GOOGL', 'META', 'SNAP', 'PINS', 'TWTR'],
+    'Internet Retail':                 ['AMZN', 'SHOP', 'BABA', 'MELI', 'EBAY'],
+    'Credit Services':                 ['V', 'MA', 'AXP', 'DFS', 'COF'],
+    'Banks—Diversified':               ['JPM', 'BAC', 'WFC', 'C', 'USB'],
+    'Banks—Regional':                  ['USB', 'TFC', 'FITB', 'RF', 'CFG'],
+    'Financial Data & Stock Exchanges':['CME', 'ICE', 'SPGI', 'MCO', 'NDAQ'],
+    'Capital Markets':                 ['GS', 'MS', 'BLK', 'SCHW', 'RJF'],
+    'Biotechnology':                   ['AMGN', 'GILD', 'REGN', 'VRTX', 'BIIB'],
+    'Drug Manufacturers—General':      ['JNJ', 'PFE', 'MRK', 'ABBV', 'LLY'],
+    'Medical Devices':                 ['MDT', 'ABT', 'SYK', 'BSX', 'EW'],
+    'Health Information Services':     ['UNH', 'CVS', 'CI', 'HUM', 'ELV'],
+    'Consumer Electronics':            ['AAPL', 'SONY', 'SSNLF', 'HPQ', 'DELL'],
+    'Auto Manufacturers':              ['TSLA', 'GM', 'F', 'TM', 'VWAGY'],
+    'Telecom Services':                ['T', 'VZ', 'TMUS', 'CMCSA', 'CHTR'],
+    'Oil & Gas Integrated':            ['XOM', 'CVX', 'BP', 'SHEL', 'TTE'],
+    'Oil & Gas E&P':                   ['COP', 'EOG', 'PXD', 'DVN', 'APA'],
+    'Aerospace & Defense':             ['LMT', 'RTX', 'NOC', 'GD', 'BA'],
+    'Specialty Retail':                ['WMT', 'TGT', 'COST', 'HD', 'LOW'],
+    'Apparel—Footwear & Accessories':  ['NKE', 'ADDYY', 'LULU', 'DECK', 'UAA'],
+    'Entertainment':                   ['NFLX', 'DIS', 'WBD', 'PARA', 'CMCSA'],
+    'Electronic Gaming & Multimedia':  ['ATVI', 'EA', 'TTWO', 'RBLX', 'UBSFY'],
+    'Insurance—Life':                  ['MET', 'PRU', 'UNM', 'LNC', 'AFL'],
+    'Insurance—Property & Casualty':   ['BRK-B', 'AIG', 'CB', 'TRV', 'ALL'],
+    'Real Estate—REIT':                ['AMT', 'PLD', 'EQIX', 'DLR', 'CCI'],
+    'Utilities—Regulated Electric':    ['NEE', 'DUK', 'SO', 'D', 'EXC'],
+    'Farm & Heavy Construction Machinery': ['CAT', 'DE', 'PCAR', 'AGCO', 'CNH'],
+    'Scientific & Technical Instruments': ['TMO', 'DHR', 'A', 'MTD', 'BIO'],
+    'Cybersecurity':                   ['PANW', 'CRWD', 'FTNT', 'ZS', 'S'],
+}
+
+# ─── Peer Metrics Cache (24h TTL) ───
+_PEER_CACHE = {}
+_PEER_CACHE_TTL = 86400  # 24 hours
+
+def _get_peer_cached(ticker):
+    entry = _PEER_CACHE.get(ticker)
+    if entry and (datetime.now() - entry['ts']).total_seconds() < _PEER_CACHE_TTL:
+        return entry['data']
+    return None
+
+def _set_peer_cached(ticker, data):
+    _PEER_CACHE[ticker] = {'ts': datetime.now(), 'data': data}
+
+def fetch_peer_metrics(ticker):
+    """Fetch key valuation + growth metrics for a single ticker."""
+    cached = _get_peer_cached(ticker)
+    if cached:
+        return cached
+    try:
+        t = yf_ticker(ticker)
+        info = t.info
+        if not info or not info.get('regularMarketPrice'):
+            return None
+        def sg(k, default=None):
+            v = info.get(k)
+            return float(v) if v is not None else default
+        data = {
+            'ticker': ticker,
+            'name': info.get('shortName', info.get('longName', ticker)),
+            'price': sg('currentPrice') or sg('regularMarketPrice'),
+            'marketCap': sg('marketCap'),
+            'pe': sg('trailingPE'),
+            'forwardPE': sg('forwardPE'),
+            'ps': sg('priceToSalesTrailing12Months'),
+            'pb': sg('priceToBook'),
+            'evEbitda': sg('enterpriseToEbitda'),
+            'grossMargin': round(sg('grossMargins', 0) * 100, 1) if sg('grossMargins') is not None else None,
+            'opMargin': round(sg('operatingMargins', 0) * 100, 1) if sg('operatingMargins') is not None else None,
+            'netMargin': round(sg('profitMargins', 0) * 100, 1) if sg('profitMargins') is not None else None,
+            'revenueGrowth': round(sg('revenueGrowth', 0) * 100, 1) if sg('revenueGrowth') is not None else None,
+            'epsGrowth': round(sg('earningsGrowth', 0) * 100, 1) if sg('earningsGrowth') is not None else None,
+            'beta': sg('beta'),
+            'sector': info.get('sector', ''),
+            'industry': info.get('industry', ''),
+        }
+        _set_peer_cached(ticker, data)
+        return data
+    except Exception as e:
+        print(f"fetch_peer_metrics({ticker}): {e}")
+        return None
+
+
 def resolve_ticker(ticker):
     """Resolve ticker aliases. Supports Hebrew names, English names, and direct symbols."""
     upper = ticker.upper().strip()
@@ -586,9 +791,9 @@ def get_historical_pe(ticker_obj, info, years=5):
                 ttm_timeline[ym] = eps
 
         if not ttm_timeline:
-            # Fallback to old method (current EPS for all dates)
+            # Fallback to old method (current EPS for all dates) — all synthetic
             pe_values = [round(p / eps_ttm_current, 2) if p and p > 0 else None for p in prices]
-            return dates, pe_values
+            return dates, pe_values, [True] * len(pe_values)
 
         sorted_ttm = sorted(ttm_timeline.keys())
         earliest_eps_date = sorted_ttm[0]
@@ -636,17 +841,20 @@ def get_historical_pe(ticker_obj, info, years=5):
                 return earliest_val / ((1 + cagr) ** years_back)
 
         pe_values = []
+        is_synthetic = []
         for dt, price in zip(dates, prices):
             eps = get_eps_for_date(dt)
+            synthetic = dt < earliest_eps_date  # True = backward-extrapolated, not real data
             if eps and eps > 0.01 and price and price > 0:
                 pe = price / eps
                 pe_values.append(round(pe, 2) if 0 < pe < 500 else None)
             else:
                 pe_values.append(None)
+            is_synthetic.append(synthetic)
 
-        return dates, pe_values
+        return dates, pe_values, is_synthetic
     except:
-        return [], []
+        return [], [], []
 
 
 # ─── API Routes ───
@@ -672,6 +880,13 @@ def init_db():
             user_id INTEGER NOT NULL,
             ticker TEXT NOT NULL,
             shares REAL NOT NULL DEFAULT 0,
+            UNIQUE(user_id, ticker),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )''')
+        db.execute('''CREATE TABLE IF NOT EXISTS watchlist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            ticker TEXT NOT NULL,
             UNIQUE(user_id, ticker),
             FOREIGN KEY(user_id) REFERENCES users(id)
         )''')
@@ -778,6 +993,118 @@ def update_shares(ticker):
                    (shares, session['user_id'], ticker.upper()))
         db.commit()
     return jsonify({'success': True})
+
+
+@app.route('/api/watchlist', methods=['GET'])
+def get_watchlist():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    with get_db() as db:
+        rows = db.execute("SELECT ticker FROM watchlist WHERE user_id = ?", (session['user_id'],)).fetchall()
+    return jsonify([row['ticker'] for row in rows])
+
+@app.route('/api/watchlist', methods=['POST'])
+def add_to_watchlist():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json
+    ticker = data.get('ticker', '').upper().strip()
+    if not ticker:
+        return jsonify({'error': 'Missing ticker'}), 400
+    with get_db() as db:
+        db.execute(
+            "INSERT OR IGNORE INTO watchlist (user_id, ticker) VALUES (?, ?)",
+            (session['user_id'], ticker)
+        )
+        db.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/watchlist/<ticker>', methods=['DELETE'])
+def remove_from_watchlist(ticker):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    with get_db() as db:
+        db.execute("DELETE FROM watchlist WHERE user_id = ? AND ticker = ?", (session['user_id'], ticker.upper()))
+        db.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/peers/<ticker>')
+def get_peers(ticker):
+    """Return curated peer comparison data for a ticker."""
+    try:
+        resolved = resolve_ticker(ticker)
+
+        # 1. Get current stock's sector/industry from yfinance
+        t = yf_ticker(resolved)
+        info = t.info
+        if not info:
+            return jsonify({'error': 'Ticker not found'}), 404
+        sector = info.get('sector', 'Unknown')
+        industry = info.get('industry', 'Unknown')
+
+        # 2. Find peers — check PEER_MAP first, then try TASE variants, then industry fallback
+        peer_tickers = PEER_MAP.get(resolved)
+        source = 'curated'
+        if not peer_tickers:
+            # Try without exchange suffix
+            base = resolved.split('.')[0]
+            peer_tickers = PEER_MAP.get(base)
+        if not peer_tickers:
+            # Industry fallback
+            peer_tickers = INDUSTRY_PEERS.get(industry) or INDUSTRY_PEERS.get(sector, [])
+            # Remove the stock itself
+            peer_tickers = [p for p in peer_tickers if p != resolved and p.split('.')[0] != base][:5]
+            source = 'industry'
+        if not peer_tickers:
+            # Generic fallback: use same-sector large-cap list
+            peer_tickers = ['SPY']  # at minimum return SPY as benchmark
+            source = 'benchmark'
+
+        # 3. Fetch metrics for all peers (in parallel using threads)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
+            futures = {ex.submit(fetch_peer_metrics, p): p for p in peer_tickers[:5]}
+            peer_data = {}
+            for fut in concurrent.futures.as_completed(futures):
+                p = futures[fut]
+                result = fut.result()
+                if result:
+                    peer_data[p] = result
+
+        # 4. Compute medians across peers (only non-None values)
+        def median_of(key):
+            vals = [v[key] for v in peer_data.values() if v.get(key) is not None and v[key] > 0]
+            if not vals:
+                return None
+            vals.sort()
+            mid = len(vals) // 2
+            return round(vals[mid] if len(vals) % 2 else (vals[mid-1] + vals[mid]) / 2, 2)
+
+        sector_median = {
+            'pe': median_of('pe'),
+            'forwardPE': median_of('forwardPE'),
+            'ps': median_of('ps'),
+            'pb': median_of('pb'),
+            'evEbitda': median_of('evEbitda'),
+            'grossMargin': median_of('grossMargin'),
+            'opMargin': median_of('opMargin'),
+            'netMargin': median_of('netMargin'),
+            'revenueGrowth': median_of('revenueGrowth'),
+        }
+
+        return jsonify({
+            'ticker': resolved,
+            'sector': sector,
+            'industry': industry,
+            'peers': list(peer_data.keys()),
+            'peerData': peer_data,
+            'sectorMedian': sector_median,
+            'source': source,
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/health')
@@ -934,15 +1261,18 @@ def get_stock(ticker):
 
         current_rsi = rsi_values[-1] if rsi_values and rsi_values[-1] is not None else 50
 
-        # Historical P/E
-        pe_dates, pe_values = get_historical_pe(t, info, years=years)
+        # Historical P/E — returns synthetic mask (True = backward-extrapolated, not real data)
+        pe_dates, pe_values, pe_synthetic_mask = get_historical_pe(t, info, years=years)
         current_pe = safe(info, 'trailingPE')
         forward_pe = safe(info, 'forwardPE')
 
-        # P/E percentile
-        valid_pes = [p for p in pe_values if p is not None and 0 < p < 200]
+        # P/E percentile — computed ONLY from real (non-synthetic) data points
+        real_pes = [p for p, s in zip(pe_values, pe_synthetic_mask)
+                    if p is not None and 0 < p < 200 and not s]
+        valid_pes = real_pes if real_pes else [p for p in pe_values if p is not None and 0 < p < 200]
         pe_percentile = None
         pe_verdict = 'N/A'
+        pe_verdict_based_on_real = bool(real_pes)  # False = based on synthetic fallback
         if valid_pes and current_pe:
             pe_percentile = sum(1 for p in valid_pes if p < current_pe) / len(valid_pes) * 100
             if pe_percentile > 75:
@@ -951,6 +1281,11 @@ def get_stock(ticker):
                 pe_verdict = 'Cheap'
             else:
                 pe_verdict = 'Fair'
+
+        # Earliest real P/E date (for UI disclaimer)
+        earliest_real_pe_date = next(
+            (d for d, s in zip(pe_dates, pe_synthetic_mask) if not s), None
+        )
 
         # Signal logic
         pe_avg = np.mean(valid_pes) if valid_pes else None
@@ -1046,6 +1381,8 @@ def get_stock(ticker):
             'pePercentile': pe_percentile,
             'peVerdict': pe_verdict,
             'peAvgHistorical': pe_avg,
+            'peVerdictBasedOnReal': pe_verdict_based_on_real,
+            'peEarliestRealDate': earliest_real_pe_date,
         }
 
         # FCF history for DCF
@@ -1080,6 +1417,120 @@ def get_stock(ticker):
             'revenueGrowth': safe(info, 'revenueGrowth', 0.1),
             'beta': safe(info, 'beta', 1.0),
         }
+
+        # S&P 500 (SPY) normalized to 100 — aligned to stock dates for comparison
+        spy_normalized = []
+        try:
+            spy_cache_key = f'spy_{years}y'
+            spy_cached = _get_cached(spy_cache_key)
+            if spy_cached:
+                spy_dict = spy_cached
+            else:
+                spy_t = yf_ticker('SPY')
+                spy_hist = yf_safe_history(spy_t, period=f"{years}y", interval="1d")
+                spy_dict = {}
+                if not spy_hist.empty:
+                    for spy_d, spy_c in zip(spy_hist.index, spy_hist['Close'].tolist()):
+                        spy_dict[spy_d.strftime('%Y-%m-%d')] = float(spy_c)
+                _set_cached(spy_cache_key, spy_dict)
+
+            if spy_dict and dates:
+                aligned = [spy_dict.get(d) for d in dates]
+                # forward fill gaps
+                last = None
+                filled = []
+                for v in aligned:
+                    if v is not None:
+                        last = v
+                    filled.append(last)
+                # normalize to 100
+                base = next((v for v in filled if v and v > 0), None)
+                if base:
+                    spy_normalized = [round(v / base * 100, 2) if v else None for v in filled]
+        except Exception:
+            pass
+
+        # Annual financials: revenue + margins history
+        annual_financials = []
+        try:
+            fin = t.financials
+            if fin is not None and not fin.empty:
+                for col in fin.columns:
+                    row = {'year': col.year}
+                    try:
+                        rev = fin.loc['Total Revenue', col] if 'Total Revenue' in fin.index else None
+                        gp = fin.loc['Gross Profit', col] if 'Gross Profit' in fin.index else None
+                        oi = fin.loc['Operating Income', col] if 'Operating Income' in fin.index else None
+                        ni = fin.loc['Net Income', col] if 'Net Income' in fin.index else None
+                        row['revenue'] = float(rev) if rev is not None and not np.isnan(float(rev)) else None
+                        r = row['revenue']
+                        row['grossMargin'] = round(float(gp) / r * 100, 1) if gp is not None and r and r > 0 and not np.isnan(float(gp)) else None
+                        row['opMargin'] = round(float(oi) / r * 100, 1) if oi is not None and r and r > 0 and not np.isnan(float(oi)) else None
+                        row['netMargin'] = round(float(ni) / r * 100, 1) if ni is not None and r and r > 0 and not np.isnan(float(ni)) else None
+                    except Exception:
+                        pass
+                    annual_financials.append(row)
+                annual_financials.sort(key=lambda x: x['year'])
+        except Exception:
+            pass
+
+        # FCF multiple — daily continuous line (like P/E chart)
+        # For each trading day, use the most recent annual FCF / shares to compute P/FCF
+        fcf_multiple_daily = []
+        fcf_multiple_synthetic_mask = []  # True = backward-filled (before any FCF data)
+        fcf_multiple_history = []  # kept for backward compat (annual bar chart)
+        try:
+            shares_out = safe(info, 'sharesOutstanding', 0)
+            if shares_out and fcf_history and dates and closes:
+                sorted_fcf = sorted(fcf_history, key=lambda x: x['year'])
+
+                # Annual bar chart (discrete points)
+                year_end_prices = {}
+                for d_str, c in zip(dates, closes):
+                    year_end_prices[int(d_str[:4])] = c
+                for item in sorted_fcf:
+                    yr_price = year_end_prices.get(item['year'])
+                    if yr_price and item['fcf'] and shares_out > 0:
+                        fps = item['fcf'] / shares_out
+                        if fps > 0:
+                            m = round(yr_price / fps, 1)
+                            if 0 < m < 1000:
+                                fcf_multiple_history.append({'year': item['year'], 'multiple': m})
+
+                # Daily continuous line: assign most-recent annual FCF to each day
+                fcf_by_year = {item['year']: item['fcf'] for item in sorted_fcf if item['fcf'] and item['fcf'] > 0}
+                if fcf_by_year:
+                    earliest_fcf_year = min(fcf_by_year.keys())
+                    all_fcf_years_sorted = sorted(fcf_by_year.keys())
+
+                    for d_str, price in zip(dates, closes):
+                        day_year = int(d_str[:4])
+                        # Use most recent FCF year ≤ current year
+                        # If before all FCF data → use earliest available (backward fill)
+                        applicable = [y for y in all_fcf_years_sorted if y <= day_year]
+                        is_backward_fill = len(applicable) == 0
+                        use_year = max(applicable) if applicable else earliest_fcf_year
+                        fcf_val = fcf_by_year[use_year]
+                        fps = fcf_val / shares_out
+                        if fps > 0:
+                            m = round(price / fps, 2)
+                            fcf_multiple_daily.append(m if 0 < m < 1000 else None)
+                        else:
+                            fcf_multiple_daily.append(None)
+                        fcf_multiple_synthetic_mask.append(is_backward_fill)
+        except Exception:
+            pass
+
+        # Current FCF multiple and average (for reference lines)
+        current_fcf_multiple = None
+        avg_fcf_multiple = None
+        try:
+            valid_fm = [v for v in fcf_multiple_daily if v is not None and v > 0]
+            if valid_fm:
+                avg_fcf_multiple = round(sum(valid_fm) / len(valid_fm), 1)
+                current_fcf_multiple = valid_fm[-1] if valid_fm else None
+        except Exception:
+            pass
 
         # News (from yfinance - new nested format)
         news = []
@@ -1165,10 +1616,20 @@ def get_stock(ticker):
                 'volumes': volumes,
                 'rsi': rsi_values,
                 'ma200': ma200,
+                'spy': spy_normalized,
+                'annualFinancials': annual_financials,
+                'fcfMultiple': fcf_multiple_history,
+                'fcfMultipleDaily': fcf_multiple_daily,
+                'fcfMultipleSyntheticMask': fcf_multiple_synthetic_mask,
+                'fcfMultipleCurrent': current_fcf_multiple,
+                'fcfMultipleAvg': avg_fcf_multiple,
             },
             'historicalPE': {
                 'dates': pe_dates,
                 'values': pe_values,
+                'syntheticMask': pe_synthetic_mask,
+                'earliestRealDate': earliest_real_pe_date,
+                'verdictBasedOnReal': pe_verdict_based_on_real,
             },
             'historicalForwardPE': {
                 'dates': fwd_pe_dates,

@@ -298,8 +298,184 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
+/* View Navigation */
+.view-nav {
+  display: flex;
+  gap: 4px;
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 64px;
+  z-index: 99;
+}
+.view-nav-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 14px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+}
+.view-nav-btn:hover { color: var(--text); }
+.view-nav-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+.nav-badge {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
 .hidden { display: none !important; }
 .chart-container { position: relative; height: 380px; width: 100%; }
+
+/* Compare grid */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.compare-grid-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  position: relative;
+}
+.compare-grid-item h4 {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.compare-grid-item .remove-compare {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  transition: color .2s;
+}
+.compare-grid-item .remove-compare:hover { color: var(--red); }
+@media (max-width: 700px) {
+  .compare-grid { grid-template-columns: 1fr; }
+}
+.chart-pill.compare-selected {
+  background: linear-gradient(135deg, rgba(41,98,255,0.3), rgba(0,229,255,0.2));
+  color: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 14px rgba(0,229,255,0.25);
+  position: relative;
+}
+.chart-pill.compare-selected::after {
+  content: '✓';
+  margin-left: 5px;
+  font-size: 11px;
+}
+
+/* Chart Selector Bar */
+.chart-selector-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 4px 2px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+.chart-selector-bar::-webkit-scrollbar { height: 4px; }
+.chart-selector-bar::-webkit-scrollbar-track { background: transparent; }
+.chart-selector-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.chart-pill {
+  flex-shrink: 0;
+  background: var(--card);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 7px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Assistant', sans-serif;
+  transition: all .2s var(--transition-smooth);
+  white-space: nowrap;
+}
+.chart-pill:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0,229,255,0.06);
+}
+.chart-pill.active {
+  background: linear-gradient(135deg, rgba(41,98,255,0.25), rgba(0,229,255,0.15));
+  color: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px rgba(0,229,255,0.2);
+}
+
+/* Peer metric selector */
+.peer-metric-btn {
+  background: var(--card);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 5px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Assistant', sans-serif;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.peer-metric-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(41,98,255,0.07); }
+.peer-metric-btn.active {
+  background: linear-gradient(135deg, rgba(41,98,255,0.25), rgba(0,229,255,0.15));
+  color: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px rgba(0,229,255,0.18);
+}
+/* Peer company chip */
+.peer-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all .2s;
+  font-size: 0.82rem;
+}
+.peer-chip:hover { border-color: var(--cyan); color: var(--cyan); }
+.peer-chip.is-self {
+  border-color: var(--accent);
+  background: rgba(41,98,255,0.12);
+  color: #7BA7FF;
+  font-weight: 700;
+}
+/* Peers table highlight */
+#peersTableBody tr.is-self-row td { background: rgba(41,98,255,0.08); font-weight: 700; }
+#peersTableBody tr.is-median-row td { background: rgba(0,230,118,0.06); color: var(--green); font-style: italic; }
+.metric-cell-best { color: var(--green); font-weight: 700; }
+.metric-cell-worst { color: var(--red); }
 .verdict-box { text-align: center; padding: 24px; border-radius: 16px; margin: 16px 0; border: 1px solid rgba(255,255,255,0.05); }
 .verdict-box .big { font-size: 2.5rem; font-weight: 800; direction: ltr; font-family: 'Inter', sans-serif; letter-spacing: -0.02em; }
 .verdict-box .sub { font-size: 14px; color: var(--muted); margin-top: 8px; font-weight: 500; }
@@ -478,11 +654,16 @@ body {
   </div>
 </header>
 
-
+<!-- View Navigation -->
+<nav class="view-nav">
+  <button class="view-nav-btn active" data-view="portfolio" onclick="switchView('portfolio')">📈 תיק השקעות</button>
+  <button class="view-nav-btn" data-view="watchlist" onclick="switchView('watchlist')">👁️ רשימת מעקב <span id="watchlistBadge" class="nav-badge" style="display:none">0</span></button>
+</nav>
 
 <div class="container">
   <!-- Portfolio Dashboard -->
   <div id="dashboardView">
+    <div id="portfolioView">
     <div class="card" id="portfolioCard" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <h2>Portfolio Dashboard</h2>
@@ -671,6 +852,41 @@ body {
         </div>
       </div>
     </div>
+    </div><!-- end portfolioView -->
+
+    <!-- Watchlist View -->
+    <div id="watchlistView" style="display:none">
+      <div class="card" id="watchlistCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2>👁️ רשימת מעקב</h2>
+          <span style="font-size:13px;color:var(--muted)" id="watchlistCount"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Ticker</th>
+                <th>Name</th>
+                <th dir="ltr">Price</th>
+                <th dir="ltr">Change</th>
+                <th>RSI</th>
+                <th>P/E</th>
+                <th>Market Cap</th>
+                <th>Signal</th>
+                <th>News</th>
+              </tr>
+            </thead>
+            <tbody id="watchlistTable"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" id="watchlistEmpty" style="text-align:center;padding:60px 20px">
+        <div style="font-size:3rem;margin-bottom:16px">👁️</div>
+        <h2>רשימת המעקב ריקה</h2>
+        <p style="color:var(--muted);margin-top:8px">הוסף מניות למעקב כדי לעקוב אחרי מניות שאינך מחזיק</p>
+      </div>
+    </div>
   </div>
 
   <!-- Stock Detail View -->
@@ -687,6 +903,7 @@ body {
         <div>
           <div id="detailPrice" style="font-size:2.2rem;font-weight:800;direction:ltr"></div>
           <div id="detailChange" style="font-size:1rem;margin-top:4px;direction:ltr"></div>
+          <div id="cacheAge" style="font-size:0.72rem;margin-top:6px;color:var(--muted)"></div>
         </div>
         <div class="metric-grid" id="quickMetrics" style="flex:1;max-width:700px"></div>
       </div>
@@ -702,6 +919,7 @@ body {
       <div class="tab" data-tab="pemodel" onclick="switchTab(this)">📈 P/E Model</div>
       <div class="tab" data-tab="fundamentals" onclick="switchTab(this)">Fundamentals</div>
       <div class="tab" data-tab="news" onclick="switchTab(this)">News</div>
+      <div class="tab" data-tab="peers" onclick="switchTab(this)">⚖️ Peers</div>
       <div class="tab" data-tab="podcast" onclick="switchTab(this)">🎙️ Podcast</div>
       </div>
       <div class="time-range-toggle" id="stockTimeToggle">
@@ -713,11 +931,53 @@ body {
 
     <!-- Charts Tab -->
     <div id="tab-charts" class="tab-content">
-      <div class="grid-2">
-        <div class="card"><h3>Price + 200-Day MA</h3><div class="chart-container"><canvas id="priceChart"></canvas></div></div>
-        <div class="card"><h3>RSI (200-Day)</h3><div class="chart-container"><canvas id="rsiChart"></canvas></div></div>
+
+      <!-- Toolbar: selector + compare toggle -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="chart-selector-bar" style="flex:1;min-width:0">
+          <button class="chart-pill active" data-chart="price"       onclick="handlePillClick('price')">📈 מחיר</button>
+          <button class="chart-pill"        data-chart="performance" onclick="handlePillClick('performance')">🏆 ביצועים</button>
+          <button class="chart-pill"        data-chart="rsi"         onclick="handlePillClick('rsi')">📊 RSI</button>
+          <button class="chart-pill"        data-chart="volume"      onclick="handlePillClick('volume')">📦 נפח</button>
+          <button class="chart-pill"        data-chart="pe"          onclick="handlePillClick('pe')">💰 P/E</button>
+          <button class="chart-pill"        data-chart="fwdpe"       onclick="handlePillClick('fwdpe')">🔮 Forward P/E</button>
+          <button class="chart-pill"        data-chart="peg"         onclick="handlePillClick('peg')">⚖️ PEG</button>
+          <button class="chart-pill"        data-chart="fcf"         onclick="handlePillClick('fcf')">💵 FCF</button>
+          <button class="chart-pill"        data-chart="fcfmultiple" onclick="handlePillClick('fcfmultiple')">🔢 מכפיל FCF</button>
+          <button class="chart-pill"        data-chart="margins"     onclick="handlePillClick('margins')">📉 מרג'ינים</button>
+          <button class="chart-pill"        data-chart="revenue"     onclick="handlePillClick('revenue')">💹 הכנסות</button>
+        </div>
+        <button id="compareToggleBtn" onclick="toggleComparisonMode()"
+          style="flex-shrink:0;background:var(--card);color:var(--muted);border:1px solid var(--border);padding:7px 16px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:600;font-family:'Assistant',sans-serif;white-space:nowrap;transition:all .2s">
+          🔲 השוואה
+        </button>
       </div>
-      <div class="card"><h3>Volume</h3><div class="chart-container"><canvas id="volumeChart"></canvas></div></div>
+
+      <!-- Comparison hint (shown only in compare mode) -->
+      <div id="compareHint" style="display:none;margin-top:8px;font-size:12px;color:var(--muted);text-align:center">
+        בחר עד 4 גרפים להשוואה — לחץ על הכפתורים למעלה
+      </div>
+
+      <!-- Single chart view -->
+      <div id="singleChartView" class="card" style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+          <h3 id="mainChartTitle" style="margin:0">מחיר + MA200</h3>
+          <button id="spyToggleBtn" onclick="toggleSPYOverlay()" style="display:none;background:#1E293B;color:#a78bfa;border:1px solid #a78bfa;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">📊 השווה ל-S&P 500</button>
+        </div>
+        <div class="chart-container" style="height:400px"><canvas id="mainChart"></canvas></div>
+      </div>
+
+      <!-- Comparison grid view (2×2) -->
+      <div id="compareGridView" style="display:none;margin-top:14px">
+        <div id="compareGrid" class="compare-grid"></div>
+      </div>
+
+      <!-- Hidden legacy canvases for backward compat -->
+      <div style="display:none">
+        <canvas id="priceChart"></canvas>
+        <canvas id="rsiChart"></canvas>
+        <canvas id="volumeChart"></canvas>
+      </div>
     </div>
 
     <!-- Valuation Tab -->
@@ -767,6 +1027,7 @@ body {
           </div>
           <div id="dcfResult" class="verdict-box" style="margin-top:20px"></div>
           <div id="dcfBreakdown" style="margin-top:16px;font-size:13px"></div>
+          <div style="margin-top:12px;font-size:0.7rem;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">⚠️ מודל DCF מבוסס על הנחות בלבד — אינו מהווה המלצת השקעה. תוצאות רגישות מאוד להנחות צמיחה ו-WACC.</div>
         </div>
         <div class="card">
           <h3>Sensitivity Table</h3>
@@ -1007,6 +1268,83 @@ body {
       </div>
     </div>
 
+    <!-- Peers Tab -->
+    <div id="tab-peers" class="tab-content hidden">
+      <!-- Loading state -->
+      <div id="peersLoading" class="card" style="text-align:center;padding:48px">
+        <div class="spinner" style="margin:0 auto 16px"></div>
+        <div style="color:var(--muted)">טוען נתוני מתחרים...</div>
+      </div>
+      <!-- Error state -->
+      <div id="peersError" class="card" style="display:none;text-align:center;padding:48px">
+        <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
+        <div id="peersErrorMsg" style="color:var(--muted)"></div>
+      </div>
+      <!-- Content -->
+      <div id="peersContent" style="display:none">
+        <!-- Header: sector + industry + source -->
+        <div class="card" style="margin-bottom:0">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+            <div id="peersSectorBadge" style="padding:4px 12px;border-radius:20px;background:rgba(41,98,255,0.15);border:1px solid rgba(41,98,255,0.3);color:#7BA7FF;font-size:0.8rem;font-weight:600"></div>
+            <div id="peersIndustryBadge" style="padding:4px 12px;border-radius:20px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);color:var(--cyan);font-size:0.8rem;font-weight:600"></div>
+            <div id="peersSourceBadge" style="padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:600"></div>
+          </div>
+          <!-- Peer company chips -->
+          <div id="peersChips" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px"></div>
+          <!-- Metric selector -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px">
+            <span style="font-size:0.8rem;color:var(--muted);font-weight:600">השווה לפי:</span>
+            <div id="peerMetricBar" style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="peer-metric-btn active" data-metric="pe" onclick="setPeerMetric('pe')">P/E</button>
+              <button class="peer-metric-btn" data-metric="forwardPE" onclick="setPeerMetric('forwardPE')">Forward P/E</button>
+              <button class="peer-metric-btn" data-metric="ps" onclick="setPeerMetric('ps')">P/S</button>
+              <button class="peer-metric-btn" data-metric="evEbitda" onclick="setPeerMetric('evEbitda')">EV/EBITDA</button>
+              <button class="peer-metric-btn" data-metric="grossMargin" onclick="setPeerMetric('grossMargin')">Gross Margin</button>
+              <button class="peer-metric-btn" data-metric="opMargin" onclick="setPeerMetric('opMargin')">Op. Margin</button>
+              <button class="peer-metric-btn" data-metric="netMargin" onclick="setPeerMetric('netMargin')">Net Margin</button>
+              <button class="peer-metric-btn" data-metric="revenueGrowth" onclick="setPeerMetric('revenueGrowth')">Revenue Growth</button>
+            </div>
+          </div>
+        </div>
+        <!-- Bar chart -->
+        <div class="card" style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 id="peersChartTitle" style="font-size:1rem"></h3>
+            <div style="font-size:0.75rem;color:var(--muted)">מיון מנמוך לגבוה</div>
+          </div>
+          <div style="position:relative;height:280px">
+            <canvas id="peersBarChart"></canvas>
+          </div>
+        </div>
+        <!-- Comparison table -->
+        <div class="card" style="margin-top:12px">
+          <h3 style="margin-bottom:12px;font-size:1rem">📊 השוואת מדדים מלאה</h3>
+          <div style="overflow-x:auto">
+            <table id="peersTable" style="width:100%;font-size:0.82rem">
+              <thead>
+                <tr>
+                  <th style="text-align:left;min-width:130px">חברה</th>
+                  <th>P/E</th>
+                  <th>Fwd P/E</th>
+                  <th>P/S</th>
+                  <th>EV/EBITDA</th>
+                  <th>Gross%</th>
+                  <th>Op%</th>
+                  <th>Net%</th>
+                  <th>Rev Growth</th>
+                  <th>Market Cap</th>
+                </tr>
+              </thead>
+              <tbody id="peersTableBody"></tbody>
+            </table>
+          </div>
+          <div style="margin-top:10px;font-size:0.7rem;color:var(--muted)">
+            ⚠️ הנתונים נלקחים מ-Yahoo Finance ועשויים להיות בפיגור. אינם מהווים המלצת השקעה.
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Podcast Tab -->
     <div id="tab-podcast" class="tab-content hidden" dir="rtl">
       <div class="card" style="text-align:center;padding:32px">
@@ -1101,6 +1439,10 @@ const CACHE_TTL = 60 * 60 * 1000;  // 1 hour cache
 const REFRESH_INTERVAL = 60 * 60 * 1000;  // auto-refresh every 1 hour
 let charts = {};
 let currentStock = null;
+let watchlist = [];  // array of tickers
+let watchlistCache = {};
+let watchlistCacheTime = {};
+let activeView = 'portfolio';  // 'portfolio' | 'watchlist'
 
 // Debounce helper
 function debounce(fn, ms) {
@@ -1154,6 +1496,127 @@ function getLogoHtml(ticker, size=36) {
   </div>`;
 }
 
+// ─── View Switching ───
+function switchView(view) {
+  activeView = view;
+  document.querySelectorAll('.view-nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.getElementById('portfolioView').style.display = view === 'portfolio' ? '' : 'none';
+  document.getElementById('watchlistView').style.display = view === 'watchlist' ? '' : 'none';
+  document.getElementById('tickerInput').placeholder = view === 'portfolio' ? 'Search: AAPL, Apple...' : 'הוסף למעקב: TSLA, Tesla...';
+  if (view === 'watchlist') loadWatchlist();
+}
+
+// ─── Watchlist Management ───
+async function addToWatchlist(tickers) {
+  const newTickers = tickers.filter(t => !watchlist.includes(t));
+  watchlist.push(...newTickers);
+  await Promise.all(newTickers.map(t =>
+    fetch(`${API}/api/watchlist`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ticker: t})
+    })
+  ));
+  updateWatchlistBadge();
+  await loadWatchlist();
+}
+
+async function removeFromWatchlist(ticker) {
+  watchlist = watchlist.filter(t => t !== ticker);
+  delete watchlistCache[ticker];
+  await fetch(`${API}/api/watchlist/${ticker}`, {method: 'DELETE'});
+  updateWatchlistBadge();
+  renderWatchlistTable();
+}
+
+function updateWatchlistBadge() {
+  const badge = document.getElementById('watchlistBadge');
+  if (watchlist.length > 0) {
+    badge.textContent = watchlist.length;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function loadWatchlist() {
+  if (!watchlist.length) {
+    document.getElementById('watchlistCard').style.display = 'none';
+    document.getElementById('watchlistEmpty').style.display = '';
+    return;
+  }
+  document.getElementById('watchlistCard').style.display = '';
+  document.getElementById('watchlistEmpty').style.display = 'none';
+
+  const toFetch = watchlist.filter(t => !watchlistCache[t] || (Date.now() - (watchlistCacheTime[t]||0)) > CACHE_TTL);
+  if (toFetch.length) {
+    showLoading();
+    await Promise.all(toFetch.map(async t => {
+      try {
+        const res = await fetch(`${API}/api/stock/${t}?years=${stockYears}`);
+        if (res.ok) {
+          watchlistCache[t] = await res.json();
+          watchlistCacheTime[t] = Date.now();
+        } else {
+          const err = await res.json();
+          watchlistCache[t] = { error: err.error, ticker: t };
+          watchlistCacheTime[t] = Date.now();
+        }
+      } catch(e) {
+        watchlistCache[t] = { error: e.message, ticker: t };
+        watchlistCacheTime[t] = Date.now();
+      }
+    }));
+    hideLoading();
+  }
+  renderWatchlistTable();
+}
+
+function renderWatchlistTable() {
+  const tbody = document.getElementById('watchlistTable');
+  if (!tbody) return;
+  const countEl = document.getElementById('watchlistCount');
+  if (countEl) countEl.textContent = `${watchlist.length} מניות`;
+  const rows = [];
+  watchlist.forEach(ticker => {
+    const d = watchlistCache[ticker];
+    if (!d || d.error) {
+      rows.push(`<tr>
+        <td><button class="remove-btn" onclick="removeFromWatchlist('${ticker}')">✕</button></td>
+        <td><div class='ticker-cell'>${getLogoHtml(ticker)}<strong>${ticker}</strong></div></td>
+        <td colspan="7" style="color:var(--red)">${d?.error || 'Error loading'}</td>
+      </tr>`);
+      return;
+    }
+    const changeClass = d.changePct >= 0 ? 'text-green' : 'text-red';
+    const changeSign = d.changePct >= 0 ? '+' : '';
+    const signalClass = d.signalColor === 'green' ? 'badge-green' : d.signalColor === 'red' ? 'badge-red' : 'badge-yellow';
+    const rsiClass = d.currentRSI < 30 ? 'text-green' : d.currentRSI > 70 ? 'text-red' : '';
+    rows.push(`<tr style="cursor:pointer" onclick="openStockFromWatchlist('${ticker}')">
+      <td><button class="remove-btn" onclick="event.stopPropagation();removeFromWatchlist('${ticker}')">✕</button></td>
+      <td><div class='ticker-cell'>${getLogoHtml(ticker)}<strong>${ticker}</strong></div></td>
+      <td style="font-size:13px">${d.name || ''}</td>
+      <td dir="ltr">${fmtPrice(d.price, d)}</td>
+      <td dir="ltr" class="${changeClass}">${changeSign}${d.changePct?.toFixed(2)}%</td>
+      <td class="${rsiClass}">${d.currentRSI?.toFixed(0) || 'N/A'}</td>
+      <td dir="ltr">${d.valuation?.trailingPE?.toFixed(1) || 'N/A'}x</td>
+      <td dir="ltr">${d.marketCap ? '$' + formatLarge(d.marketCap) : 'N/A'}</td>
+      <td><span class="badge ${signalClass}">${d.signal}</span></td>
+      <td><button class="news-btn" onclick="event.stopPropagation();openNewsPanel('${ticker}')" title="חדשות">📰</button></td>
+    </tr>`);
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+function openStockFromWatchlist(ticker) {
+  // Make sure cache is available (use watchlistCache)
+  if (!stockCache[ticker] && watchlistCache[ticker]) {
+    stockCache[ticker] = watchlistCache[ticker];
+    stockCacheTime[ticker] = watchlistCacheTime[ticker];
+  }
+  openStock(ticker);
+}
+
 // ─── Portfolio Management ───
 
 async function addTickers() {
@@ -1161,16 +1624,20 @@ async function addTickers() {
   const tickers = input.value.split(/[,\s]+/).map(t => t.trim().toUpperCase()).filter(t => t);
   if (!tickers.length) return;
   input.value = '';
-  const newTickers = tickers.filter(t => !portfolio[t]);
-  newTickers.forEach(t => { portfolio[t] = { shares: 0 }; });
-  await Promise.all(newTickers.map(t =>
-    fetch(`${API}/api/portfolio`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ticker: t, shares: 0})
-    })
-  ));
-  loadPortfolio();
+  if (activeView === 'watchlist') {
+    await addToWatchlist(tickers);
+  } else {
+    const newTickers = tickers.filter(t => !portfolio[t]);
+    newTickers.forEach(t => { portfolio[t] = { shares: 0 }; });
+    await Promise.all(newTickers.map(t =>
+      fetch(`${API}/api/portfolio`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ticker: t, shares: 0})
+      })
+    ));
+    loadPortfolio();
+  }
 }
 
 // ─── Ticker Autocomplete ───
@@ -1216,7 +1683,7 @@ async function addTickers() {
     selectedIndex = -1;
     if (!results.length) { showEmpty(q); return; }
     dropdown.innerHTML = results.map((r, i) => {
-      const alreadyIn = !!portfolio[r.symbol];
+      const alreadyIn = activeView === 'watchlist' ? watchlist.includes(r.symbol) : !!portfolio[r.symbol];
       return `<div class="ticker-dropdown-item${alreadyIn ? ' in-portfolio' : ''}" data-index="${i}"
           onmousedown="event.preventDefault()"
           onclick="${alreadyIn ? '' : 'selectDropdownItem(' + i + ')'}">
@@ -1234,7 +1701,7 @@ async function addTickers() {
 
   window.selectDropdownItem = function(i) {
     const r = currentResults[i];
-    if (!r || portfolio[r.symbol]) return;
+    if (!r || (activeView === 'watchlist' ? watchlist.includes(r.symbol) : !!portfolio[r.symbol])) return;
     input.value = r.symbol;
     closeDropdown();
     addTickers();
@@ -1290,7 +1757,7 @@ async function addTickers() {
       highlightItem(selectedIndex);
       items[selectedIndex]?.scrollIntoView({block: 'nearest'});
     } else if (e.key === 'Enter') {
-      const selectable = currentResults.filter(r => !portfolio[r.symbol]);
+      const selectable = currentResults.filter(r => activeView === 'watchlist' ? !watchlist.includes(r.symbol) : !portfolio[r.symbol]);
       if (selectedIndex >= 0 && selectable[selectedIndex]) {
         e.preventDefault();
         const realIdx = currentResults.indexOf(selectable[selectedIndex]);
@@ -1476,7 +1943,19 @@ async function openStock(ticker) {
 
   const signalClass = d.signalColor === 'green' ? 'badge-green' : d.signalColor === 'red' ? 'badge-red' : 'badge-yellow';
   document.getElementById('detailSignal').className = `badge ${signalClass}`;
+  document.getElementById('detailSignal').title = 'אינדיקציה אלגוריתמית בלבד — אינה מהווה המלצת השקעה';
   document.getElementById('detailSignal').textContent = d.signal;
+
+  // Cache age
+  try {
+    const fetchedAt = d._fetchedAt ? new Date(d._fetchedAt) : null;
+    const cacheEl = document.getElementById('cacheAge');
+    if (fetchedAt && cacheEl) {
+      const diffMin = Math.round((Date.now() - fetchedAt.getTime()) / 60000);
+      cacheEl.textContent = diffMin < 1 ? '🟢 עודכן זה עתה' : diffMin < 10 ? `🟡 עודכן לפני ${diffMin} דקות` : `🔴 עודכן לפני ${diffMin} דקות`;
+      cacheEl.title = `נמשך בשעה ${fetchedAt.toLocaleTimeString('he-IL')}`;
+    }
+  } catch(e) {}
 
   // Quick metrics
   const qm = document.getElementById('quickMetrics');
@@ -1494,6 +1973,22 @@ async function openStock(ticker) {
   document.getElementById('podcastInit').classList.remove('hidden');
   document.getElementById('podcastReady').classList.add('hidden');
   document.getElementById('podcastLoading').classList.add('hidden');
+
+  // Reset chart explorer to price on new stock
+  activeChartType = 'price';
+  spyOverlayActive = false;
+  comparisonMode = false;
+  selectedCompareCharts = ['price', 'pe'];
+  _destroyCompareCharts();
+  document.getElementById('singleChartView').style.display = 'block';
+  document.getElementById('compareGridView').style.display = 'none';
+  document.getElementById('compareHint').style.display = 'none';
+  const cmpBtn = document.getElementById('compareToggleBtn');
+  if (cmpBtn) { cmpBtn.style.background = 'var(--card)'; cmpBtn.style.color = 'var(--muted)'; cmpBtn.style.borderColor = 'var(--border)'; cmpBtn.textContent = '🔲 השוואה'; }
+  document.querySelectorAll('.chart-pill').forEach(p => { p.classList.remove('compare-selected'); p.classList.toggle('active', p.dataset.chart === 'price'); });
+  const spyBtn = document.getElementById('spyToggleBtn');
+  if (spyBtn) { spyBtn.style.display = 'block'; spyBtn.style.background = '#1E293B'; spyBtn.textContent = '📊 השווה ל-S&P 500'; }
+  document.getElementById('mainChartTitle').textContent = 'מחיר + MA200';
 
   // Switch to first tab
   document.querySelector('.tab.active').click();
@@ -1523,6 +2018,7 @@ function switchTab(el) {
 function destroyCharts() {
   Object.values(charts).forEach(c => c.destroy());
   charts = {};
+  if (mainExplorerChart) { mainExplorerChart.destroy(); mainExplorerChart = null; }
 }
 
 function formatDateLabel(dateStr) {
@@ -1552,46 +2048,430 @@ async function setStockYears(y) {
   }
 }
 
+// ─── Chart Explorer State ───
+let activeChartType = 'price';
+let spyOverlayActive = false;
+let mainExplorerChart = null;
+let comparisonMode = false;
+let selectedCompareCharts = ['price', 'pe'];  // default comparison pair
+let compareChartInstances = {};  // { type: Chart }
+
+const CHART_TYPES = {
+  price:       { title: 'מחיר + MA200',           spySupport: true  },
+  performance: { title: 'ביצועים מנורמלים',       spySupport: false },
+  rsi:         { title: 'RSI (14)',                spySupport: false },
+  volume:      { title: 'נפח מסחר',               spySupport: false },
+  pe:          { title: 'P/E היסטורי',            spySupport: false },
+  fwdpe:       { title: 'Forward P/E',             spySupport: false },
+  peg:         { title: 'PEG Ratio',               spySupport: false },
+  fcf:         { title: 'Free Cash Flow',          spySupport: false },
+  fcfmultiple: { title: 'מכפיל FCF (P/FCF)',      spySupport: false },
+  margins:     { title: "מרג'ינים שנתיים",        spySupport: false },
+  revenue:     { title: 'הכנסות שנתיות',          spySupport: false },
+};
+
+// ── Unified pill click handler ──
+function handlePillClick(type) {
+  if (comparisonMode) {
+    _toggleCompareSelection(type);
+  } else {
+    selectChartType(type);
+  }
+}
+
+function selectChartType(type) {
+  activeChartType = type;
+  document.querySelectorAll('.chart-pill').forEach(p =>
+    p.classList.toggle('active', p.dataset.chart === type)
+  );
+  const cfg = CHART_TYPES[type] || {};
+  document.getElementById('mainChartTitle').textContent = cfg.title || type;
+  const spyBtn = document.getElementById('spyToggleBtn');
+  if (cfg.spySupport) {
+    spyBtn.style.display = 'block';
+  } else {
+    spyBtn.style.display = 'none';
+    spyOverlayActive = false;
+    spyBtn.style.background = '#1E293B';
+    spyBtn.textContent = '📊 השווה ל-S&P 500';
+  }
+  renderMainChart(stockCache[currentStock]);
+}
+
+// ── Comparison mode ──
+function toggleComparisonMode() {
+  comparisonMode = !comparisonMode;
+  const btn = document.getElementById('compareToggleBtn');
+  const hint = document.getElementById('compareHint');
+  const single = document.getElementById('singleChartView');
+  const grid = document.getElementById('compareGridView');
+
+  if (comparisonMode) {
+    btn.style.background = 'linear-gradient(135deg,rgba(41,98,255,0.3),rgba(0,229,255,0.2))';
+    btn.style.color = 'var(--cyan)';
+    btn.style.borderColor = 'var(--cyan)';
+    btn.textContent = '✅ מצב השוואה';
+    hint.style.display = 'block';
+    single.style.display = 'none';
+    document.getElementById('spyToggleBtn').style.display = 'none';
+    grid.style.display = 'block';
+    _updateComparePillStyles();
+    renderCompareGrid(stockCache[currentStock]);
+  } else {
+    btn.style.background = 'var(--card)';
+    btn.style.color = 'var(--muted)';
+    btn.style.borderColor = 'var(--border)';
+    btn.textContent = '🔲 השוואה';
+    hint.style.display = 'none';
+    single.style.display = 'block';
+    grid.style.display = 'none';
+    _destroyCompareCharts();
+    // restore single mode pill styling
+    document.querySelectorAll('.chart-pill').forEach(p => {
+      p.classList.remove('compare-selected');
+      p.classList.toggle('active', p.dataset.chart === activeChartType);
+    });
+    selectChartType(activeChartType);
+  }
+}
+
+function _toggleCompareSelection(type) {
+  const idx = selectedCompareCharts.indexOf(type);
+  if (idx >= 0) {
+    // deselect (keep at least 1)
+    if (selectedCompareCharts.length > 1) {
+      selectedCompareCharts.splice(idx, 1);
+    }
+  } else {
+    if (selectedCompareCharts.length >= 4) {
+      // replace oldest
+      selectedCompareCharts.shift();
+    }
+    selectedCompareCharts.push(type);
+  }
+  _updateComparePillStyles();
+  renderCompareGrid(stockCache[currentStock]);
+}
+
+function _updateComparePillStyles() {
+  document.querySelectorAll('.chart-pill').forEach(p => {
+    p.classList.remove('active', 'compare-selected');
+    if (selectedCompareCharts.includes(p.dataset.chart)) {
+      p.classList.add('compare-selected');
+    }
+  });
+}
+
+function _destroyCompareCharts() {
+  Object.values(compareChartInstances).forEach(c => { try { c.destroy(); } catch(e){} });
+  compareChartInstances = {};
+  document.getElementById('compareGrid').innerHTML = '';
+}
+
+function renderCompareGrid(d) {
+  _destroyCompareCharts();
+  if (!d) return;
+  const grid = document.getElementById('compareGrid');
+  grid.innerHTML = '';
+
+  selectedCompareCharts.forEach(type => {
+    const cfg = CHART_TYPES[type] || {};
+    const id = `compare_canvas_${type}`;
+
+    const item = document.createElement('div');
+    item.className = 'compare-grid-item';
+    item.innerHTML = `
+      <button class="remove-compare" onclick="_removeCompareChart('${type}')" title="הסר">✕</button>
+      <h4>${cfg.title || type}</h4>
+      <div style="position:relative;height:280px"><canvas id="${id}"></canvas></div>
+    `;
+    grid.appendChild(item);
+
+    // render after DOM is ready
+    requestAnimationFrame(() => {
+      const canvas = document.getElementById(id);
+      if (canvas) {
+        const chart = _buildChartConfig(type, d, true);
+        if (chart) compareChartInstances[type] = new Chart(canvas, chart);
+        else _showNoData(canvas, 'אין נתונים');
+      }
+    });
+  });
+}
+
+function _removeCompareChart(type) {
+  if (selectedCompareCharts.length <= 1) return;
+  const idx = selectedCompareCharts.indexOf(type);
+  if (idx >= 0) selectedCompareCharts.splice(idx, 1);
+  _updateComparePillStyles();
+  renderCompareGrid(stockCache[currentStock]);
+}
+
+function toggleSPYOverlay() {
+  spyOverlayActive = !spyOverlayActive;
+  const btn = document.getElementById('spyToggleBtn');
+  if (spyOverlayActive) {
+    btn.style.background = 'rgba(167,139,250,0.2)';
+    btn.style.color = '#a78bfa';
+    btn.textContent = '✅ S&P 500 מוצג';
+  } else {
+    btn.style.background = '#1E293B';
+    btn.style.color = '#a78bfa';
+    btn.textContent = '📊 השווה ל-S&P 500';
+  }
+  renderMainChart(stockCache[currentStock]);
+}
+
+function _normalizeBase100(arr) {
+  const base = arr.find(v => v != null && v > 0);
+  if (!base) return arr;
+  return arr.map(v => v != null ? Math.round(v / base * 10000) / 100 : null);
+}
+
+function _showNoData(canvas, msg) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(148,163,184,0.4)';
+  ctx.font = '600 15px Assistant';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(msg || 'אין נתונים זמינים', canvas.width / 2, canvas.height / 2);
+}
+
+// _buildChartConfig(type, d, compact) — pure function, returns Chart.js config or null
+// compact=true reduces heights/points for compare grid
+function _buildChartConfig(type, d, compact = false) {
+  const gc = 'rgba(30,41,59,0.5)';
+  const labels = d.chart.dates.map(x => formatDateLabel(x));
+  const base = chartOpts(gc);
+  let cfg = null;
+  const activeType = type;  // alias for switch
+
+  switch (activeType) {
+
+    case 'price': {
+      const datasets = [
+        { label: d.ticker, data: d.chart.closes, borderColor: '#00D4FF', borderWidth: 2, pointRadius: 0, fill: { target: 'origin', above: 'rgba(0,212,255,0.07)' }, tension: 0.1 },
+        { label: 'MA 200', data: d.chart.ma200, borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0, borderDash: [6,4], fill: false },
+      ];
+      if (spyOverlayActive && d.chart.spy?.length) {
+        // normalize stock + SPY both to base 100
+        datasets[0].data = _normalizeBase100(d.chart.closes);
+        datasets[0].label = `${d.ticker} (מנורמל לבסיס 100)`;
+        datasets[1].data = d.chart.spy;
+        datasets[1].label = 'S&P 500 (מנורמל לבסיס 100)';
+        datasets[1].borderColor = '#a78bfa';
+        datasets[1].borderDash = [];
+        datasets[1].borderWidth = 2;
+      }
+      cfg = { type: 'line', data: { labels, datasets }, options: base };
+      break;
+    }
+
+    case 'performance': {
+      if (!d.chart.spy?.length) return null;
+      cfg = {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: d.ticker, data: _normalizeBase100(d.chart.closes), borderColor: '#00D4FF', borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.1 },
+            { label: 'S&P 500', data: d.chart.spy, borderColor: '#a78bfa', borderWidth: 2, pointRadius: 0, fill: false, borderDash: [5,3] },
+          ]
+        },
+        options: { ...base, plugins: { ...base.plugins, tooltip: { ...base.plugins.tooltip, callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)}` } } } }
+      };
+      break;
+    }
+
+    case 'rsi': {
+      cfg = {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'RSI', data: d.chart.rsi, borderColor: '#00D4FF', borderWidth: 2, pointRadius: 0, fill: false },
+            { label: 'קנוי יתר (70)', data: Array(labels.length).fill(70), borderColor: 'rgba(239,68,68,0.55)', borderWidth: 1.5, pointRadius: 0, borderDash: [6,4] },
+            { label: 'מכור יתר (30)', data: Array(labels.length).fill(30), borderColor: 'rgba(34,197,94,0.55)', borderWidth: 1.5, pointRadius: 0, borderDash: [6,4] },
+          ]
+        },
+        options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, min: 0, max: 100 } } }
+      };
+      break;
+    }
+
+    case 'volume': {
+      const vc = d.chart.closes.map((p, i) => i > 0 && p >= d.chart.closes[i-1] ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)');
+      cfg = {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'נפח', data: d.chart.volumes, backgroundColor: vc }] },
+        options: { ...base, plugins: { ...base.plugins, legend: { display: false } } }
+      };
+      break;
+    }
+
+    case 'pe': {
+      if (!d.historicalPE?.dates?.length) return null;
+      const peL = d.historicalPE.dates.map(x => formatDateLabel(x));
+      const curPE = d.valuation?.trailingPE, avgPE = d.valuation?.peAvgHistorical;
+      const peMask = d.historicalPE.syntheticMask || [];
+      const peVals = d.historicalPE.values;
+      // Split into real (solid) and synthetic/extrapolated (dashed gray) datasets
+      const peReal = peVals.map((v, i) => peMask[i] ? null : v);
+      const peSynth = peVals.map((v, i) => peMask[i] ? v : null);
+      const hasSynth = peSynth.some(v => v !== null);
+      const hasReal = peReal.some(v => v !== null);
+      const peDatasets = [];
+      if (hasReal) peDatasets.push({ label: 'P/E', data: peReal, borderColor: '#00D4FF', borderWidth: 1.5, pointRadius: 0, fill: { target: 'origin', above: 'rgba(0,212,255,0.09)' }, spanGaps: false });
+      if (hasSynth) peDatasets.push({ label: 'P/E (אקסטרפולציה)', data: peSynth, borderColor: 'rgba(150,150,150,0.5)', borderWidth: 1, borderDash: [4,4], pointRadius: 0, fill: false, spanGaps: false });
+      if (curPE) peDatasets.push({ label: `נוכחי (${curPE.toFixed(1)}x)`, data: Array(peL.length).fill(curPE), borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, borderDash: [5,3] });
+      if (avgPE) peDatasets.push({ label: `ממוצע (${avgPE.toFixed(1)}x)`, data: Array(peL.length).fill(avgPE), borderColor: '#22c55e', borderWidth: 1, pointRadius: 0, borderDash: [3,3] });
+      cfg = {
+        type: 'line',
+        data: { labels: peL, datasets: peDatasets },
+        options: base
+      };
+      break;
+    }
+
+    case 'fwdpe': {
+      if (!d.historicalForwardPE?.dates?.length) return null;
+      const fL = d.historicalForwardPE.dates.map(x => formatDateLabel(x));
+      const fV = d.historicalForwardPE.values;
+      const fAvg = fV.length ? fV.reduce((a,b) => a+b, 0) / fV.length : null;
+      const fCur = d.valuation?.forwardPE;
+      cfg = {
+        type: 'line',
+        data: {
+          labels: fL,
+          datasets: [
+            { label: 'Forward P/E', data: fV, borderColor: '#a78bfa', borderWidth: 1.5, pointRadius: 0, fill: { target: 'origin', above: 'rgba(167,139,250,0.09)' } },
+            ...(fCur ? [{ label: `נוכחי (${fCur.toFixed(1)}x)`, data: Array(fL.length).fill(fCur), borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, borderDash: [5,3] }] : []),
+            ...(fAvg ? [{ label: `ממוצע (${fAvg.toFixed(1)}x)`, data: Array(fL.length).fill(fAvg), borderColor: '#22c55e', borderWidth: 1, pointRadius: 0, borderDash: [3,3] }] : []),
+          ]
+        },
+        options: base
+      };
+      break;
+    }
+
+    case 'peg': {
+      if (!d.historicalPEG?.dates?.length) return null;
+      const pgL = d.historicalPEG.dates.map(x => formatDateLabel(x));
+      const pgV = d.historicalPEG.values;
+      const pgCur = d.valuation?.pegRatio;
+      cfg = {
+        type: 'line',
+        data: {
+          labels: pgL,
+          datasets: [
+            { label: 'PEG', data: pgV, borderColor: '#00D4FF', borderWidth: 1.5, pointRadius: 0, fill: { target: 'origin', above: 'rgba(0,212,255,0.09)' } },
+            { label: 'הוגן (1.0)', data: Array(pgL.length).fill(1), borderColor: '#22c55e', borderWidth: 1, pointRadius: 0, borderDash: [3,3] },
+            ...(pgCur ? [{ label: `נוכחי (${pgCur.toFixed(2)})`, data: Array(pgL.length).fill(pgCur), borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, borderDash: [5,3] }] : []),
+          ]
+        },
+        options: base
+      };
+      break;
+    }
+
+    case 'fcf': {
+      if (!d.dcfInputs?.fcfHistory?.length) return null;
+      const fd = d.dcfInputs.fcfHistory;
+      const fVals = fd.map(x => +(x.fcf / 1e9).toFixed(2));
+      cfg = {
+        type: 'bar',
+        data: {
+          labels: fd.map(x => x.year.toString()),
+          datasets: [{ label: 'FCF (מיליארד)', data: fVals, backgroundColor: fVals.map(v => v >= 0 ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)') }]
+        },
+        options: { ...base, plugins: { ...base.plugins, tooltip: { ...base.plugins.tooltip, callbacks: { label: ctx => `FCF: $${ctx.parsed.y?.toFixed(2)}B` } } } }
+      };
+      break;
+    }
+
+    case 'fcfmultiple': {
+      if (!d.chart?.fcfMultipleDaily?.length) return null;
+      const fmDailyValid = d.chart.fcfMultipleDaily.some(v => v != null);
+      if (!fmDailyValid) return null;
+      const curFM = d.chart.fcfMultipleCurrent;
+      const avgFM = d.chart.fcfMultipleAvg;
+      const fmMask = d.chart.fcfMultipleSyntheticMask || [];
+      const fmVals = d.chart.fcfMultipleDaily;
+      // Split: real (solid) vs backward-fill (dashed gray)
+      const fmReal = fmVals.map((v, i) => fmMask[i] ? null : v);
+      const fmSynth = fmVals.map((v, i) => fmMask[i] ? v : null);
+      const fmHasSynth = fmSynth.some(v => v !== null);
+      const fmDatasets = [
+        { label: 'P/FCF', data: fmReal, borderColor: '#00D4FF', borderWidth: 1.5, pointRadius: 0, fill: { target: 'origin', above: 'rgba(0,212,255,0.09)' }, tension: 0.1, spanGaps: false },
+      ];
+      if (fmHasSynth) fmDatasets.push({ label: 'P/FCF (backward fill)', data: fmSynth, borderColor: 'rgba(150,150,150,0.5)', borderWidth: 1, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.1, spanGaps: false });
+      if (curFM != null) fmDatasets.push({ label: `נוכחי (${curFM.toFixed(1)}x)`, data: Array(labels.length).fill(curFM), borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, borderDash: [5,3] });
+      if (avgFM != null) fmDatasets.push({ label: `ממוצע (${avgFM.toFixed(1)}x)`, data: Array(labels.length).fill(avgFM), borderColor: '#22c55e', borderWidth: 1, pointRadius: 0, borderDash: [3,3] });
+      cfg = {
+        type: 'line',
+        data: { labels, datasets: fmDatasets },
+        options: { ...base, plugins: { ...base.plugins, tooltip: { ...base.plugins.tooltip, callbacks: { label: ctx => ctx.parsed.y != null ? `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}x` : '' } } } }
+      };
+      break;
+    }
+
+    case 'margins': {
+      const af = d.chart?.annualFinancials;
+      if (!af?.length) return null;
+      const mL = af.map(x => x.year.toString());
+      cfg = {
+        type: 'line',
+        data: {
+          labels: mL,
+          datasets: [
+            { label: "מרג'ין גולמי", data: af.map(x => x.grossMargin), borderColor: '#00E676', borderWidth: 2.5, pointRadius: 5, fill: false },
+            { label: "מרג'ין תפעולי", data: af.map(x => x.opMargin), borderColor: '#00D4FF', borderWidth: 2.5, pointRadius: 5, fill: false },
+            { label: "מרג'ין נקי", data: af.map(x => x.netMargin), borderColor: '#a78bfa', borderWidth: 2.5, pointRadius: 5, fill: false },
+          ]
+        },
+        options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => `${v}%` } } }, plugins: { ...base.plugins, tooltip: { ...base.plugins.tooltip, callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)}%` } } } }
+      };
+      break;
+    }
+
+    case 'revenue': {
+      const afR = d.chart?.annualFinancials?.filter(x => x.revenue);
+      if (!afR?.length) return null;
+      const rV = afR.map(x => +(x.revenue / 1e9).toFixed(2));
+      const rC = rV.map((v, i) => i === 0 || v >= rV[i-1] ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)');
+      cfg = {
+        type: 'bar',
+        data: {
+          labels: afR.map(x => x.year.toString()),
+          datasets: [{ label: 'הכנסות (מיליארד)', data: rV, backgroundColor: rC }]
+        },
+        options: { ...base, plugins: { ...base.plugins, tooltip: { ...base.plugins.tooltip, callbacks: { label: ctx => `הכנסות: $${ctx.parsed.y?.toFixed(2)}B` } } } }
+      };
+      break;
+    }
+  }
+
+  return cfg;
+}
+
+function renderMainChart(d) {
+  if (mainExplorerChart) { mainExplorerChart.destroy(); mainExplorerChart = null; }
+  if (!d) return;
+  const canvas = document.getElementById('mainChart');
+  if (!canvas) return;
+  const cfg = _buildChartConfig(activeChartType, d, false);
+  if (cfg) mainExplorerChart = new Chart(canvas, cfg);
+  else _showNoData(canvas, 'אין נתונים זמינים');
+}
+
 function renderCharts(d) {
   destroyCharts();
-  const labels = d.chart.dates.map(d => formatDateLabel(d));
-  const gridColor = 'rgba(30,41,59,0.5)';
-
-  // Price + MA200
-  charts.price = new Chart(document.getElementById('priceChart'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'Price', data: d.chart.closes, borderColor: '#00D4FF', borderWidth: 2, pointRadius: 0, fill: { target: 'origin', above: 'rgba(0,212,255,0.08)' }, tension: 0.1 },
-        { label: 'MA 200', data: d.chart.ma200, borderColor: '#f59e0b', borderWidth: 2.5, pointRadius: 0, borderDash: [6,4], fill: false },
-      ]
-    },
-    options: chartOpts(gridColor),
-  });
-
-  // RSI
-  const rsiData = d.chart.rsi;
-  charts.rsi = new Chart(document.getElementById('rsiChart'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'RSI', data: rsiData, borderColor: '#00D4FF', borderWidth: 2, pointRadius: 0, fill: false },
-        { label: 'Overbought (70)', data: Array(labels.length).fill(70), borderColor: 'rgba(239,68,68,0.6)', borderWidth: 2, pointRadius: 0, borderDash: [6,4] },
-        { label: 'Oversold (30)', data: Array(labels.length).fill(30), borderColor: 'rgba(34,197,94,0.6)', borderWidth: 2, pointRadius: 0, borderDash: [6,4] },
-      ]
-    },
-    options: { ...chartOpts(gridColor), scales: { ...chartOpts(gridColor).scales, y: { ...chartOpts(gridColor).scales.y, min: 0, max: 100 } } },
-  });
-
-  // Volume
-  const volColors = d.chart.closes.map((p, i) => i > 0 && p >= d.chart.closes[i-1] ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)');
-  charts.volume = new Chart(document.getElementById('volumeChart'), {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'Volume', data: d.chart.volumes, backgroundColor: volColors }] },
-    options: { ...chartOpts(gridColor), plugins: { ...chartOpts(gridColor).plugins, legend: { display: false } } },
-  });
+  if (comparisonMode) {
+    renderCompareGrid(d);
+  } else {
+    renderMainChart(d);
+  }
 }
 
 function chartOpts(gridColor) {
@@ -1699,18 +2579,24 @@ function renderValuation(d) {
   const vv = document.getElementById('valuationVerdict');
   const verdict = d.valuation.peVerdict;
   const vColor = verdict === 'Cheap' ? 'var(--green)' : verdict === 'Expensive' ? 'var(--red)' : 'var(--yellow)';
+  const synthNote = d.valuation.peVerdictBasedOnReal === false
+    ? `<div class="sub" style="margin-top:4px;color:var(--muted);font-size:0.72rem">⚠️ מבוסס על אקסטרפולציה — נתונים היסטוריים חלקיים</div>` : '';
+  const earliestNote = d.valuation.peEarliestRealDate
+    ? `<div class="sub" style="color:var(--muted);font-size:0.7rem">נתונים אמיתיים מאז: ${d.valuation.peEarliestRealDate.slice(0,7)}</div>` : '';
   vv.innerHTML = `
     <div class="big" style="color:${vColor}">${verdict}</div>
     <div class="sub">P/E Percentile: ${d.valuation.pePercentile?.toFixed(0) || 'N/A'}%</div>
     <div class="sub" style="margin-top:4px">Current P/E: ${d.valuation.trailingPE?.toFixed(1) || 'N/A'}x | Historical Avg: ${d.valuation.peAvgHistorical?.toFixed(1) || 'N/A'}x</div>
+    ${earliestNote}${synthNote}
   `;
   vv.style.background = verdict === 'Cheap' ? 'rgba(34,197,94,.08)' : verdict === 'Expensive' ? 'rgba(239,68,68,.08)' : 'rgba(234,179,8,.08)';
 
   // Metrics
   const vm = document.getElementById('valuationMetrics');
+  const fwdPEVal = d.valuation.forwardPE ? d.valuation.forwardPE.toFixed(1) + 'x' : 'N/A';
   vm.innerHTML = [
     ['Trailing P/E', d.valuation.trailingPE?.toFixed(1) + 'x'],
-    ['Forward P/E', d.valuation.forwardPE?.toFixed(1) + 'x'],
+    ['Forward P/E <span title="הערכת אנליסטים — אינה מובטחת" style="cursor:help;opacity:0.6;font-size:0.75em">ⓘ</span>', fwdPEVal],
     ['EV/EBITDA', d.valuation.evToEbitda?.toFixed(1) + 'x'],
     ['P/S', d.valuation.priceToSales?.toFixed(1) + 'x'],
     ['P/B', d.valuation.priceToBook?.toFixed(1) + 'x'],
@@ -2813,6 +3699,301 @@ function checkExistingPodcast(ticker) {
     });
 }
 
+// ─── Peer Comparison ───
+let peersData = null;
+let currentPeerMetric = 'pe';
+let peersBarChartInstance = null;
+
+const PEER_METRIC_LABELS = {
+  pe:            { label: 'Trailing P/E',      suffix: 'x',  isMargin: false },
+  forwardPE:     { label: 'Forward P/E',       suffix: 'x',  isMargin: false },
+  ps:            { label: 'Price / Sales',      suffix: 'x',  isMargin: false },
+  evEbitda:      { label: 'EV / EBITDA',        suffix: 'x',  isMargin: false },
+  grossMargin:   { label: 'Gross Margin',       suffix: '%',  isMargin: true  },
+  opMargin:      { label: 'Operating Margin',   suffix: '%',  isMargin: true  },
+  netMargin:     { label: 'Net Margin',         suffix: '%',  isMargin: true  },
+  revenueGrowth: { label: 'Revenue Growth YoY', suffix: '%',  isMargin: true  },
+};
+
+async function loadPeersTab(ticker) {
+  const loading = document.getElementById('peersLoading');
+  const error   = document.getElementById('peersError');
+  const content = document.getElementById('peersContent');
+  loading.style.display = '';
+  error.style.display = 'none';
+  content.style.display = 'none';
+  peersData = null;
+
+  try {
+    const res = await fetch(`${API}/api/peers/${encodeURIComponent(ticker)}`);
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+    peersData = await res.json();
+    loading.style.display = 'none';
+    content.style.display = '';
+    renderPeersContent();
+  } catch(e) {
+    loading.style.display = 'none';
+    error.style.display = '';
+    document.getElementById('peersErrorMsg').textContent = `שגיאה: ${e.message}`;
+  }
+}
+
+function renderPeersContent() {
+  if (!peersData) return;
+  const d = peersData;
+  const selfTicker = d.ticker;
+
+  // Sector / industry badges
+  document.getElementById('peersSectorBadge').textContent = `🏢 ${d.sector}`;
+  document.getElementById('peersIndustryBadge').textContent = `🏭 ${d.industry}`;
+  const srcBadge = document.getElementById('peersSourceBadge');
+  if (d.source === 'curated') {
+    srcBadge.textContent = '✅ מקורות מאומתים';
+    srcBadge.style.cssText = 'padding:4px 12px;border-radius:20px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:var(--green);font-size:0.75rem;font-weight:600';
+  } else if (d.source === 'industry') {
+    srcBadge.textContent = '📊 ענף אוטומטי';
+    srcBadge.style.cssText = 'padding:4px 12px;border-radius:20px;background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);color:var(--yellow);font-size:0.75rem;font-weight:600';
+  } else {
+    srcBadge.textContent = '📈 S&P Benchmark';
+    srcBadge.style.cssText = 'padding:4px 12px;border-radius:20px;background:rgba(139,149,168,0.1);border:1px solid rgba(139,149,168,0.2);color:var(--muted);font-size:0.75rem;font-weight:600';
+  }
+
+  // Peer chips (include self)
+  const chips = document.getElementById('peersChips');
+  const allTickers = [selfTicker, ...d.peers];
+  chips.innerHTML = allTickers.map(t => {
+    const pd = t === selfTicker ? stockCache[selfTicker] : d.peerData[t];
+    const name = pd?.name || t;
+    const isSelf = t === selfTicker;
+    return `<div class="peer-chip ${isSelf ? 'is-self' : ''}" onclick="openStock('${t}')" title="פתח ניתוח ${name}">
+      ${getLogoHtml(t, 24)}
+      <span>${t}</span>
+      ${isSelf ? '<span style="font-size:0.7rem;opacity:0.7"> ◀ נבחר</span>' : ''}
+    </div>`;
+  }).join('');
+
+  // Render the selected metric
+  renderPeersChart();
+  renderPeersTable();
+}
+
+function setPeerMetric(metric) {
+  currentPeerMetric = metric;
+  document.querySelectorAll('.peer-metric-btn').forEach(b => b.classList.toggle('active', b.dataset.metric === metric));
+  renderPeersChart();
+}
+
+function renderPeersChart() {
+  if (!peersData) return;
+  const metric = currentPeerMetric;
+  const meta = PEER_METRIC_LABELS[metric];
+  const selfTicker = peersData.ticker;
+  const selfCache = stockCache[selfTicker];
+
+  // Build data rows: self + peers + median
+  const rows = [];
+
+  // Self — map metric keys to stockCache field paths
+  function getSelfVal(m) {
+    if (m === 'pe') return selfCache?.valuation?.trailingPE;
+    if (m === 'forwardPE') return selfCache?.valuation?.forwardPE;
+    if (m === 'ps') return selfCache?.valuation?.priceToSales;
+    if (m === 'evEbitda') return selfCache?.valuation?.evToEbitda;
+    if (m === 'grossMargin') { const v = selfCache?.fundamentals?.grossMargins; return v != null ? parseFloat((v*100).toFixed(1)) : null; }
+    if (m === 'opMargin') { const v = selfCache?.fundamentals?.operatingMargins; return v != null ? parseFloat((v*100).toFixed(1)) : null; }
+    if (m === 'netMargin') { const v = selfCache?.fundamentals?.profitMargins; return v != null ? parseFloat((v*100).toFixed(1)) : null; }
+    if (m === 'revenueGrowth') { const v = selfCache?.fundamentals?.revenueGrowth; return v != null ? parseFloat((v*100).toFixed(1)) : null; }
+    return null;
+  }
+  const selfPeerData = peersData.peerData[selfTicker] || {};
+  const selfFinal = getSelfVal(metric) ?? selfPeerData[metric];
+  if (selfFinal != null) rows.push({ label: selfTicker, value: selfFinal, isSelf: true });
+
+  // Peers
+  for (const t of peersData.peers) {
+    const v = peersData.peerData[t]?.[metric];
+    if (v != null) rows.push({ label: t, value: v, isSelf: false });
+  }
+
+  // Median reference line value
+  const median = peersData.sectorMedian[metric];
+
+  // Sort by value ascending (for valuation multiples: lower = cheaper; for margins: higher = better)
+  rows.sort((a, b) => a.value - b.value);
+
+  // Chart
+  const labels = rows.map(r => r.label);
+  const values = rows.map(r => r.value);
+  const colors = rows.map(r => r.isSelf ? 'rgba(41,98,255,0.85)' : 'rgba(0,229,255,0.5)');
+  const borderColors = rows.map(r => r.isSelf ? '#2962FF' : '#00E5FF');
+
+  document.getElementById('peersChartTitle').textContent = `${meta.label} — השוואת מתחרים`;
+
+  if (peersBarChartInstance) { peersBarChartInstance.destroy(); peersBarChartInstance = null; }
+
+  const ctx = document.getElementById('peersBarChart').getContext('2d');
+  peersBarChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: meta.label,
+          data: values,
+          backgroundColor: colors,
+          borderColor: borderColors,
+          borderWidth: 1.5,
+          borderRadius: 6,
+        },
+        ...(median != null ? [{
+          label: `Peer Median (${median}${meta.suffix})`,
+          data: Array(labels.length).fill(median),
+          type: 'line',
+          borderColor: '#22c55e',
+          borderWidth: 2,
+          borderDash: [5, 4],
+          pointRadius: 0,
+          fill: false,
+          order: 0,
+        }] : []),
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: median != null, labels: { color: '#94A3B8', font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x?.toFixed(1)}${meta.suffix}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(30,41,59,0.5)' },
+          ticks: { color: '#94A3B8', callback: v => `${v}${meta.suffix}` }
+        },
+        y: {
+          grid: { display: false },
+          ticks: {
+            color: ctx => {
+              const lbl = ctx.tick.label;
+              return lbl === selfTicker ? '#7BA7FF' : '#94A3B8';
+            },
+            font: ctx => ({ weight: ctx.tick.label === selfTicker ? '700' : '400', size: 12 })
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderPeersTable() {
+  if (!peersData) return;
+  const tbody = document.getElementById('peersTableBody');
+  const selfTicker = peersData.ticker;
+  const selfCache = stockCache[selfTicker];
+
+  // Build unified row for self from stockCache/valuation
+  function selfMetricVal(metric) {
+    if (metric === 'pe') return selfCache?.valuation?.trailingPE;
+    if (metric === 'forwardPE') return selfCache?.valuation?.forwardPE;
+    if (metric === 'ps') return selfCache?.valuation?.priceToSales;
+    if (metric === 'evEbitda') return selfCache?.valuation?.evToEbitda;
+    // fundamentals uses raw fractions (0-1) — convert to %
+    if (metric === 'grossMargin') {
+      const v = selfCache?.fundamentals?.grossMargins;
+      return v != null ? parseFloat((v * 100).toFixed(1)) : null;
+    }
+    if (metric === 'opMargin') {
+      const v = selfCache?.fundamentals?.operatingMargins;
+      return v != null ? parseFloat((v * 100).toFixed(1)) : null;
+    }
+    if (metric === 'netMargin') {
+      const v = selfCache?.fundamentals?.profitMargins;
+      return v != null ? parseFloat((v * 100).toFixed(1)) : null;
+    }
+    if (metric === 'revenueGrowth') {
+      const v = selfCache?.fundamentals?.revenueGrowth;
+      return v != null ? parseFloat((v * 100).toFixed(1)) : null;
+    }
+    return null;
+  }
+
+  const selfRow = {
+    ticker: selfTicker,
+    name: selfCache?.name || selfTicker,
+    pe: selfMetricVal('pe') ?? peersData.peerData[selfTicker]?.pe,
+    forwardPE: selfMetricVal('forwardPE') ?? peersData.peerData[selfTicker]?.forwardPE,
+    ps: selfMetricVal('ps') ?? peersData.peerData[selfTicker]?.ps,
+    evEbitda: selfMetricVal('evEbitda') ?? peersData.peerData[selfTicker]?.evEbitda,
+    grossMargin: selfMetricVal('grossMargin') ?? peersData.peerData[selfTicker]?.grossMargin,
+    opMargin: selfMetricVal('opMargin') ?? peersData.peerData[selfTicker]?.opMargin,
+    netMargin: selfMetricVal('netMargin') ?? peersData.peerData[selfTicker]?.netMargin,
+    revenueGrowth: selfMetricVal('revenueGrowth') ?? peersData.peerData[selfTicker]?.revenueGrowth,
+    marketCap: selfCache?.marketCap ?? peersData.peerData[selfTicker]?.marketCap,
+    isSelf: true,
+  };
+
+  const allRows = [selfRow, ...peersData.peers.map(t => ({...peersData.peerData[t], isSelf: false}))];
+
+  // Median row
+  const medianRow = {
+    ticker: '—', name: 'Peer Median', isSelf: false, isMedian: true,
+    ...peersData.sectorMedian,
+    marketCap: null,
+  };
+  allRows.push(medianRow);
+
+  // Compute best/worst for colour coding (per column, lower = better for multiples, higher = better for margins)
+  const colKeys = ['pe','forwardPE','ps','evEbitda','grossMargin','opMargin','netMargin','revenueGrowth'];
+  const colBetter = { pe: 'lower', forwardPE: 'lower', ps: 'lower', evEbitda: 'lower', grossMargin: 'higher', opMargin: 'higher', netMargin: 'higher', revenueGrowth: 'higher' };
+  const realRows = allRows.filter(r => !r.isMedian);
+  const colBest = {}, colWorst = {};
+  colKeys.forEach(k => {
+    const vals = realRows.map(r => r[k]).filter(v => v != null);
+    if (!vals.length) return;
+    colBest[k] = colBetter[k] === 'lower' ? Math.min(...vals) : Math.max(...vals);
+    colWorst[k] = colBetter[k] === 'lower' ? Math.max(...vals) : Math.min(...vals);
+  });
+
+  function fmt(v, suffix, decimals = 1) {
+    if (v == null) return '<span style="color:var(--muted)">—</span>';
+    return `${v.toFixed(decimals)}${suffix}`;
+  }
+  function fmtCell(val, key) {
+    if (val == null) return '<span style="color:var(--muted)">—</span>';
+    const suffix = (key === 'grossMargin' || key === 'opMargin' || key === 'netMargin' || key === 'revenueGrowth') ? '%' : 'x';
+    const isBest = colBest[key] === val;
+    const isWorst = colWorst[key] === val;
+    const cls = isBest ? 'metric-cell-best' : isWorst ? 'metric-cell-worst' : '';
+    return `<span class="${cls}">${val.toFixed(1)}${suffix}</span>`;
+  }
+
+  tbody.innerHTML = allRows.map(r => `
+    <tr class="${r.isSelf ? 'is-self-row' : ''} ${r.isMedian ? 'is-median-row' : ''}">
+      <td style="display:flex;align-items:center;gap:8px;min-width:130px">
+        ${r.isMedian ? '<span style="font-size:16px">📊</span>' : getLogoHtml(r.ticker, 22)}
+        <div>
+          <div style="font-weight:${r.isSelf ? 700 : 500}">${r.ticker}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">${r.name || ''}</div>
+        </div>
+      </td>
+      <td dir="ltr">${r.isMedian ? fmt(r.pe, 'x') : fmtCell(r.pe, 'pe')}</td>
+      <td dir="ltr">${r.isMedian ? fmt(r.forwardPE, 'x') : fmtCell(r.forwardPE, 'forwardPE')}</td>
+      <td dir="ltr">${r.isMedian ? fmt(r.ps, 'x') : fmtCell(r.ps, 'ps')}</td>
+      <td dir="ltr">${r.isMedian ? fmt(r.evEbitda, 'x') : fmtCell(r.evEbitda, 'evEbitda')}</td>
+      <td dir="ltr">${r.isMedian ? fmt(r.grossMargin, '%') : fmtCell(r.grossMargin, 'grossMargin')}</td>
+      <td dir="ltr">${r.isMedian ? fmt(r.opMargin, '%') : fmtCell(r.opMargin, 'opMargin')}</td>
+      <td dir="ltr">${r.isMedian ? fmt(r.netMargin, '%') : fmtCell(r.netMargin, 'netMargin')}</td>
+      <td dir="ltr">${r.isMedian ? fmt(r.revenueGrowth, '%') : fmtCell(r.revenueGrowth, 'revenueGrowth')}</td>
+      <td dir="ltr">${r.marketCap ? '$' + formatLarge(r.marketCap) : '—'}</td>
+    </tr>
+  `).join('');
+}
+
 // Override switchTab to detect special tabs
 const _origSwitchTab = switchTab;
 switchTab = function(el) {
@@ -2825,6 +4006,9 @@ switchTab = function(el) {
   }
   if (el.dataset.tab === 'pemodel' && currentStock) {
     loadPEModelData(currentStock);
+  }
+  if (el.dataset.tab === 'peers' && currentStock) {
+    loadPeersTab(currentStock);
   }
 };
 
@@ -2880,6 +4064,14 @@ function closeNewsPanel() {
     }
   } catch (e) {}
   loadPortfolio();
+  // Also load watchlist on startup
+  try {
+    const wlRes = await fetch(`${API}/api/watchlist`);
+    if (wlRes.ok) {
+      watchlist = await wlRes.json();
+      updateWatchlistBadge();
+    }
+  } catch (e) {}
 })();
 </script>
 
