@@ -880,9 +880,16 @@ def init_db():
             user_id INTEGER NOT NULL,
             ticker TEXT NOT NULL,
             shares REAL NOT NULL DEFAULT 0,
+            entry_price REAL DEFAULT NULL,
             UNIQUE(user_id, ticker),
             FOREIGN KEY(user_id) REFERENCES users(id)
         )''')
+        # Migration: add entry_price to existing DBs
+        try:
+            db.execute('ALTER TABLE portfolios ADD COLUMN entry_price REAL DEFAULT NULL')
+            db.commit()
+        except Exception:
+            pass  # column already exists
         db.execute('''CREATE TABLE IF NOT EXISTS watchlist (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -953,8 +960,8 @@ def get_portfolio():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     with get_db() as db:
-        rows = db.execute("SELECT ticker, shares FROM portfolios WHERE user_id = ?", (session['user_id'],)).fetchall()
-    return jsonify({row['ticker']: {'shares': row['shares']} for row in rows})
+        rows = db.execute("SELECT ticker, shares, entry_price FROM portfolios WHERE user_id = ?", (session['user_id'],)).fetchall()
+    return jsonify({row['ticker']: {'shares': row['shares'], 'entry_price': row['entry_price']} for row in rows})
 
 @app.route('/api/portfolio', methods=['POST'])
 def add_to_portfolio():
@@ -963,12 +970,16 @@ def add_to_portfolio():
     data = request.json
     ticker = data.get('ticker', '').upper().strip()
     shares = float(data.get('shares', 0))
+    entry_price_raw = data.get('entry_price') or data.get('entryPrice')
+    entry_price = float(entry_price_raw) if entry_price_raw else None
     if not ticker:
         return jsonify({'error': 'Missing ticker'}), 400
     with get_db() as db:
         db.execute(
-            "INSERT INTO portfolios (user_id, ticker, shares) VALUES (?, ?, ?) ON CONFLICT(user_id, ticker) DO UPDATE SET shares = excluded.shares",
-            (session['user_id'], ticker, shares)
+            "INSERT INTO portfolios (user_id, ticker, shares, entry_price) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(user_id, ticker) DO UPDATE SET shares = excluded.shares, "
+            "entry_price = COALESCE(excluded.entry_price, entry_price)",
+            (session['user_id'], ticker, shares, entry_price)
         )
         db.commit()
     return jsonify({'success': True})
@@ -991,6 +1002,19 @@ def update_shares(ticker):
     with get_db() as db:
         db.execute("UPDATE portfolios SET shares = ? WHERE user_id = ? AND ticker = ?",
                    (shares, session['user_id'], ticker.upper()))
+        db.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/portfolio/<ticker>/entry', methods=['PATCH'])
+def update_entry_price(ticker):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json
+    entry_price_raw = data.get('entry_price') or data.get('entryPrice')
+    entry_price = float(entry_price_raw) if entry_price_raw else None
+    with get_db() as db:
+        db.execute("UPDATE portfolios SET entry_price = ? WHERE user_id = ? AND ticker = ?",
+                   (entry_price, session['user_id'], ticker.upper()))
         db.commit()
     return jsonify({'success': True})
 
@@ -2513,54 +2537,107 @@ except Exception:
 
 # ─── Daily Briefing API ───
 
-@app.route('/api/briefing/generate', methods=['POST'])
-def generate_briefing():
-    """Generate a new daily briefing for given tickers."""
+# Per-user generation state: {user_id: {'status': 'generating'|'done'|'error', 'error': str, 'result': dict}}
+_briefing_jobs = {}
+_briefing_jobs_lock = __import__('threading').Lock()
+
+
+def _run_briefing_job(user_id, tickers, positions, briefings_dir):
+    """Background worker: collect → LLM → TTS → save files."""
+    import subprocess, sys as _sys, tempfile, threading
+    from daily_briefing import generate_text_report, generate_podcast_script, text_to_speech
+
+    def _set(state):
+        with _briefing_jobs_lock:
+            _briefing_jobs[user_id] = state
+
     try:
-        data = request.get_json() or {}
-        tickers = data.get('tickers', [])
-        positions = data.get('positions', {})  # {ticker: {shares: N}}
-        if not tickers:
-            return jsonify({'error': 'No tickers provided'}), 400
+        # Phase 1: collect data in subprocess (avoids Flask SSL serialization)
+        _script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'daily_briefing.py')
+        _env = {**os.environ, '_BRIEFING_TICKERS': ','.join(tickers)}
+        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as _tf:
+            _out_path = _tf.name
+        try:
+            _proc = subprocess.run(
+                [_sys.executable, _script, '--collect-json', _out_path],
+                capture_output=True, text=True, timeout=300, env=_env
+            )
+            if _proc.returncode != 0:
+                raise RuntimeError(f"collect failed: {_proc.stderr[-1000:]}")
+            with open(_out_path, 'r', encoding='utf-8') as _f:
+                all_data = json.load(_f)
+        finally:
+            try:
+                os.unlink(_out_path)
+            except OSError:
+                pass
 
-        from daily_briefing import collect_all, generate_text_report, generate_podcast_script, text_to_speech
-        import daily_briefing
-        daily_briefing.PORTFOLIO = tickers
-
-        all_data = collect_all()
+        # Phase 2: LLM report + script
+        _set({'status': 'generating', 'step': 'llm'})
         report = generate_text_report(all_data, positions)
         script = generate_podcast_script(all_data)
 
         today = datetime.now().strftime('%Y-%m-%d')
-        briefings_dir = os.path.join(os.path.dirname(__file__), 'briefings')
         os.makedirs(briefings_dir, exist_ok=True)
-
-        user_id = session.get('user_id', 'anon')
         prefix = f'briefing_{user_id}_{today}'
-        report_path = os.path.join(briefings_dir, f'{prefix}.txt')
-        script_path = os.path.join(briefings_dir, f'{prefix}_script.txt')
-        audio_path  = os.path.join(briefings_dir, f'{prefix}.mp3')
-        data_path   = os.path.join(briefings_dir, f'{prefix}_data.json')
 
-        with open(report_path, 'w', encoding='utf-8') as f:
+        with open(os.path.join(briefings_dir, f'{prefix}.txt'), 'w', encoding='utf-8') as f:
             f.write(report)
-        with open(script_path, 'w', encoding='utf-8') as f:
+        with open(os.path.join(briefings_dir, f'{prefix}_script.txt'), 'w', encoding='utf-8') as f:
             f.write(script)
-        with open(data_path, 'w', encoding='utf-8') as f:
+        with open(os.path.join(briefings_dir, f'{prefix}_data.json'), 'w', encoding='utf-8') as f:
             json.dump(all_data, f, ensure_ascii=False, indent=2, default=str)
 
+        # Phase 3: TTS
+        _set({'status': 'generating', 'step': 'tts'})
+        audio_path = os.path.join(briefings_dir, f'{prefix}.mp3')
         text_to_speech(script, audio_path)
 
-        return jsonify({
-            'date': today,
-            'report': report,
-            'script': script,
-            'hasAudio': os.path.exists(audio_path),
-            'stocks': len([s for s in all_data['stocks'] if 'error' not in s]),
+        _set({
+            'status': 'done',
+            'result': {
+                'date': today,
+                'report': report,
+                'script': script,
+                'hasAudio': os.path.exists(audio_path),
+                'stocks': len([s for s in all_data['stocks'] if 'error' not in s]),
+            }
         })
     except Exception as e:
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        _set({'status': 'error', 'error': str(e)})
+
+
+@app.route('/api/briefing/generate', methods=['POST'])
+def generate_briefing():
+    """Start async briefing generation; returns immediately."""
+    import threading
+    data = request.get_json() or {}
+    tickers = data.get('tickers', [])
+    positions = data.get('positions', {})
+    if not tickers:
+        return jsonify({'error': 'No tickers provided'}), 400
+
+    user_id = session.get('user_id', 'anon')
+    with _briefing_jobs_lock:
+        job = _briefing_jobs.get(user_id, {})
+        if job.get('status') == 'generating':
+            return jsonify({'status': 'generating'})  # already running
+        _briefing_jobs[user_id] = {'status': 'generating', 'step': 'collect'}
+
+    briefings_dir = os.path.join(os.path.dirname(__file__), 'briefings')
+    t = threading.Thread(target=_run_briefing_job, args=(user_id, tickers, positions, briefings_dir), daemon=True)
+    t.start()
+    return jsonify({'status': 'generating'})
+
+
+@app.route('/api/briefing/status')
+def briefing_status():
+    """Poll briefing generation progress."""
+    user_id = session.get('user_id', 'anon')
+    with _briefing_jobs_lock:
+        job = dict(_briefing_jobs.get(user_id, {'status': 'idle'}))
+    return jsonify(job)
 
 
 @app.route('/api/briefing/latest')
@@ -2697,5 +2774,5 @@ if __name__ == '__main__':
     print(f"  Stock Portfolio Tracker")
     print(f"  Open: http://localhost:{port}")
     print("="*50 + "\n")
-    app.run(host='0.0.0.0', debug=True, port=port)
+    app.run(host='0.0.0.0', debug=True, port=port, use_reloader=False, threaded=True)
 

@@ -686,7 +686,9 @@ body {
               <th>P/E vs Hist</th>
               <th>Signal</th>
               <th>Shares</th>
+              <th dir="ltr">Avg Cost</th>
               <th dir="ltr">Value</th>
+              <th dir="ltr">Unrealized P&L</th>
               <th>News</th>
             </tr>
           </thead>
@@ -1797,6 +1799,18 @@ async function updateShares(ticker, val) {
     body: JSON.stringify({shares})
   });
   updatePortfolioValue();
+  renderPortfolioTable();
+}
+
+async function updateEntryPrice(ticker, val) {
+  const entry_price = parseFloat(val) || null;
+  portfolio[ticker].entry_price = entry_price;
+  await fetch(`${API}/api/portfolio/${ticker}/entry`, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({entry_price})
+  });
+  renderPortfolioTable();
 }
 
 async function loadPortfolio() {
@@ -1854,7 +1868,12 @@ function renderPortfolioTable() {
     const signalClass = d.signalColor === 'green' ? 'badge-green' : d.signalColor === 'red' ? 'badge-red' : 'badge-yellow';
     const rsiClass = d.currentRSI < 30 ? 'text-green' : d.currentRSI > 70 ? 'text-red' : '';
     const shares = portfolio[ticker].shares || 0;
+    const entryPrice = portfolio[ticker].entry_price || null;
     const value = shares * d.price;
+    const unrealizedPnl = (entryPrice && shares) ? (d.price - entryPrice) * shares : null;
+    const unrealizedPct = (entryPrice && shares) ? ((d.price - entryPrice) / entryPrice * 100) : null;
+    const pnlClass = unrealizedPnl !== null ? (unrealizedPnl >= 0 ? 'text-green' : 'text-red') : '';
+    const pnlSign = unrealizedPnl !== null && unrealizedPnl >= 0 ? '+' : '';
 
     const peVsHist = d.valuation.peAvgHistorical && d.valuation.trailingPE
       ? ((d.valuation.trailingPE / d.valuation.peAvgHistorical - 1) * 100).toFixed(0) + '%'
@@ -1875,7 +1894,10 @@ function renderPortfolioTable() {
       <td><span class="badge ${signalClass}">${d.signal}</span></td>
       <td><input class="portfolio-shares" type="number" value="${shares}" min="0"
            onclick="event.stopPropagation()" onchange="updateShares('${ticker}',this.value)" dir="ltr"></td>
+      <td><input class="portfolio-shares" type="number" placeholder="avg cost" value="${entryPrice || ''}" min="0" step="0.01"
+           onclick="event.stopPropagation()" onchange="updateEntryPrice('${ticker}',this.value)" dir="ltr" title="Average purchase price"></td>
       <td dir="ltr">${shares ? '$' + value.toLocaleString('en',{maximumFractionDigits:0}) : '-'}</td>
+      <td dir="ltr" class="${pnlClass}">${unrealizedPnl !== null ? pnlSign + '$' + Math.abs(unrealizedPnl).toLocaleString('en',{maximumFractionDigits:0}) + ' (' + pnlSign + unrealizedPct.toFixed(1) + '%)' : '-'}</td>
       <td><button class="news-btn" onclick="event.stopPropagation();openNewsPanel('${ticker}')" title="חדשות">📰</button></td>
     </tr>`);
   });
@@ -3053,19 +3075,21 @@ document.addEventListener('visibilitychange', () => {
 // ─── Daily Briefing ───
 
 let briefingOpen = false;
+let _briefingGenerating = false;
 
 function toggleBriefing() {
   briefingOpen = !briefingOpen;
   document.getElementById('briefingContent').style.display = briefingOpen ? 'block' : 'none';
   document.getElementById('briefingToggle').textContent = briefingOpen ? '▲' : '▼';
-  if (briefingOpen) loadLatestBriefing();
+  if (briefingOpen && !_briefingGenerating) loadLatestBriefing();
 }
 
 async function loadLatestBriefing() {
+  if (_briefingGenerating) return;
   try {
     const resp = await fetch(`${API}/api/briefing/latest`);
     const d = await resp.json();
-    if (d.exists) {
+    if (d.exists && !_briefingGenerating) {
       showBriefingResult(d);
     }
   } catch(e) { console.error('briefing load error:', e); }
@@ -3075,11 +3099,14 @@ async function generateBriefing() {
   const tickers = Object.keys(portfolio);
   if (!tickers.length) { alert('הוסף מניות לפורטפוליו קודם'); return; }
 
-  // Build positions: shares per ticker (only if has shares)
+  // Build positions: shares + entry_price per ticker (only if has shares)
   const positions = {};
   tickers.forEach(t => {
     const shares = portfolio[t]?.shares || 0;
-    if (shares > 0) positions[t] = { shares };
+    if (shares > 0) {
+      positions[t] = { shares };
+      if (portfolio[t]?.entry_price) positions[t].entry_price = portfolio[t].entry_price;
+    }
   });
 
   // Open panel
@@ -3088,29 +3115,39 @@ async function generateBriefing() {
   document.getElementById('briefingToggle').textContent = '▲';
 
   // Show loading
+  _briefingGenerating = true;
   document.getElementById('briefingLoading').style.display = 'block';
   document.getElementById('briefingReport').style.display = 'none';
   document.getElementById('briefingAudioSection').style.display = 'none';
   document.getElementById('briefingGenBtn').disabled = true;
   document.getElementById('briefingGenBtn').textContent = '⏳ מייצר...';
 
-  // Smart progress — one step per ticker + fixed steps
+  // Progress label cycling
   const progressEl = document.getElementById('briefingLoadingProgress');
   const steps = [
-    { label: '📊 אוסף נתוני מאקרו...', ms: 3000 },
-    ...tickers.map(t => ({ label: `📈 מנתח ${t}...`, ms: 5000 })),
-    { label: '📰 אוסף חדשות...', ms: tickers.length * 3000 },
-    { label: '✍️ כותב סיכום...', ms: 6000 },
-    { label: '🎙️ מייצר פודקאסט...', ms: 15000 },
+    '📊 אוסף נתוני מאקרו...',
+    ...tickers.map(t => `📈 מנתח ${t}...`),
+    '📰 אוסף חדשות ורשתות חברתיות...',
+    '✍️ כותב סיכום...',
+    '🎙️ מייצר פודקאסט...',
   ];
-  let progTimeout = null;
-  function runStep(i) {
-    if (i >= steps.length) return;
-    progressEl.textContent = steps[i].label;
-    progTimeout = setTimeout(() => runStep(i + 1), steps[i].ms);
-  }
-  runStep(0);
+  let stepIdx = 0;
+  progressEl.textContent = steps[0];
+  const stepInterval = setInterval(() => {
+    stepIdx = (stepIdx + 1) % steps.length;
+    progressEl.textContent = steps[stepIdx];
+  }, 6000);
 
+  function _stopBriefingLoading(si, pi) {
+    if (si) clearInterval(si);
+    if (pi) clearInterval(pi);
+    _briefingGenerating = false;
+    document.getElementById('briefingLoading').style.display = 'none';
+    document.getElementById('briefingGenBtn').disabled = false;
+    document.getElementById('briefingGenBtn').textContent = '🎙️ צור סיכום';
+  }
+
+  // Start generation (returns immediately — server runs async)
   try {
     const resp = await fetch(`${API}/api/briefing/generate`, {
       method: 'POST',
@@ -3118,16 +3155,42 @@ async function generateBriefing() {
       body: JSON.stringify({ tickers, positions }),
     });
     const d = await resp.json();
-    if (d.error) { alert('שגיאה: ' + d.error); return; }
-    showBriefingResult(d);
+    if (d.error) {
+      _stopBriefingLoading(stepInterval, null);
+      alert('שגיאה: ' + d.error);
+      return;
+    }
   } catch(e) {
-    alert('שגיאה ביצירת סיכום: ' + e.message);
-  } finally {
-    clearTimeout(progTimeout);
-    document.getElementById('briefingLoading').style.display = 'none';
-    document.getElementById('briefingGenBtn').disabled = false;
-    document.getElementById('briefingGenBtn').textContent = '🎙️ צור סיכום';
+    _stopBriefingLoading(stepInterval, null);
+    alert('שגיאה: ' + e.message);
+    return;
   }
+
+  // Poll for completion
+  const pollStart = Date.now();
+  const pollInterval = setInterval(async () => {
+    if (Date.now() - pollStart > 8 * 60 * 1000) {
+      _stopBriefingLoading(stepInterval, pollInterval);
+      alert('יצירת הסיכום לקחה יותר מדי זמן. נסה שוב.');
+      return;
+    }
+    try {
+      const sr = await fetch(`${API}/api/briefing/status`);
+      const sd = await sr.json();
+      if (sd.status === 'done') {
+        _stopBriefingLoading(stepInterval, pollInterval);
+        showBriefingResult(sd.result);
+      } else if (sd.status === 'error') {
+        _stopBriefingLoading(stepInterval, pollInterval);
+        alert('שגיאה ביצירת סיכום: ' + sd.error);
+      } else if (sd.status === 'idle') {
+        // Server restarted and lost job state — restart generation
+        clearInterval(pollInterval);
+        generateBriefing();
+      }
+      // status === 'generating' → keep polling
+    } catch(e) { /* network blip, keep polling */ }
+  }, 4000);
 }
 
 function showBriefingResult(d) {

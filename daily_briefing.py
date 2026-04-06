@@ -9,8 +9,8 @@ Generates a morning analyst briefing covering:
 
 import json
 import os
+import re
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -94,6 +94,12 @@ def safe_get(d, *keys):
             return v
     return None
 
+def _np_isnan(v):
+    try:
+        return np.isnan(v)
+    except Exception:
+        return False
+
 # ─── Data Collection ───
 
 def collect_macro():
@@ -162,6 +168,40 @@ def collect_macro():
     except:
         macro['ta35'] = None
 
+    # 10Y Treasury Yield (^TNX) — key driver of tech/growth valuations
+    try:
+        tnx = yf.Ticker('^TNX')
+        ti = tnx.info
+        yield_now = safe_get(ti, 'regularMarketPrice', 'currentPrice')
+        yield_prev = safe_get(ti, 'previousClose')
+        if yield_now:
+            change_bps = round((yield_now - yield_prev) * 100, 1) if yield_prev else 0
+            macro['treasury_10y'] = {
+                'yield': round(yield_now, 3),
+                'change_bps': change_bps,
+            }
+    except:
+        macro['treasury_10y'] = None
+
+    # Key sector ETF moves — detect sector-wide pressure vs stock-specific moves
+    try:
+        sector_etfs = {'XLK': 'טק', 'XLF': 'פיננסים', 'XLV': 'בריאות', 'XLE': 'אנרגיה'}
+        sector_moves = {}
+        for etf, label in sector_etfs.items():
+            try:
+                et = yf.Ticker(etf)
+                ei = et.info
+                ep = safe_get(ei, 'regularMarketPrice', 'currentPrice')
+                ec = safe_get(ei, 'previousClose')
+                if ep and ec:
+                    sector_moves[label] = round((ep - ec) / ec * 100, 2)
+            except Exception:
+                pass
+        if sector_moves:
+            macro['sector_etfs'] = sector_moves
+    except:
+        pass
+
     return macro
 
 
@@ -198,16 +238,24 @@ def collect_stock(ticker):
     target_high = safe_get(info, 'targetHighPrice')
     recommendation = safe_get(info, 'recommendationKey')
 
-    # RSI (Wilder's smoothing) + MA200
+    # Sector
+    sector = info.get('sector') or info.get('sectorKey') or ''
+
+    # RSI (Wilder's smoothing) + MA200 + 1Y performance
     hist_long = t.history(period='2y', interval='1d')
     rsi = None
     ma200 = None
+    change_1y = None
     if not hist_long.empty and len(hist_long) > 30:
         rsi = _wilder_rsi(hist_long['Close'].values, 14)
     if not hist_long.empty and len(hist_long) >= 200:
         ma200_val = hist_long['Close'].rolling(200).mean().iloc[-1]
         if not np.isnan(ma200_val):
             ma200 = round(float(ma200_val), 2)
+    if not hist_long.empty and len(hist_long) >= 252:
+        price_1y_ago = float(hist_long['Close'].iloc[-252])
+        if price_1y_ago > 0:
+            change_1y = round((price - price_1y_ago) / price_1y_ago * 100, 1)
 
     # 52-week range
     w52_high = safe_get(info, 'fiftyTwoWeekHigh')
@@ -215,6 +263,108 @@ def collect_stock(ticker):
 
     # Distance from 52w high
     pct_from_high = round((price - w52_high) / w52_high * 100, 1) if w52_high and price else None
+
+    # Earnings calendar
+    earnings_date = None
+    earnings_est_eps = None
+    earnings_est_revenue = None
+    try:
+        cal = t.calendar
+        if cal is not None and isinstance(cal, dict):
+            dates = cal.get('Earnings Date', [])
+            if dates:
+                d0 = dates[0]
+                # yfinance may return datetime.date or pd.Timestamp
+                earnings_date = d0.strftime('%Y-%m-%d') if hasattr(d0, 'strftime') else str(d0)[:10]
+            earnings_est_eps = cal.get('Earnings Average')
+            earnings_est_revenue = cal.get('Revenue Average')
+    except Exception:
+        pass
+
+    # Recent analyst upgrades/downgrades (last 14 days)
+    import datetime as _dt
+    recent_analyst_actions = []
+    try:
+        upgrades = t.upgrades_downgrades
+        if upgrades is not None and not upgrades.empty:
+            upgrades = upgrades.sort_index(ascending=False)
+            cutoff = _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=14)
+            for idx, row in upgrades.iterrows():
+                # index may be tz-aware or tz-naive Timestamp
+                try:
+                    idx_dt = idx if idx.tzinfo else idx.tz_localize('UTC')
+                    if idx_dt < cutoff:
+                        break
+                except Exception:
+                    pass
+                target = row.get('currentPriceTarget')
+                recent_analyst_actions.append({
+                    'date': str(idx)[:10],
+                    'firm': str(row.get('Firm', '')),
+                    'from_grade': str(row.get('FromGrade', '')),
+                    'to_grade': str(row.get('ToGrade', '')),
+                    'action': str(row.get('Action', '')),
+                    'price_target': round(float(target), 0) if target and not _np_isnan(target) else None,
+                })
+                if len(recent_analyst_actions) >= 5:
+                    break
+    except Exception:
+        pass
+
+    # Short interest — squeeze potential signal
+    short_pct = None
+    short_ratio = None
+    try:
+        sp_float = safe_get(info, 'shortPercentOfFloat')
+        if sp_float and sp_float > 0:
+            short_pct = round(sp_float * 100, 1)  # e.g. 0.08 → 8.0%
+        sr = safe_get(info, 'shortRatio')
+        if sr:
+            short_ratio = round(float(sr), 1)  # days to cover
+    except Exception:
+        pass
+
+    # Insider transactions — last 90 days, significant moves only
+    # yfinance columns: Shares, Value, Text, Insider, Position, Transaction, Start Date, Ownership
+    insider_activity = []
+    try:
+        insiders = t.insider_transactions
+        if insiders is not None and not insiders.empty:
+            import datetime as _dt2
+            cutoff = _dt2.datetime.now() - _dt2.timedelta(days=90)
+            for _, row in insiders.iterrows():
+                try:
+                    tx_date = row['Start Date']
+                    if hasattr(tx_date, 'to_pydatetime'):
+                        tx_date = tx_date.to_pydatetime()
+                    if tx_date.replace(tzinfo=None) < cutoff:
+                        continue
+                    value_tx = float(row.get('Value') or 0)
+                    if abs(value_tx) < 100_000:  # skip tiny transactions
+                        continue
+                    tx_type = str(row.get('Transaction') or '')
+                    # Derivative conversions are exercise, not open-market buys — skip
+                    text_lower = str(row.get('Text') or '').lower()
+                    if 'conversion' in text_lower or 'exercise' in text_lower or 'derivative' in text_lower:
+                        continue
+                    is_sale = any(w in tx_type.lower() for w in ['sale', 'sell', 'sold'])
+                    is_buy = any(w in tx_type.lower() for w in ['purchase', 'buy', 'bought'])
+                    if not is_sale and not is_buy:
+                        continue
+                    insider_activity.append({
+                        'date': str(tx_date)[:10],
+                        'name': str(row.get('Insider') or ''),
+                        'relation': str(row.get('Position') or ''),
+                        'type': 'מכירה' if is_sale else 'קנייה',
+                        'value': int(abs(value_tx)),
+                        'shares': int(abs(float(row.get('Shares') or 0))),
+                    })
+                    if len(insider_activity) >= 4:
+                        break
+                except Exception:
+                    continue
+    except Exception:
+        pass
 
     # News from Yahoo RSS
     news = []
@@ -257,6 +407,15 @@ def collect_stock(ticker):
         'recommendation': recommendation,
         'news': news,
         'prev_price': round(prev / div, 2),
+        'earnings_date': earnings_date,
+        'earnings_est_eps': round(earnings_est_eps, 2) if earnings_est_eps else None,
+        'earnings_est_revenue': earnings_est_revenue,
+        'recent_analyst_actions': recent_analyst_actions,
+        'sector': sector,
+        'change_1y': change_1y,
+        'short_pct': short_pct,
+        'short_ratio': short_ratio,
+        'insider_activity': insider_activity,
     }
 
 
@@ -271,34 +430,353 @@ def _is_generic_url(url):
     return any(d in url_lower for d in skip_domains)
 
 
+def _run_with_timeout(fn, timeout=15, default=None):
+    """Run fn() with a hard timeout. Returns default on timeout/error.
+    Does NOT wait for the hung thread — avoids blocking the caller.
+    """
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+    ex = ThreadPoolExecutor(max_workers=1)
+    fut = ex.submit(fn)
+    try:
+        result = fut.result(timeout=timeout)
+        ex.shutdown(wait=False)
+        return result
+    except FuturesTimeout:
+        ex.shutdown(wait=False, cancel_futures=True)
+        return default
+    except Exception:
+        ex.shutdown(wait=False)
+        return default
+
+
 def _tavily_extract_urls(tavily_client, urls):
     """Use Tavily extract to get full article content from URLs."""
     try:
-        # Tavily extract API — pulls full text from URLs
-        result = tavily_client.extract(urls=urls[:5])
+        result = _run_with_timeout(
+            lambda: tavily_client.extract(urls=urls[:5]),
+            timeout=10, default={}
+        )
+        if not result:
+            return {}
         extracted = {}
         for r in result.get('results', []):
             url = r.get('url', '')
             text = r.get('raw_content', '') or r.get('text', '')
             if url and text and len(text) > 100:
-                extracted[url] = text[:3000]  # Cap per article
+                extracted[url] = text[:3000]
         return extracted
     except Exception as e:
         print(f"    ⚠️  Tavily extract failed: {e}")
         return {}
 
 
-def collect_social(ticker):
-    """Collect social sentiment — StockTwits (free API) + Nitter RSS (X/Twitter).
-    No API key required for either source.
-    """
-    social = {'stocktwits': [], 'twitter': [], 'sentiment': None}
+# ── Curated expert X/Twitter accounts — high signal-to-noise, institutional-grade ──
+# Sources: SentimenTrader "most useful FinTwit" ranking + The Bear Cave 100 list +
+#          Acquired/All-In research community + semiconductor/tech specialist accounts.
+_EXPERT_ACCOUNTS = [
+    # Macro & rates — the people who move the narrative
+    'KobeissiLetter',   # Adam Kobeissi — global macro, rates, equities; 700k followers, CNBC regular
+    'elerianm',         # Mohamed El-Erian — Fed policy, central banking, global macro; ex-PIMCO CEO
+    'NorthmanTrader',   # Sven Henrich — technical analysis, S&P structure, MarketWatch contributor
+    'cullenroche',      # Cullen Roche — monetary mechanics, debunks myths; Orcam Financial founder
+    'IanShepherdson',   # Ian Shepherdson — Pantheon Macro chief economist; Fed forecasting
+    # Fundamental equity — deep valuation and business analysis
+    'AswathDamodaran',  # "Dean of Valuation" — NYU professor; DCF models on any stock
+    'charliebilello',   # Charlie Bilello — pure data + historical market stats; best quant visual feed
+    'morganhousel',     # Morgan Housel — Psychology of Money author; behavioral finance
+    'GavinSBaker',      # Gavin Baker — Atreides CIO; tech sector, semiconductors; ex-Fidelity OTC
+    # Tech & semiconductors — specialist-level analysis
+    'dylan522p',        # Dylan Patel — SemiAnalysis; semiconductor supply chain, NVDA/TSMC/Intel
+    'benthompson',      # Ben Thompson — Stratechery; tech business strategy, platform economics
+    # Options flow & market structure
+    'unusual_whales',   # Options flow, dark pools, institutional positioning; real-time alerts
+    'OptionsHawk',      # Joe Kunkle — real-time options order flow, sector sweeps
+    'sentimentrader',   # SentimenTrader — sentiment indicators, historical analogues; ranked #1 quality
+    # Commentary & behavioral
+    'fundstrat',        # Tom Lee / Fundstrat — macro strategy, earnings season interpretation
+    'ReformedBroker',   # Josh Brown — CNBC; market analysis + sharp cultural commentary
+    'ritholtz',         # Barry Ritholtz — financial market history, behavioral economics
+    'michaelbatnick',   # Michael Batnick — Ritholtz; investor mistakes, market data
+    'awealthofcs',      # Ben Carlson — evidence-based investing, behavioral finance
+]
 
-    # ── StockTwits (free public API, no key needed) ──
+# Spam/noise patterns — tweets matching these are penalized
+_SPAM_PATTERNS = [
+    '🚀🚀🚀', '100x', 'to the moon', 'buy now', 'free signal',
+    'dm me', 'join my', 'guaranteed', 'get rich', '🔥🔥',
+]
+
+
+def _score_stocktwits(msg):
+    """Quality score for a StockTwits message. Higher = better."""
+    import re
+    body = msg.get('body', '')
+    score = 0
+    # Length bonus — substance over noise
+    if len(body) > 120:
+        score += 3
+    elif len(body) > 60:
+        score += 1
+    # Data-driven: contains numbers, percentages, dollar amounts
+    if re.search(r'\d+\.?\d*%|\$\d+|\d+B|\d+M', body):
+        score += 2
+    # Has explicit sentiment tag — user has conviction
+    if msg.get('entities', {}).get('sentiment', {}).get('basic'):
+        score += 1
+    # Spam/noise penalty
+    body_lower = body.lower()
+    for pat in _SPAM_PATTERNS:
+        if pat.lower() in body_lower:
+            score -= 4
+    return score
+
+
+def _collect_reddit(ticker, company_name=''):
+    """Search Reddit for ticker via the public JSON API (no auth needed).
+    Returns posts sorted by engagement score (upvotes × subreddit quality weight).
+    """
+    # (subreddit, quality_weight) — SecurityAnalysis has the deepest analysis
+    subreddits = [
+        ('SecurityAnalysis', 4),
+        ('ValueInvesting', 3),
+        ('stocks', 2),
+        ('investing', 1),
+    ]
+    posts = []
+    seen_ids = set()
+    headers = {'User-Agent': 'PortfolioBriefingBot/1.0 (personal finance tool)'}
+
+    def _fetch_sub(sub_weight):
+        sub, weight = sub_weight
+        results = []
+        try:
+            url = f'https://www.reddit.com/r/{sub}/search.json'
+            params = {'q': ticker, 'sort': 'top', 't': 'week', 'limit': 10, 'restrict_sr': 1}
+            resp = requests.get(url, params=params, headers=headers, timeout=6)
+            if resp.status_code != 200:
+                return results
+            children = resp.json().get('data', {}).get('children', [])
+            for child in children:
+                d = child.get('data', {})
+                post_id = d.get('id', '')
+                title = d.get('title', '')
+                selftext = d.get('selftext', '') or ''
+                ups = d.get('ups', 0)
+                combined = (title + ' ' + selftext).upper()
+                if (ticker.upper() not in combined
+                        and (not company_name or company_name.split()[0].upper() not in combined)):
+                    continue
+                if len(title) < 15:
+                    continue
+                if ups < 5 and sub not in ('SecurityAnalysis', 'ValueInvesting'):
+                    continue
+                results.append((post_id, {
+                    'title': title,
+                    'text': selftext[:600] if len(selftext) > 50 else '',
+                    'ups': ups,
+                    'score': ups * weight,
+                    'subreddit': sub,
+                    'permalink': f"reddit.com{d.get('permalink', '')}",
+                }))
+        except Exception:
+            pass
+        return results
+
+    # Sequential subreddit requests — requests.get handles timeout at socket level
+    for sw in subreddits:
+        for post_id, post in _fetch_sub(sw):
+            if post_id not in seen_ids:
+                seen_ids.add(post_id)
+                posts.append(post)
+
+    # Deduplicate by title — same story can appear in multiple subreddits
+    posts.sort(key=lambda x: x['score'], reverse=True)
+    seen_titles = set()
+    deduped = []
+    for p in posts:
+        title_key = p['title'].lower()[:60]
+        if title_key not in seen_titles:
+            seen_titles.add(title_key)
+            deduped.append(p)
+    return deduped[:5]
+
+
+def _collect_expert_tweets(ticker):
+    """Search for recent expert X/Twitter posts about ticker via Tavily web search.
+    Uses Tavily instead of Nitter — reliable, thread-safe, no zombie threads.
+    Falls back to empty list gracefully if Tavily unavailable or no results found.
+    """
+    try:
+        from tavily import TavilyClient
+        api_key = os.environ.get('TAVILY_API_KEY', '')
+        if not api_key:
+            return []
+        tavily = TavilyClient(api_key=api_key)
+
+        # Build a targeted query: ticker + known expert handles on X
+        # Use include_domains to restrict results to x.com only
+        expert_handles = [
+            'KobeissiLetter', 'unusual_whales', 'AswathDamodaran', 'charliebilello',
+            'fundstrat', 'NorthmanTrader', 'GavinSBaker', 'dylan522p',
+        ]
+        handles_str = ' '.join(expert_handles[:2])
+        query = f'{ticker} {handles_str} site:x.com'
+
+        result = _run_with_timeout(
+            lambda: tavily.search(query=query, search_depth="basic", max_results=8),
+            timeout=8, default={}
+        ) or {}
+
+        posts = []
+        seen_urls = set()
+        for r in (result.get('results') or []):
+            url = r.get('url', '')
+            if url in seen_urls:
+                continue
+            # Only x.com/twitter.com results
+            if 'x.com/' not in url and 'twitter.com/' not in url:
+                continue
+            seen_urls.add(url)
+            content = (r.get('content') or r.get('snippet') or '').strip()
+            if not content or len(content) < 40:
+                continue
+
+            # Extract author from URL (prefer direct tweet URLs)
+            author = ''
+            for domain in ('x.com/', 'twitter.com/'):
+                if domain in url:
+                    parts = url.split(domain)[-1].split('/')
+                    if parts and parts[0] not in ('i', 'search', 'hashtag', ''):
+                        author = parts[0]
+                    break
+
+            # If not from a known expert URL, scan content for expert mention
+            is_expert = author.lower() in [h.lower() for h in expert_handles]
+            if not is_expert:
+                for handle in expert_handles:
+                    if handle.lower() in content.lower():
+                        author = handle
+                        is_expert = True
+                        break
+
+            if author and is_expert:
+                posts.append({
+                    'author': f'@{author}',
+                    'text': content[:280],
+                    'url': url,
+                })
+
+        return posts[:3]
+    except Exception:
+        return []
+
+
+def _collect_viral_tweets(ticker, company_name=''):
+    """Fetch recent high-engagement tweets about a ticker using Twitter API v2.
+
+    Requires TWITTER_BEARER_TOKEN in env.
+    Returns up to 5 tweets sorted by engagement (likes + retweets + replies),
+    filtered to a minimum buzz threshold to cut noise.
+    """
+    bearer = os.environ.get('TWITTER_BEARER_TOKEN', '')
+    if not bearer:
+        return []
+    try:
+        import tweepy
+
+        client = tweepy.Client(bearer_token=bearer, wait_on_rate_limit=False)
+
+        # Build query: ticker + optional company name, exclude retweets and replies,
+        # English or Hebrew only, minimum 10 likes to cut pure noise
+        q_terms = f'({ticker}'
+        if company_name:
+            q_terms += f' OR "{company_name}"'
+        q_terms += ') -is:retweet -is:reply lang:en'
+
+        result = _run_with_timeout(
+            lambda: client.search_recent_tweets(
+                query=q_terms,
+                max_results=50,              # fetch 50, then rank by engagement
+                tweet_fields=['public_metrics', 'created_at', 'author_id', 'text'],
+                expansions=['author_id'],
+                user_fields=['username', 'name', 'verified', 'public_metrics'],
+            ),
+            timeout=10, default=None
+        )
+        if not result or not result.data:
+            return []
+
+        # Build author lookup: author_id → username
+        author_map = {}
+        if result.includes and result.includes.get('users'):
+            for u in result.includes['users']:
+                author_map[u.id] = {
+                    'username': u.username,
+                    'followers': (u.public_metrics or {}).get('followers_count', 0),
+                }
+
+        # Score each tweet by engagement + author credibility
+        scored = []
+        for t in result.data:
+            m = t.public_metrics or {}
+            likes     = m.get('like_count', 0)
+            retweets  = m.get('retweet_count', 0)
+            replies   = m.get('reply_count', 0)
+            quotes    = m.get('quote_count', 0)
+            engagement = likes + (retweets * 2) + replies + quotes  # retweets weighted more
+
+            if engagement < 15:   # skip low-signal tweets entirely
+                continue
+
+            author_info = author_map.get(t.author_id, {})
+            username = author_info.get('username', 'unknown')
+            followers = author_info.get('followers', 0)
+
+            # Boost score for known expert accounts
+            expert_boost = 50 if username.lower() in [h.lower() for h in _EXPERT_ACCOUNTS] else 0
+            # Boost for accounts with significant following
+            follower_boost = min(followers // 10000, 30)  # up to +30 for large accounts
+
+            final_score = engagement + expert_boost + follower_boost
+
+            scored.append({
+                'author': f'@{username}',
+                'text': t.text,
+                'likes': likes,
+                'retweets': retweets,
+                'engagement': engagement,
+                'score': final_score,
+                'is_expert': expert_boost > 0,
+            })
+
+        # Sort by final score descending
+        scored.sort(key=lambda x: x['score'], reverse=True)
+
+        # Return top 5 (mix of expert + viral)
+        return scored[:5]
+
+    except Exception as e:
+        print(f"  ⚠️  Twitter viral search failed ({type(e).__name__}): {e}")
+        return []
+
+
+def collect_social(ticker, company_name=''):
+    """Collect social intelligence — four quality layers:
+    1. Reddit (engagement-ranked, expert subreddits, no auth needed)
+    2. StockTwits (quality-scored, spam-filtered sentiment)
+    3. Viral X tweets via Twitter API v2 (requires TWITTER_BEARER_TOKEN)
+    4. Expert X posts via Tavily search (fallback when no Bearer Token)
+    """
+    social = {'reddit': [], 'stocktwits': [], 'twitter': [], 'viral_tweets': [], 'sentiment': None}
+
+    # ── Layer 1: Reddit ──
+    social['reddit'] = _collect_reddit(ticker, company_name)
+
+    # ── Layer 2: StockTwits — sentiment signal ──
     try:
         r = requests.get(
             f'https://api.stocktwits.com/api/2/streams/symbol/{ticker}.json',
-            headers={'User-Agent': 'Mozilla/5.0'}, timeout=10
+            headers={'User-Agent': 'Mozilla/5.0'}, timeout=(3, 5)
         )
         if r.status_code == 200:
             messages = r.json().get('messages', [])
@@ -315,49 +793,46 @@ def collect_social(ticker):
                     'bearish_pct': round(bearish / total * 100),
                     'total_messages': len(messages),
                 }
-            # Top messages (prefer those with sentiment tags)
-            tagged = [m for m in messages if m.get('entities', {}).get('sentiment', {}).get('basic')]
-            rest = [m for m in messages if m not in tagged]
-            for m in (tagged + rest)[:8]:
+            scored = sorted(
+                [m for m in messages if len(m.get('body', '')) > 40],
+                key=_score_stocktwits, reverse=True,
+            )
+            for m in scored[:6]:
                 body = m.get('body', '').strip()
-                if body and len(body) > 15:
-                    social['stocktwits'].append({
-                        'text': body,
-                        'sentiment': m.get('entities', {}).get('sentiment', {}).get('basic', ''),
-                        'user': m.get('user', {}).get('username', ''),
-                    })
-    except Exception as e:
-        print(f"    ⚠️  StockTwits failed for {ticker}: {e}")
+                social['stocktwits'].append({
+                    'text': body,
+                    'sentiment': m.get('entities', {}).get('sentiment', {}).get('basic', ''),
+                    'user': m.get('user', {}).get('username', ''),
+                })
+    except Exception:
+        pass
 
-    # ── Nitter RSS — X/Twitter cashtag search ──
-    if feedparser:
-        nitter_instances = [
-            'https://nitter.poast.org',
-            'https://nitter.privacydev.net',
-            'https://nitter.1d4.us',
-            'https://nitter.nl',
-        ]
-        for instance in nitter_instances:
-            try:
-                feed = feedparser.parse(
-                    f'{instance}/search/rss?q=%24{ticker}&f=tweets',
-                    request_headers={'User-Agent': 'Mozilla/5.0'},
-                )
-                if feed.entries:
-                    for entry in feed.entries[:6]:
-                        text = entry.get('title', '').strip()
-                        if text and len(text) > 20:
-                            social['twitter'].append({
-                                'text': text,
-                                'published': entry.get('published', ''),
-                                'author': entry.get('author', ''),
-                            })
-                    if social['twitter']:
-                        break  # got results — stop trying instances
-            except Exception:
-                continue
+    # ── Layer 3: Viral tweets via Twitter API v2 (if Bearer Token configured) ──
+    if os.environ.get('TWITTER_BEARER_TOKEN'):
+        social['viral_tweets'] = _collect_viral_tweets(ticker, company_name)
+        # Expert accounts that appeared in viral results go into 'twitter' too
+        social['twitter'] = [t for t in social['viral_tweets'] if t.get('is_expert')]
+
+    # ── Layer 4: Tavily expert X posts (fallback when no viral tweets) ──
+    if not social['twitter']:
+        social['twitter'] = _collect_expert_tweets(ticker)
 
     return social
+
+
+def _feedparser_with_timeout(url, timeout=8, **kwargs):
+    """feedparser via requests — thread-safe, proper socket-level timeout, no zombie threads."""
+    empty = type('FP', (), {'entries': []})()
+    if not feedparser:
+        return empty
+    try:
+        resp = requests.get(url, timeout=(3, timeout),
+                            headers={'User-Agent': 'Mozilla/5.0 (feedparser)'})
+        if resp.status_code == 200:
+            return feedparser.parse(resp.content)
+    except Exception:
+        pass
+    return empty
 
 
 def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
@@ -369,7 +844,8 @@ def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
     # Source 1: Yahoo Finance RSS
     if feedparser:
         try:
-            feed = feedparser.parse(f'https://feeds.finance.yahoo.com/rss/2.0/headline?s={resolved_ticker}')
+            feed = _feedparser_with_timeout(
+                f'https://feeds.finance.yahoo.com/rss/2.0/headline?s={resolved_ticker}')
             for entry in feed.entries[:8]:
                 url = entry.get('link', '')
                 if url and url not in seen_urls:
@@ -389,7 +865,7 @@ def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
     if feedparser:
         try:
             gn_url = f'https://news.google.com/rss/search?q={ticker}+stock&hl=en&gl=US&ceid=US:en'
-            feed = feedparser.parse(gn_url)
+            feed = _feedparser_with_timeout(gn_url)
             for entry in feed.entries[:6]:
                 url = entry.get('link', '')
                 if url and url not in seen_urls:
@@ -408,39 +884,37 @@ def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
         except Exception as e:
             print(f"    ⚠️  Google News RSS failed for {ticker}: {e}")
 
-    # Use Tavily extract to get full content for RSS articles
+    # Tavily extract + search — sequential with hard timeouts (no nested pools)
     tavily_key = os.environ.get('TAVILY_API_KEY', '')
-    if tavily_key and TavilyClient and rss_urls_to_extract:
-        tavily = TavilyClient(api_key=tavily_key)
-        extracted = _tavily_extract_urls(tavily, rss_urls_to_extract[:5])
-        for a in articles:
-            url = a.get('url', '')
-            if url in extracted:
-                a['content'] = extracted[url]
-        time.sleep(0.3)
-
-    # Source 3: Tavily Search (deep content extraction)
     if tavily_key and TavilyClient:
-        try:
-            tavily = TavilyClient(api_key=tavily_key)
-            query = f"{company_name} ({ticker}) stock news latest developments"
-            results = tavily.search(query=query, search_depth="advanced", max_results=5,
-                                     include_raw_content=True)
-            for r in results.get('results', []):
-                url = r.get('url', '')
-                if url and url not in seen_urls and not _is_generic_url(url):
-                    seen_urls.add(url)
-                    content = r.get('raw_content', '') or r.get('content', '')
-                    articles.append({
-                        'title': r.get('title', ''),
-                        'source': 'Tavily',
-                        'url': url,
-                        'published': '',
-                        'content': content[:3000],
-                    })
-            time.sleep(0.5)
-        except Exception as e:
-            print(f"    ⚠️  Tavily failed for {ticker}: {e}")
+        tavily = TavilyClient(api_key=tavily_key)
+        query = f"{company_name} ({ticker}) stock news latest developments"
+
+        # Extract full content from RSS URLs
+        if rss_urls_to_extract:
+            extracted = _tavily_extract_urls(tavily, rss_urls_to_extract[:5]) or {}
+            for a in articles:
+                if a.get('url') in extracted:
+                    a['content'] = extracted[a['url']]
+
+        # Search for additional news
+        results = _run_with_timeout(
+            lambda: tavily.search(query=query, search_depth="advanced",
+                                  max_results=5, include_raw_content=True),
+            timeout=10, default={}
+        ) or {}
+        for r in results.get('results', []):
+            url = r.get('url', '')
+            if url and url not in seen_urls and not _is_generic_url(url):
+                seen_urls.add(url)
+                content = r.get('raw_content', '') or r.get('content', '')
+                articles.append({
+                    'title': r.get('title', ''),
+                    'source': 'Tavily',
+                    'url': url,
+                    'published': '',
+                    'content': content[:3000],
+                })
 
     # For Israeli stocks, also search in Hebrew
     is_israeli = resolved_ticker.endswith('.TA')
@@ -448,8 +922,11 @@ def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
         try:
             tavily = TavilyClient(api_key=tavily_key)
             query = f"{hebrew_name} מניה חדשות"
-            results = tavily.search(query=query, search_depth="advanced", max_results=3,
-                                     include_raw_content=True)
+            results = _run_with_timeout(
+                lambda: tavily.search(query=query, search_depth="advanced", max_results=3,
+                                      include_raw_content=True),
+                timeout=10, default={}
+            ) or {}
             for r in results.get('results', []):
                 url = r.get('url', '')
                 if url and url not in seen_urls and not _is_generic_url(url):
@@ -462,7 +939,6 @@ def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
                         'published': '',
                         'content': content[:3000],
                     })
-            time.sleep(0.5)
         except Exception as e:
             print(f"    ⚠️  Tavily HE failed for {ticker}: {e}")
 
@@ -553,11 +1029,86 @@ def _llm_chat(messages, max_tokens=1000, system=None):
     raise RuntimeError("No LLM API key configured (set DEEPSEEK_API_KEY, GEMINI_API_KEY, or GROQ_API_KEY)")
 
 
+_CAUSAL_WORDS = [
+    'because', 'after', 'amid', 'due to', 'following', 'driven by',
+    'cited', 'despite', 'as investors', 'as the company', 'as shares',
+    'reported', 'announced', 'beat', 'missed', 'raised', 'cut', 'warned',
+    'upgraded', 'downgraded', 'acquired', 'launched', 'partnered',
+]
+
+def _best_news_sentence(content):
+    """Return the most informative sentence — prefer causal/event sentences over generic openers."""
+    # Reject entire content if it looks like a scraped HTML page
+    content_low = content.lower()
+    if any(marker in content_low for marker in ['skip to navigation', 'oops, something went wrong',
+                                                  'enable javascript', '<html', 'document.write']):
+        return ''
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', content) if len(s.strip()) > 50]
+    if not sentences:
+        return ''
+    # Score each sentence: causal words = +2, longer = better up to 250 chars, boilerplate = -5
+    boilerplate = ['click here', 'subscribe', 'sign up', 'cookie', 'privacy policy', 'read more',
+                   'skip to navigation', 'skip to content', 'oops, something went wrong',
+                   'javascript is required', 'enable javascript', 'please enable',
+                   'terms of service', 'terms of use', 'all rights reserved', 'advertisement']
+    html_garbage = ['<html', '<head', '<body', '<div', '<script', 'document.write', 'window.location']
+    scored = []
+    for sent in sentences[:15]:  # scan first 15 sentences
+        low = sent.lower()
+        # Skip boilerplate and HTML fragments
+        if any(b in low for b in boilerplate):
+            continue
+        if any(h in low for h in html_garbage):
+            continue
+        # Skip sentences that are mostly bracket-wrapped content (scraped nav links)
+        bracket_ratio = (sent.count('[') + sent.count(']')) / max(len(sent), 1)
+        if bracket_ratio > 0.05:
+            continue
+        score = sum(2 for w in _CAUSAL_WORDS if w in low)
+        score += min(len(sent), 250) / 50  # length bonus, capped
+        scored.append((score, sent))
+    if not scored:
+        # Last resort: find first sentence without HTML markers
+        clean_fallback = [s for s in sentences if not any(b in s.lower() for b in boilerplate + html_garbage)
+                          and (s.count('[') + s.count(']')) / max(len(s), 1) <= 0.05]
+        return clean_fallback[0][:280] if clean_fallback else ''
+    scored.sort(key=lambda x: -x[0])
+    return scored[0][1][:280]
+
+
+def _extract_news_context(articles):
+    """Deterministic news extraction — headlines + best causal sentence. No LLM needed.
+    Returns same shape as summarize_stock_news for compatibility with podcast builder.
+    """
+    articles_with_content = [a for a in articles if a.get('content') and len(a['content']) > 50]
+    best = articles_with_content or articles
+    if not best:
+        return {'has_news': False, 'article_count': 0, 'key_headlines': [], 'summary': ''}
+
+    lines = []
+    for a in best[:4]:
+        title = a.get('title', '')
+        source = a.get('source', '')
+        content = a.get('content', '')
+        snippet = _best_news_sentence(content) if content else ''
+        entry = f"• {title} ({source})"
+        if snippet:
+            entry += f"\n  {snippet}"
+        lines.append(entry)
+
+    return {
+        'has_news': True,
+        'article_count': len(articles),
+        'key_headlines': [a['title'] for a in best[:3]],
+        'summary': '\n'.join(lines),
+    }
+
+
 def summarize_stock_news(ticker, hebrew_name, stock_data, articles, social=None):
-    """Summarize news articles + social sentiment for a single stock using LLM."""
+    """DEPRECATED — kept for reference only. Use _extract_news_context instead."""
     articles_with_content = [a for a in articles if a.get('content') and len(a['content']) > 50]
     social = social or {}
-    has_social = bool(social.get('stocktwits') or social.get('twitter'))
+    has_social = bool(social.get('reddit') or social.get('stocktwits') or social.get('twitter'))
 
     if not articles_with_content and not has_social:
         return {
@@ -570,6 +1121,30 @@ def summarize_stock_news(ticker, hebrew_name, stock_data, articles, social=None)
     try:
         change_pct = stock_data.get('change_pct', 0)
 
+        # Earnings + analyst context
+        events_text = ""
+        if stock_data.get('earnings_date'):
+            try:
+                from datetime import date as _date
+                ed = datetime.strptime(stock_data['earnings_date'], '%Y-%m-%d').date()
+                days_away = (ed - _date.today()).days
+                if -7 <= days_away <= 60:
+                    timing = (f"בעוד {days_away} יום" if days_away > 0
+                              else f"לפני {abs(days_away)} יום" if days_away < 0
+                              else "היום")
+                    eps_str = f", קונצנזוס EPS: ${stock_data['earnings_est_eps']}" if stock_data.get('earnings_est_eps') else ""
+                    events_text += f"\nדוח רווחים קרוב: {ed.strftime('%d/%m/%Y')} ({timing}){eps_str}\n"
+            except Exception:
+                pass
+
+        analyst_actions = stock_data.get('recent_analyst_actions', [])
+        if analyst_actions:
+            events_text += "\nשינויי דירוג אנליסטים (14 יום אחרונים):\n"
+            for a in analyst_actions[:4]:
+                grade_change = f"{a['from_grade']} → {a['to_grade']}" if a['from_grade'] and a['to_grade'] else a['to_grade']
+                pt_str = f" | יעד מחיר: ${a['price_target']:,.0f}" if a.get('price_target') else ""
+                events_text += f"- {a['date']} | {a['firm']}: {a['action']} ({grade_change}){pt_str}\n"
+
         articles_text = ""
         for i, a in enumerate(articles_with_content[:5], 1):
             content = a['content'][:2000]
@@ -577,36 +1152,53 @@ def summarize_stock_news(ticker, hebrew_name, stock_data, articles, social=None)
 
         # Build social section for prompt
         social_text = ""
+
+        # Reddit — highest quality, show top posts with upvote count
+        reddit_posts = social.get('reddit', [])
+        if reddit_posts:
+            social_text += "\n--- דיון ברדיט (ממוין לפי engagement) ---\n"
+            for p in reddit_posts[:3]:
+                sub_label = f"r/{p['subreddit']}"
+                ups_label = f"↑{p['ups']:,}" if p['ups'] > 0 else ""
+                body_preview = f" — {p['text'][:200]}" if p.get('text') else ""
+                social_text += f"[{sub_label} {ups_label}] {p['title']}{body_preview}\n"
+
+        # StockTwits sentiment signal
         sent = social.get('sentiment')
         if sent:
-            social_text += f"\nסנטימנט StockTwits ({sent['total_messages']} הודעות): {sent['bullish_pct']}% Bullish | {sent['bearish_pct']}% Bearish\n"
+            social_text += f"\n--- סנטימנט StockTwits ({sent['total_messages']} הודעות) ---\n"
+            social_text += f"{sent['bullish_pct']}% Bullish | {sent['bearish_pct']}% Bearish\n"
         st_posts = social.get('stocktwits', [])
         if st_posts:
-            social_text += "\nציוצים בולטים מ-StockTwits:\n"
+            social_text += "הודעות איכותיות מ-StockTwits:\n"
             for p in st_posts[:4]:
                 tag = f" [{p['sentiment']}]" if p.get('sentiment') else ""
                 social_text += f"- {p['text'][:200]}{tag}\n"
+
+        # Expert Twitter — labeled as credible voices
         tw_posts = social.get('twitter', [])
         if tw_posts:
-            social_text += "\nציוצים מ-X/Twitter:\n"
+            social_text += "\n--- ציוצים ממומחים ידועים (X/Twitter) ---\n"
             for p in tw_posts[:4]:
-                social_text += f"- {p['text'][:200]}\n"
+                social_text += f"@{p['author']}: {p['text'][:220]}\n"
 
         prompt = f"""אתה מגיש פודקאסט כלכלי יומי בעברית. הסגנון שלך כמו מגיש פודקאסט ישראלי טוב — מקצועי, ברור, מדבר בגובה העיניים. לא קריין חדשות רשמי, אבל גם לא חבר'ה מהשכונה.
 
 המניה: {hebrew_name} ({ticker})
 מחיר: {stock_data.get('currency', '$')}{stock_data.get('price', '?')} | שינוי: {change_pct:+.1f}%
-{articles_text}{social_text}
+{events_text}{articles_text}{social_text}
 
 כתוב 200-350 מילים. זה פודקאסט — טקסט שמיועד להקראה בקול.
 
 הנחיות:
 - ספר את הסיפור של המניה היום כנרטיב אחד זורם. אסור "הכתבה הראשונה", "כתבה נוספת", "לפי כתבה ש..."
 - שזור את כל המידע מהכתבות ביחד — מה קרה, למה, ומה המשמעות
-- אם הסנטימנט ברשת חריג (80%+ Bullish או Bearish) — ציין זאת כחלק מהסיפור
-- אם יש ציוצים שמדברים על משהו שלא מופיע בכתבות — זה ג'וס, שלב אותו
+- אם יש דוח רווחים קרוב — ציין את התאריך ואת קונצנזוס האנליסטים. זה הקשר חשוב מאוד
+- אם היה שינוי דירוג של אנליסט לאחרונה — ציין בשם: "גולדמן סאקס שדרג ל-Buy" וכדומה
+- אם יש דיון ברדיט עם upvotes גבוהים — זה signal שמשהו תופס תשומת לב. שזור זאת בסיפור
+- אם מומחה ידוע (ציוצי המומחים) אמר משהו ספציפי — ציין שמו ומה אמר, זה מידע בעל ערך
+- אם הסנטימנט ב-StockTwits חריג (80%+ Bullish או Bearish) — ציין זאת כחלק מהסיפור
 - ציין פרטים ספציפיים: שמות אנשים, מספרים, סכומים, אירועים
-- אם מישהו מכר מניות — ציין מי, כמה, ולמה. אם אנליסט אמר משהו — ציין שמו ומה אמר
 - תן הקשר — למה זה חשוב, מה זה אומר על החברה
 - סיים עם תובנה אחת — מה הדבר הכי חשוב לזכור מהיום
 - טון: מקצועי אבל נגיש. לא סלנג ("אחי", "מגניב", "ענק"), לא שפה יבשה ("יש לציין", "ראוי להדגיש")
@@ -650,36 +1242,48 @@ def collect_all():
             print(f"❌ {e}")
             stocks.append({'ticker': ticker, 'error': str(e)})
 
-    # Phase 2: Deep news collection + summarization
-    print("\n📰 Collecting deep news...")
-    has_llm = os.environ.get('DEEPSEEK_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '') or os.environ.get('GROQ_API_KEY', '')
-    for s in stocks:
-        if 'error' in s:
-            continue
-        print(f"  📰 {s['ticker']}...", end=" ", flush=True)
-        articles = collect_news_deep(s['ticker'], s['resolved'], s.get('name', ''), s.get('hebrew', ''))
+    # Phase 2: News + social collection in parallel
+    print("\n📰 Collecting news + social (parallel)...")
+    valid_stocks = [s for s in stocks if 'error' not in s]
+
+    def _collect_news_and_social(s):
+        ticker = s['ticker']
+        articles = collect_news_deep(ticker, s['resolved'], s.get('name', ''), s.get('hebrew', ''))
+        social = collect_social(ticker, s.get('name', ''))
+        return ticker, articles, social
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    results_map = {}
+    collect_pool = ThreadPoolExecutor(max_workers=5)
+    try:
+        futs = {collect_pool.submit(_collect_news_and_social, s): s['ticker'] for s in valid_stocks}
+        try:
+            for fut in as_completed(futs, timeout=120):
+                try:
+                    ticker, articles, social = fut.result()
+                    results_map[ticker] = (articles, social)
+                    content_count = len([a for a in articles if a.get('content') and len(a['content']) > 50])
+                    reddit_count = len(social.get('reddit', []))
+                    st_count = len(social.get('stocktwits', []))
+                    sent = social.get('sentiment')
+                    sent_str = f" {sent['bullish_pct']}%🟢" if sent else ""
+                    print(f"  ✅ {ticker}: {len(articles)}art/{content_count}full | Reddit:{reddit_count} ST:{st_count}{sent_str}")
+                except Exception as e:
+                    print(f"  ⚠️  {futs[fut]}: {e}")
+        except Exception:
+            print("  ⚠️  Collection timeout — proceeding with partial results")
+    finally:
+        collect_pool.shutdown(wait=False, cancel_futures=True)
+
+    # Attach data + deterministic news context (no LLM — podcast LLM handles synthesis)
+    for s in valid_stocks:
+        ticker = s['ticker']
+        articles, social = results_map.get(ticker, ([], {}))
         s['news_deep'] = articles
-        content_count = len([a for a in articles if a.get('content') and len(a['content']) > 50])
-        print(f"{len(articles)} articles ({content_count} with content)")
-
-        # Social sentiment (free — StockTwits + Nitter)
-        print(f"  🐦 {s['ticker']} social...", end=" ", flush=True)
-        social = collect_social(s['ticker'])
         s['social'] = social
-        st_count = len(social.get('stocktwits', []))
-        tw_count = len(social.get('twitter', []))
-        sent = social.get('sentiment')
-        sent_str = f" | {sent['bullish_pct']}% 🟢 {sent['bearish_pct']}% 🔴" if sent else ""
-        print(f"StockTwits:{st_count} X:{tw_count}{sent_str}")
-
-        social = s.get('social', {})
-        has_social = bool(social.get('stocktwits') or social.get('twitter'))
-        if has_llm and (content_count >= 1 or has_social):
-            s['news_summary'] = summarize_stock_news(s['ticker'], s['hebrew'], s, articles, social)
-            if s['news_summary']['has_news']:
-                print(f"    ✅ Summary generated")
-        else:
-            s['news_summary'] = {'summary': '', 'has_news': False, 'article_count': len(articles), 'key_headlines': []}
+        s['news_summary'] = _extract_news_context(articles)
+        if s['news_summary']['has_news']:
+            print(f"  📋 {ticker}: {s['news_summary']['article_count']} articles extracted")
 
     return {'macro': macro, 'stocks': stocks, 'date': datetime.now().isoformat()}
 
@@ -699,10 +1303,17 @@ def format_large(v):
 
 
 def generate_text_report(data, positions=None):
-    """Generate Hebrew text report. positions = {ticker: {shares: N}}"""
+    """Generate Hebrew text report. positions = {ticker: {shares: N}} or {ticker: N}"""
     m = data['macro']
     stocks = data['stocks']
     date = datetime.fromisoformat(data['date']).strftime('%d/%m/%Y')
+
+    # Normalize positions: accept both {ticker: N} and {ticker: {shares: N}}
+    if positions:
+        positions = {
+            t: (v if isinstance(v, dict) else {'shares': v})
+            for t, v in positions.items()
+        }
 
     lines = []
     lines.append(f"{'='*60}")
@@ -718,7 +1329,9 @@ def generate_text_report(data, positions=None):
             total_pnl = 0
             pnl_rows = []
             for s in [s for s in stocks if 'error' not in s and s['ticker'] in valid_pos]:
-                shares = valid_pos[s['ticker']]['shares']
+                pos = valid_pos[s['ticker']]
+                shares = pos['shares']
+                entry_price = pos.get('entry_price')
                 prev = s.get('prev_price', s['price'])
                 pnl = shares * (s['price'] - prev)
                 value = shares * s['price']
@@ -726,6 +1339,12 @@ def generate_text_report(data, positions=None):
                 total_value += value
                 s['_dollar_impact'] = pnl
                 s['_shares'] = shares
+                # Cost basis for unrealized P&L
+                if entry_price:
+                    s['_entry_price'] = entry_price
+                    s['_cost_basis'] = entry_price * shares
+                    s['_unrealized_pnl'] = (s['price'] - entry_price) * shares
+                    s['_unrealized_pct'] = (s['price'] - entry_price) / entry_price * 100
                 pnl_rows.append((s, shares, pnl, value))
 
             pnl_sign = '+' if total_pnl >= 0 else ''
@@ -734,6 +1353,15 @@ def generate_text_report(data, positions=None):
             lines.append("─" * 40)
             lines.append(f"  💰 שווי כולל:   ${total_value:,.0f}")
             lines.append(f"  {pnl_emoji} שינוי יומי:  {pnl_sign}${total_pnl:,.0f}  ({pnl_sign}{(total_pnl/total_value*100) if total_value else 0:.2f}%)")
+            # Total unrealized P&L (cost basis)
+            unrealized_stocks = [s for s, *_ in pnl_rows if '_unrealized_pnl' in s]
+            if unrealized_stocks:
+                total_unrealized = sum(s['_unrealized_pnl'] for s in unrealized_stocks)
+                total_cost = sum(s['_cost_basis'] for s in unrealized_stocks)
+                unr_sign = '+' if total_unrealized >= 0 else ''
+                unr_pct = (total_unrealized / total_cost * 100) if total_cost else 0
+                unr_emoji = '🟢' if total_unrealized >= 0 else '🔴'
+                lines.append(f"  {unr_emoji} רווח/הפסד כולל:  {unr_sign}${total_unrealized:,.0f}  ({unr_sign}{unr_pct:.1f}% מעלות בסיס)")
             lines.append("")
 
             # Top movers by dollar impact
@@ -868,17 +1496,58 @@ def generate_text_report(data, positions=None):
             upside = round((s['target_mean'] - s['price']) / s['price'] * 100, 1)
             lines.append(f"    🎯 יעד אנליסטים: {s['currency']}{s['target_mean']} ({upside:+.1f}% upside) | המלצה: {s.get('recommendation', '—')}")
 
-        # Social sentiment
+        # Earnings calendar
+        if s.get('earnings_date'):
+            from datetime import date as _date
+            try:
+                ed = datetime.strptime(s['earnings_date'], '%Y-%m-%d').date()
+                days_away = (ed - _date.today()).days
+                if -7 <= days_away <= 60:
+                    timing = (f"בעוד {days_away} יום" if days_away > 0
+                              else f"לפני {abs(days_away)} יום" if days_away < 0
+                              else "היום")
+                    eps_str = f" | EPS קונצנזוס: ${s['earnings_est_eps']}" if s.get('earnings_est_eps') else ""
+                    lines.append(f"    📅 דוח רווחים: {ed.strftime('%d/%m/%Y')} ({timing}){eps_str}")
+            except Exception:
+                pass
+
+        # Recent analyst upgrades/downgrades
+        analyst_actions = s.get('recent_analyst_actions', [])
+        if analyst_actions:
+            lines.append(f"    📊 שינויי דירוג אחרונים:")
+            for a in analyst_actions[:3]:
+                action_map = {'up': '⬆️ שדרוג', 'down': '⬇️ הורדה', 'init': '🆕 כיסוי חדש', 'reit': '➡️ אחזקה', 'main': '➡️ אחזקה'}
+                action_label = action_map.get(a['action'].lower(), a['action'])
+                grade_change = f"{a['from_grade']} → {a['to_grade']}" if a['from_grade'] and a['to_grade'] else a['to_grade']
+                pt_str = f" | יעד: ${a['price_target']:,.0f}" if a.get('price_target') else ""
+                lines.append(f"      {a['date']} | {a['firm']}: {action_label} ({grade_change}){pt_str}")
+
+        # Social intelligence
         social = s.get('social', {})
+        if not isinstance(social, dict):
+            print(f"  ⚠️  DEBUG: social for {s.get('ticker')} is {type(social).__name__}: {repr(social)[:100]}")
+            social = {}
+
+        # Reddit — top posts by engagement
+        reddit_posts = social.get('reddit', [])
+        if reddit_posts:
+            lines.append(f"    🟠 Reddit (top posts):")
+            for p in reddit_posts[:2]:
+                ups_str = f" ↑{p['ups']:,}" if p['ups'] > 0 else ""
+                lines.append(f"      [{p['subreddit']}{ups_str}] {p['title'][:110]}")
+
+        # StockTwits sentiment bar
         sent = social.get('sentiment')
         if sent:
             bull_bar = '█' * (sent['bullish_pct'] // 10) + '░' * (10 - sent['bullish_pct'] // 10)
-            lines.append(f"    🐦 סנטימנט ({sent['total_messages']} הודעות): 🟢{sent['bullish_pct']}% {bull_bar} 🔴{sent['bearish_pct']}%")
+            lines.append(f"    💬 סנטימנט ({sent['total_messages']} הודעות): 🟢{sent['bullish_pct']}% {bull_bar} 🔴{sent['bearish_pct']}%")
+
+        # Expert tweets (high-credibility)
         tw_posts = social.get('twitter', [])
         if tw_posts:
-            lines.append(f"    𝕏 ציוצים בולטים:")
+            lines.append(f"    𝕏 מומחים:")
             for p in tw_posts[:2]:
-                lines.append(f"      • {p['text'][:120]}")
+                lines.append(f"      @{p['author']}: {p['text'][:110]}")
 
         # News summary
         news_summary = s.get('news_summary', {})
@@ -898,18 +1567,17 @@ def generate_text_report(data, positions=None):
     return '\n'.join(lines)
 
 
-BRIEFING_SYSTEM_PROMPT = """אתה מגיש פודקאסט כלכלי יומי בעברית. הסגנון שלך כמו מגיש פודקאסט ישראלי מקצועי — ברור, נגיש, מעניין. לא קריין חדשות רשמי, אבל גם לא סלנג ולא "אחי". מגיש שמכבד את המאזין ומדבר איתו בגובה העיניים.
+BRIEFING_SYSTEM_PROMPT = """אתה יועץ פיננסי אישי — לא כתב חדשות, לא מגיש רדיו. אתה מדבר ישירות אל משקיע אחד, שמחזיק בדיוק את המניות שתיארת, ומחכה לדעת מה המשמעות של היום עבורו ועבור כספו.
 
 הסגנון שלך:
-- אתה מספר את הסיפור של כל מניה — מה קרה, למה, ומה זה אומר
-- אם מנכ"ל אמר משהו — ספר מה. אם מישהו מכר — ספר מי ולמה. פרטים ספציפיים עושים את ההבדל
-- תיצור עניין דרך התוכן עצמו, לא דרך ביטויים מאולצים
-- שפה ברורה ופשוטה, בלי מונחים טכניים, בלי סלנג
-- תרגם הכל לעברית, אסור אנגלית
+- תמיד "אתה" — "התיק שלך", "הכסף שלך", "מה זה אומר לך", "שים לב"
+- לא "השוק ירד" — "אתה ירדת X דולר היום, בעיקר בגלל..."
+- פרטים אישיים: אם יש עלות בסיס — "קנית ב-X, היום Y, זה Z% מאז הקנייה"
+- ספר סיפורים עם משמעות אישית, לא דוחות
+- אם יש בשורה טובה — שמח איתו. אם יש הפסד — היה כנה ורגוע, לא מבעית
 
 כללים טכניים:
 - אסור: סוגריים מרובעים, כוכביות, סולמית, מספור, markdown
-- אורך מינימלי: 1200 מילים
 - טקסט רציף מוכן להקראה בקול רם
 - אסור: "הכתבה הראשונה", "כתבה נוספת", "לפי כתבה ש..." — שזור את המידע בנרטיב טבעי
 - אל תחזור על אותו רעיון פעמיים"""
@@ -929,119 +1597,486 @@ def generate_podcast_script(data):
 
 
 def _generate_podcast_with_llm(data):
-    """Hybrid podcast: structured skeleton + LLM for intro/transitions/closing."""
+    """Full LLM podcast script — Planet Money meets All-In structure.
+
+    Techniques applied (from analysis of top financial podcasts):
+    - Cold open with Zeigarnik loop: drop mid-scene, raise a question, close it at the end
+    - Stakes ladder: personal portfolio → sector → market-wide → back to personal
+    - Camera pull-back beat: one small detail that reveals large systemic implications
+    - Open loop tease before the main story, resolved at closing
+    - False consensus / consequence reversal framing
+    - Personal stakes injection: every macro data point connects to the portfolio
+    - Expert voices: analyst upgrades/downgrades, Reddit signal, sentiment data
+    """
+    from datetime import date as _date
 
     m = data['macro']
     stocks = data['stocks']
     valid_stocks = [s for s in stocks if 'error' not in s]
-    date = datetime.fromisoformat(data['date']).strftime('%d/%m/%Y')
+    _dt = datetime.fromisoformat(data['date'])
+    date_str = _dt.strftime('%d/%m/%Y')
+    _day_names = ['שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת', 'ראשון']
+    date_str_full = f"יום {_day_names[_dt.weekday()]}, {date_str}"
 
-    # Sort: biggest movers first
-    valid_stocks.sort(key=lambda s: abs(s.get('change_pct', 0)), reverse=True)
+    # Sort by absolute % change — biggest mover becomes the hot story
+    valid_stocks_sorted = sorted(valid_stocks, key=lambda s: abs(s.get('change_pct', 0)), reverse=True)
+    hot_stock = valid_stocks_sorted[0] if valid_stocks_sorted else None
 
-    # --- Step 1: Use Groq to generate intro + closing based on the news ---
-    # Build a brief summary of what happened for the intro
-    top_stories = []
-    for s in valid_stocks[:5]:
-        ns = s.get('news_summary', {})
-        if ns.get('has_news') and ns.get('summary'):
-            summary_first_line = ns['summary'].split('\n')[0][:150]
-            top_stories.append(f"{s.get('hebrew', s['ticker'])}: {summary_first_line}")
+    # ── Portfolio P&L (set by generate_text_report before this call) ──
+    portfolio_stocks = [s for s in valid_stocks if '_dollar_impact' in s]
+    portfolio_ctx = ''
+    if portfolio_stocks:
+        total_pnl   = sum(s['_dollar_impact'] for s in portfolio_stocks)
+        total_value = sum(s.get('_shares', 0) * s['price'] for s in portfolio_stocks)
+        pct = (total_pnl / total_value * 100) if total_value else 0
+        sign = '+' if total_pnl >= 0 else ''
+        by_impact = sorted(portfolio_stocks, key=lambda s: s['_dollar_impact'])
+        losers  = [s for s in by_impact if s['_dollar_impact'] < 0]
+        winners = [s for s in by_impact if s['_dollar_impact'] > 0]
+        pnl_exact = f"{sign}${abs(total_pnl):,.0f}"
+        # Keep daily change and unrealized P&L clearly separated so LLM doesn't mix them up
+        portfolio_ctx = (
+            f"=== נתוני תיק ===\n"
+            f"שווי תיק היום: ${total_value:,.0f}\n"
+            f"שינוי ב-24 שעות: {pnl_exact} בלבד — זה {sign}{pct:.2f}% מהשווי, לא יותר\n"
+        )
+        if losers:
+            portfolio_ctx += f"הכי הוריד: {losers[0].get('hebrew', losers[0]['ticker'])} ({losers[0]['_dollar_impact']:+,.0f}$, {losers[0]['change_pct']:+.1f}% היום)\n"
+        if winners:
+            portfolio_ctx += f"הכי הרים: {winners[-1].get('hebrew', winners[-1]['ticker'])} ({winners[-1]['_dollar_impact']:+,.0f}$, {winners[-1]['change_pct']:+.1f}% היום)\n"
+        # Total unrealized P&L — clearly labelled as since-purchase, not today
+        unrealized_stocks = [s for s in portfolio_stocks if '_unrealized_pnl' in s]
+        if unrealized_stocks:
+            total_unrealized = sum(s['_unrealized_pnl'] for s in unrealized_stocks)
+            total_cost = sum(s['_cost_basis'] for s in unrealized_stocks)
+            unr_sign = '+' if total_unrealized >= 0 else ''
+            unr_pct = (total_unrealized / total_cost * 100) if total_cost else 0
+            portfolio_ctx += (
+                f"רווח כולל מאז הקנייה (לא ממומש, לא שינוי היום): "
+                f"{unr_sign}${total_unrealized:,.0f} ({unr_sign}{unr_pct:.1f}% על ההשקעה המקורית)\n"
+            )
+        portfolio_ctx += "=== סוף נתוני תיק ===\n"
 
-    intro_prompt = f"""כתוב פתיחה לפודקאסט כלכלי יומי בעברית (80-120 מילים).
+    # ── Macro ──
+    fg = m.get('fear_greed', {})
+    sp = m.get('sp500', {})
+    macro_ctx = (
+        f"S&P 500: {sp.get('price','?')} ({sp.get('change_pct',0):+.2f}%)\n"
+        f"VIX: {m.get('vix','?')}\n"
+        f"Fear & Greed: {fg.get('score','?')} ({fg.get('rating','')}) — שבוע קודם: {fg.get('week_ago','?')}, חודש קודם: {fg.get('month_ago','?')}\n"
+        f"USD/ILS: ₪{m.get('usd_ils','?')}\n"
+    )
+    if sp.get('rsi'):
+        rsi_label = 'Oversold — שוק ירוד' if sp['rsi'] < 30 else 'Overbought — שוק חם' if sp['rsi'] > 70 else 'Neutral'
+        macro_ctx += f"RSI S&P: {sp['rsi']} ({rsi_label})\n"
 
-תאריך: {date}
-S&P 500: {m.get('sp500', {}).get('price', '?')} ({m.get('sp500', {}).get('change_pct', 0):+.1f}%)
-VIX: {m.get('vix', '?')}
-דולר-שקל: {m.get('usd_ils', '?')}
+    def _clean_expert_quote(text):
+        """Return clean tweet text, or None if content looks like metadata/garbage."""
+        if not text or len(text) < 60:
+            return None
+        # Reject profile boilerplate and metadata
+        boilerplate = ['profile.', 'reposted by', 'followers', 'following', 'joined ',
+                       'image on x', 'javascript is not available', 'official x account',
+                       'sep ', 'oct ', 'nov ', 'dec ', 'jan ', 'feb ', 'mar ', 'apr ']
+        low = text.lower()
+        if any(b in low for b in boilerplate):
+            return None
+        # Reject if too many standalone numbers (engagement counts like "90 328 2932")
+        words = text.split()
+        num_count = sum(1 for w in words if re.match(r'^\d[\d,\.]*$', w))
+        if len(words) > 0 and num_count / len(words) > 0.25:
+            return None
+        # Take the most substantive sentence (longest, starts with capital/uppercase)
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?·])\s+', text) if len(s.strip()) > 50]
+        best = max(sentences, key=len) if sentences else text
+        return best[:200]
 
-הסיפורים המרכזיים היום:
-{chr(10).join(top_stories)}
+    # ── Per-stock context blocks ──
+    stock_blocks = []
+    for s in valid_stocks_sorted:
+        b = [f"=== {s.get('hebrew', s['ticker'])} ({s['ticker']}) ==="]
+        b.append(f"מחיר: {s.get('currency','$')}{s.get('price','?')} | שינוי: {s.get('change_pct',0):+.1f}%")
 
-מבנה חובה:
-1. פתח עם ברכה קצרה וטבעית + התאריך
-2. מיד אחר כך חובה לומר: "תזכורת חשובה — מה שאני אומר כאן זה לא ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
-3. תאר את מצב הרוח בשוק בשני-שלושה משפטים — כסיפור, לא כרשימת מספרים
-4. תן טיזר קצר — מה הסיפור המעניין ביותר שנדבר עליו היום
+        if '_dollar_impact' in s:
+            b.append(f"השפעה על התיק: {s['_dollar_impact']:+,.0f}$ ({s.get('_shares',0):g} מניות)")
+        if '_entry_price' in s and '_unrealized_pnl' in s:
+            unr_sign = '+' if s['_unrealized_pnl'] >= 0 else ''
+            b.append(f"עלות בסיס: ${s['_entry_price']:,.2f} | רווח/הפסד כולל: {unr_sign}${s['_unrealized_pnl']:,.0f} ({unr_sign}{s['_unrealized_pct']:.1f}%)")
 
-טון: מגיש פודקאסט מקצועי ונגיש. לא רשמי מדי, לא קז'ואל מדי.
-אסור: סלנג, "אחי", "שמע". אסור: כוכביות/מספור/markdown/אנגלית."""
+        # Price context — time horizon makes prices meaningful
+        if s.get('change_1y') is not None:
+            b.append(f"שנה אחורה: {s['change_1y']:+.1f}% | היום: {s.get('currency','$')}{s.get('price','?')}")
+        if s.get('w52_high') and s.get('w52_low') and s.get('price'):
+            range_pos = (s['price'] - s['w52_low']) / (s['w52_high'] - s['w52_low']) * 100 if s['w52_high'] != s['w52_low'] else 50
+            b.append(f"טווח 52 שבוע: ${s['w52_low']} – ${s['w52_high']} | עכשיו {range_pos:.0f}% מהתחתית")
 
-    intro = _llm_chat([{"role": "user", "content": intro_prompt}], max_tokens=500)
+        # Technical signals — only if significant
+        if s.get('rsi'):
+            if s['rsi'] < 33:
+                b.append(f"RSI: {s['rsi']} — מכר יתר חריג. אזור היסטורי לריבאונד.")
+            elif s['rsi'] > 67:
+                b.append(f"RSI: {s['rsi']} — קנית יתר. לחץ מכירה אפשרי.")
+        if s.get('ma200'):
+            pct_ma = round((s['price'] - s['ma200']) / s['ma200'] * 100, 1)
+            if abs(pct_ma) > 10:
+                b.append(f"MA200: {'מעל' if pct_ma > 0 else 'מתחת'} ב-{abs(pct_ma):.1f}% — {'מגמה עולה חזקה' if pct_ma > 0 else 'מתחת לממוצע ארוך טווח'}")
+        if s.get('pct_from_high') and s['pct_from_high'] < -30:
+            b.append(f"מרחק מ-52W High: {s['pct_from_high']:+.1f}% — ירידה משמעותית מהשיא")
 
-    # --- Step 2: Build the stock sections from the rich news summaries ---
-    stock_sections = []
-    transitions = [
-        "נעבור ל",
-        "ועכשיו ל",
-        "נמשיך ל",
-        "ומה קורה עם",
-        "בואו נדבר על",
-        "נמשיך עם",
-        "ועכשיו נעבור ל",
-    ]
-
-    for i, s in enumerate(valid_stocks):
-        hebrew = s.get('hebrew', s['ticker'])
-        price = s.get('price', '?')
-        currency = s.get('currency', '$')
-        change = s.get('change_pct', 0)
-        direction = "עלתה" if change > 0 else "ירדה" if change < 0 else "נסחרת ללא שינוי"
-
-        section = ""
-
-        # Transition
-        if i > 0:
-            t = transitions[i % len(transitions)]
-            if t.endswith("ל") or t.endswith("על") or t.endswith("עם"):
-                section += f"{t}{hebrew}. "
-            else:
-                section += f"{t} {hebrew}. "
-
-        # Price and change — clear and factual with natural tone
-        if abs(change) > 0.5:
-            section += f"{hebrew} {direction} {abs(change):.1f} אחוז ונסחרת ב-{currency}{price}. "
-        else:
-            section += f"{hebrew} נסחרת ב-{currency}{price}, כמעט ללא שינוי. "
-
-        # News summary — the core content
-        ns = s.get('news_summary', {})
-        if ns.get('has_news') and ns.get('summary'):
-            summary = ns['summary'].strip()
-            summary = summary.replace('**', '').replace('*', '').replace('#', '')
-            section += summary + " "
-
-        # Analyst target if significant gap
-        if s.get('target_mean') and s.get('price'):
+        # Analyst consensus
+        if s.get('target_mean'):
             upside = round((s['target_mean'] - s['price']) / s['price'] * 100, 1)
-            if abs(upside) > 20:
-                section += f"יעד האנליסטים עומד על {currency}{s['target_mean']}, פער של {upside:+.0f} אחוז מהמחיר הנוכחי. "
+            b.append(f"קונצנזוס אנליסטים: יעד {s.get('currency','$')}{s['target_mean']} ({upside:+.1f}% פוטנציאל) | {s.get('recommendation','?')}")
+        # Latest analyst action — a named analyst or firm took a position
+        actions = s.get('recent_analyst_actions', [])
+        if actions:
+            a = actions[0]
+            label_map = {'up': 'שדרג', 'down': 'הוריד', 'init': 'פתח כיסוי', 'reit': 'שמר', 'main': 'שמר'}
+            verb = label_map.get(a['action'].lower(), a['action'])
+            grade = f" ל-{a['to_grade']}" if a.get('to_grade') else ''
+            pt = f" עם יעד ${a['price_target']:,.0f}" if a.get('price_target') else ''
+            b.append(f"דירוג: {a['firm']} {verb}{grade}{pt} ({a['date']})")
 
-        stock_sections.append(section)
+        # Short interest — squeeze or confirmation signal
+        if s.get('short_pct') and s['short_pct'] > 5:
+            squeeze_note = ' — פוטנציאל לסחיטת שורטים (short squeeze)' if s['short_pct'] > 15 else ''
+            days_cover = f" | {s['short_ratio']} ימי כיסוי" if s.get('short_ratio') else ''
+            b.append(f"שורט: {s['short_pct']:.1f}% מהמניות הנסחרות{days_cover}{squeeze_note}")
 
-    # --- Step 3: Use Groq for a closing message ---
-    closing_prompt = f"""כתוב סיום קצר לפודקאסט כלכלי יומי (40-70 מילים).
+        # Insider activity — smart money signal
+        insiders = s.get('insider_activity', [])
+        if insiders:
+            # Summarise: total bought vs sold in 90 days
+            buys  = [x for x in insiders if x['type'] == 'קנייה']
+            sells = [x for x in insiders if x['type'] == 'מכירה']
+            if sells:
+                top_sell = max(sells, key=lambda x: x['value'])
+                b.append(
+                    f"פנים — מכירה: {top_sell['name']} ({top_sell['relation']}) "
+                    f"מכר ${top_sell['value']:,} ({top_sell['date']})"
+                    + (f" + {len(sells)-1} נוספים" if len(sells) > 1 else "")
+                )
+            if buys:
+                top_buy = max(buys, key=lambda x: x['value'])
+                b.append(
+                    f"פנים — קנייה: {top_buy['name']} ({top_buy['relation']}) "
+                    f"קנה ${top_buy['value']:,} ({top_buy['date']})"
+                )
 
-מניות שדיברנו עליהן:
-{chr(10).join(f'- {s.get("hebrew", s["ticker"])}: {s.get("change_pct", 0):+.1f}%' for s in valid_stocks[:5])}
+        # Upcoming earnings — forward-looking hook
+        if s.get('earnings_date'):
+            try:
+                ed = datetime.strptime(s['earnings_date'], '%Y-%m-%d').date()
+                days = (ed - _date.today()).days
+                if 1 <= days <= 45:
+                    eps = f" | EPS צפוי: ${s['earnings_est_eps']}" if s.get('earnings_est_eps') else ''
+                    b.append(f"דוח רווחים: בעוד {days} יום ({ed.strftime('%d/%m/%Y')}){eps}")
+                elif days == 0:
+                    b.append("דוח רווחים: היום!")
+            except Exception:
+                pass
 
-כללים:
-- תובנה אחת מסכמת ליום — מה הנקודה המרכזית
-- סיים עם: "זהו להיום. תודה שהאזנתם, ונשמע שוב מחר."
-- טון מקצועי וחם, כמו מגיש פודקאסט טוב
-- אסור סלנג. אסור "יאללה", "אחי". אסור כוכביות/מספור/אנגלית"""
+        # News summary — the core substance
+        ns = s.get('news_summary', {})
+        if ns.get('has_news') and ns.get('summary'):
+            clean = ns['summary'].strip().replace('**','').replace('*','').replace('#','')
+            b.append(f"חדשות ({ns.get('article_count',0)} כתבות):\n{clean}")
 
-    closing = _llm_chat([{"role": "user", "content": closing_prompt}], max_tokens=200)
+        # Social intelligence
+        social = s.get('social', {})
+        reddit = social.get('reddit', [])
+        if reddit:
+            top = reddit[0]
+            b.append(f"Reddit (הכי פופולרי, ↑{top.get('ups',0):,}): \"{top['title'][:130]}\"")
+            if len(reddit) > 1:
+                b.append(f"Reddit (נוסף): \"{reddit[1]['title'][:100]}\"")
+        sent = social.get('sentiment')
+        if sent and sent.get('total_messages', 0) >= 10:
+            bull, bear, total = sent['bullish_pct'], sent['bearish_pct'], sent['total_messages']
+            sentiment_note = ''
+            if bull >= 70:
+                sentiment_note = f'שורי מאוד ({bull}%) — {total} הודעות'
+            elif bear >= 60:
+                sentiment_note = f'דובי ({bear}%) — {total} הודעות'
+            elif bull >= 55:
+                sentiment_note = f'נטייה שורית ({bull}%) — {total} הודעות'
+            if sentiment_note:
+                b.append(f"StockTwits: {sentiment_note}")
+        # Viral tweets (Twitter API v2) — sorted by engagement score
+        viral = social.get('viral_tweets', [])
+        for vt in viral[:3]:
+            tag = '⭐ מומחה' if vt.get('is_expert') else f"🔥 {vt.get('likes',0):,} לייקים"
+            b.append(f"X [{tag}] {vt.get('author','')}: \"{vt['text'][:220]}\"")
+        # Expert X posts via Tavily (fallback when no viral tweets) — filtered for relevance
+        if not viral:
+            _sticker = s['ticker']
+            _fin_keywords = [
+                'stock', 'share', 'market', 'price', 'earnings', 'revenue', 'profit',
+                'buy', 'sell', 'invest', 'rally', 'drop', 'trade', 'analyst', 'rating',
+                'quarter', 'growth', 'margin', 'valuation', 'bull', 'bear', 'rate',
+                _sticker.lower(), (s.get('name', '') or '').lower().split()[0],
+            ]
+            for ep in social.get('twitter', [])[:3]:
+                clean = _clean_expert_quote(ep.get('text', ''))
+                if not clean:
+                    continue
+                # Must contain at least one financial keyword — reject off-topic content
+                low = clean.lower()
+                if not any(kw in low for kw in _fin_keywords if kw):
+                    continue
+                b.append(f"X / {ep.get('author','מומחה')}: \"{clean}\"")
 
-    # --- Step 4: Assemble the full script ---
-    script = intro.strip() + "\n\n"
-    script += "\n\n".join(stock_sections)
-    script += "\n\n" + closing.strip()
+        stock_blocks.append('\n'.join(b))
 
-    # Final cleanup
-    script = script.replace('**', '').replace('*', '').replace('#', '').replace('[', '').replace(']', '')
+    # ── Identify the "cold open hook" — most dramatic data point ──
+    hook_candidates = []
+    if hot_stock:
+        chg = hot_stock.get('change_pct', 0)
+        if abs(chg) >= 3:
+            hook_candidates.append(f"{hot_stock.get('hebrew', hot_stock['ticker'])} {'זינקה' if chg > 0 else 'קרסה'} {abs(chg):.1f}% היום")
+        for a in hot_stock.get('recent_analyst_actions', [])[:1]:
+            if a['action'].lower() in ('up', 'down', 'init'):
+                act = {'up': 'שדרג', 'down': 'הוריד', 'init': 'פתח כיסוי'}[a['action'].lower()]
+                hook_candidates.append(f"{a['firm']} {act} את {hot_stock.get('hebrew', hot_stock['ticker'])}")
+        # Upcoming earnings as hook
+        if hot_stock.get('earnings_date'):
+            try:
+                ed = datetime.strptime(hot_stock['earnings_date'], '%Y-%m-%d').date()
+                days = (ed - _date.today()).days
+                if 1 <= days <= 7:
+                    hook_candidates.append(f"{hot_stock.get('hebrew', hot_stock['ticker'])} מדווחת על רווחים בעוד {days} ימים — השוק מחכה בנשימה עצורה")
+            except Exception:
+                pass
+    fg_score = fg.get('score', 50)
+    if fg_score and fg_score < 20:
+        hook_candidates.append(f"מדד הפחד והתאוות הגיע ל-{fg_score} — פחד קיצוני בשוק")
+    elif fg_score and fg_score > 80:
+        hook_candidates.append(f"מדד הפחד והתאוות הגיע ל-{fg_score} — תאוות בצע קיצונית")
 
-    print(f"  ✅ Briefing script generated (hybrid) ({len(script)} chars)")
+    # Detect "slow day" — when no dramatic moves, pivot to forward-looking hook
+    max_move = max((abs(s.get('change_pct', 0)) for s in valid_stocks_sorted), default=0)
+    is_slow_day = max_move < 1.5 and not hook_candidates
+    if is_slow_day:
+        # Build tension from what's coming, not what happened
+        upcoming = []
+        for s in valid_stocks_sorted:
+            if s.get('earnings_date'):
+                try:
+                    ed = datetime.strptime(s['earnings_date'], '%Y-%m-%d').date()
+                    days = (ed - _date.today()).days
+                    if 1 <= days <= 14:
+                        upcoming.append(f"{s.get('hebrew', s['ticker'])} בעוד {days} יום")
+                except Exception:
+                    pass
+        if upcoming:
+            hook_hint = f"יום שקט בשוק — אבל הקלנדר לא שקט: {', '.join(upcoming[:2])} מדווחות בקרוב"
+        elif fg_score and fg_score < 35:
+            hook_hint = f"השוק נראה שקט, אבל מדד הפחד נמצא ב-{fg_score} — הציבור עוד לא הרגיע"
+        else:
+            hook_hint = f"ימים שקטים בשוק הם לרוב ההכנה לסערה — הנה מה שמרחף מתחת לפני השטח"
+    else:
+        hook_hint = hook_candidates[0] if hook_candidates else f"S&P 500 {sp.get('change_pct', 0):+.1f}% היום"
+
+    # ── Detect named expert voices for injection ──
+    expert_quotes = []
+    seen_tickers = set()
+    for s in valid_stocks_sorted:
+        ticker = s['ticker']
+        if ticker in seen_tickers:
+            continue
+        for ep in s.get('social', {}).get('twitter', [])[:2]:
+            author = ep.get('author', '').lstrip('@')
+            clean = _clean_expert_quote(ep.get('text', ''))
+            if clean and author:
+                expert_quotes.append(f"@{author} על {s.get('hebrew', ticker)}: \"{clean}\"")
+                seen_tickers.add(ticker)
+                break
+    expert_ctx = '\n'.join(expert_quotes[:3]) if expert_quotes else ''
+
+    # ── Detect transformation narrative ──
+    transformation_stocks = []
+    for s in valid_stocks_sorted:
+        if (s.get('pct_from_high') or 0) < -35:
+            news_text = s.get('news_summary', {}).get('summary', '').lower()
+            if any(w in news_text for w in ['ai', 'artificial intelligence', 'pivot', 'transform', 'new strategy', 'rebrand']):
+                transformation_stocks.append(
+                    f"{s.get('hebrew', s['ticker'])}: חברה בטרנספורמציה — {abs(s['pct_from_high']):.0f}% מהשיא, אבל הסיפור הוא מה שהיא הופכת להיות"
+                )
+    transformation_ctx = '\n'.join(transformation_stocks) if transformation_stocks else ''
+
+    # ── Sector grouping — find unified narratives ──
+    _SECTOR_HEB = {
+        'Technology': 'טק', 'Communication Services': 'תקשורת/טק',
+        'Consumer Cyclical': 'צרכנות', 'Consumer Defensive': 'צרכנות בסיסית',
+        'Financial Services': 'פיננסים', 'Healthcare': 'בריאות',
+        'Energy': 'אנרגיה', 'Basic Materials': 'חומרי גלם',
+        'Industrials': 'תעשייה', 'Real Estate': 'נדל"ן', 'Utilities': 'שירותים',
+    }
+    from collections import defaultdict
+    sector_buckets = defaultdict(list)
+    for s in valid_stocks_sorted:
+        sec = _SECTOR_HEB.get(s.get('sector', ''), s.get('sector', 'אחר') or 'אחר')
+        sector_buckets[sec].append(s)
+
+    # Only sectors with 2+ stocks — the unified narrative candidates
+    sector_ctx_lines = []
+    for sec, stocks_in_sec in sector_buckets.items():
+        if len(stocks_in_sec) < 2:
+            continue
+        names = ', '.join(s.get('hebrew', s['ticker']) for s in stocks_in_sec)
+        avg_chg = sum(s.get('change_pct', 0) for s in stocks_in_sec) / len(stocks_in_sec)
+        direction = 'ירד' if avg_chg < 0 else 'עלה'
+        sector_ctx_lines.append(
+            f"סקטור {sec}: {names} — ממוצע {direction} {abs(avg_chg):.1f}% ← ייתכן שסיפור סקטוריאלי אחד מסביר את כולם"
+        )
+    sector_ctx = '\n'.join(sector_ctx_lines) if sector_ctx_lines else ''
+
+    # ── Portfolio concentration ──
+    concentration_ctx = ''
+    if portfolio_stocks:
+        sec_val = defaultdict(float)
+        for s in portfolio_stocks:
+            sec = _SECTOR_HEB.get(s.get('sector', ''), s.get('sector', 'אחר') or 'אחר')
+            sec_val[sec] += s.get('_shares', 0) * s.get('price', 0)
+        total_v = sum(sec_val.values())
+        if total_v > 0:
+            top_sectors = sorted(sec_val.items(), key=lambda x: -x[1])[:4]
+            parts = [f"{sec} {v/total_v*100:.0f}%" for sec, v in top_sectors]
+            concentration_ctx = f"ריכוז סקטוריאלי בתיק: {', '.join(parts)}"
+
+    # ── Macro: TNX + sector ETFs context string ──
+    tnx = m.get('treasury_10y')
+    tnx_ctx = ''
+    if tnx and tnx.get('yield'):
+        bps = tnx['change_bps']
+        direction = 'עלה' if bps > 0 else 'ירד'
+        impact = ' — לחץ על מכפילי הטק' if bps > 5 else (' — גב רוח לצמיחה' if bps < -5 else '')
+        tnx_ctx = f"תשואת אג\"ח 10 שנים (ארה\"ב): {tnx['yield']:.2f}% ({direction} {abs(bps):.0f} נקודות בסיס){impact}"
+
+    sector_etf_ctx = ''
+    if m.get('sector_etfs'):
+        etf_parts = [f"{label} {chg:+.1f}%" for label, chg in m['sector_etfs'].items()]
+        sector_etf_ctx = f"תנועות סקטוריאליות: {', '.join(etf_parts)}"
+
+    # ── Assemble full context for LLM ──
+    macro_full = macro_ctx
+    if tnx_ctx:
+        macro_full += f"{tnx_ctx}\n"
+    if sector_etf_ctx:
+        macro_full += f"{sector_etf_ctx}\n"
+
+    context_parts = [f"תאריך: {date_str_full}", f"\nמאקרו:\n{macro_full}"]
+    if portfolio_ctx:
+        context_parts.append(f"תיק ההשקעות:\n{portfolio_ctx}")
+    if concentration_ctx:
+        context_parts.append(concentration_ctx)
+    context_parts.append("מניות (מהגדול לקטן לפי תנועה):\n" + "\n\n".join(stock_blocks))
+    if sector_ctx:
+        context_parts.append(f"ניתוח סקטוריאלי — חפש נרטיב מאחד:\n{sector_ctx}")
+    if expert_ctx:
+        context_parts.append(f"ציטוטים ממומחים (X/Twitter) — חייב להשתמש בהם בשמם:\n{expert_ctx}")
+    if transformation_ctx:
+        context_parts.append(f"נרטיב טרנספורמציה — השתמש במסגור זה:\n{transformation_ctx}")
+    full_context = "\n\n".join(context_parts)
+
+    has_portfolio = bool(portfolio_ctx)
+    all_names_heb = ', '.join(s.get('hebrew', s['ticker']) for s in valid_stocks_sorted)
+
+    # ── Has cost basis data? ──
+    has_cost_basis = any('_entry_price' in s for s in valid_stocks_sorted)
+
+    # ── THE PROMPT — personal financial advisor speaking directly to the investor ──
+    prompt = f"""{full_context}
+
+{'='*60}
+
+אתה מקליט הודעת קולית יומית אישית למשקיע שמחזיק את המניות שלמעלה. אתה יועצו האישי — לא כתב חדשות, לא מגיש רדיו. אתה מדבר אליו ישירות, בגוף שני יחיד, כל הזמן.
+
+הנחיות מבנה (טקסט רציף, ללא כותרות, ללא פסיקים):
+
+פסקה 1 — COLD OPEN אישי (40-60 מילה):
+אל תפתח עם "שלום" וברכות. שחרר ישירות לתוך רגע קונקרטי שנגע בכסף שלו היום. הנה החומר גלם: {hook_hint}. {"ביום שקט — הדרמה היא לא מה שקרה אלא מה שמרחף: בנה את המתח מהאירועים הקרובים." if is_slow_day else "בנה סצנה קצרה ומוחשית מהאירוע הזה."} סיים בשאלה שתיענה רק בסוף.
+
+פסקה 2 — ברכה ו-DISCLAIMER (2-3 משפטים):
+ברך אותו בחום, ציין את התאריך, ואמר בדיוק: "תזכורת חשובה — מה שנאמר כאן אינו ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
+
+פסקה 3 — תמונת שוק כרקע לתיק שלו (3-4 משפטים):
+תאר את מצב השוק — תמיד בחיבור לתיק שלו. לא "השוק ירד X אחוז" אלא "היום השוק הפעיל לחץ על כל תיק צמיחה כמו שלך — וזה הסיבה ש..." אם תשואת האג"ח ל-10 שנים זזה משמעותית — הסבר את המנגנון: "כשהריבית עולה, מכפילי הטק יורדים — זה מה שהכה גם את X וגם את Y בתיק שלך." אם יש נרטיב סקטוריאלי — קשר בין המניות: "שלוש מניות הטק שלך ירדו ביחד — לא במקרה."
+
+{"פסקה 4 — עדכון תיק אישי (3-4 משפטים): התחל ב'בוא נדבר על הכסף שלך.' אמור את הסכום המדויק מ'שינוי ב-24 שעות' — משפט אחד פשוט: 'היום התיק שלך עלה/ירד [סכום בדולרים] — זה [האחוז המדויק מ-24 שעות]'. שים לב: אחוז השינוי היומי הוא מאוד קטן (פחות מאחוז). " + (f"בנפרד — ציין את הרווח הכולל מאז הקנייה: 'מאז שקנית, אתה ברווח/הפסד כולל של [סכום] — [אחוז] על ההשקעה המקורית.'" if has_cost_basis else "") + " לעולם אל תערבב בין השינוי היומי לבין הרווח הכולל." if has_portfolio else ""}
+
+פסקה {"5" if has_portfolio else "4"} — הסיפור הכי חם היום (6-8 משפטים):
+עמוד על המניה עם הסיפור הכי מעניין. מה קרה? מה הפתיע? אם יש עלות בסיס — "קנית ב-X, היום Y — זה Z% מאז הקנייה." אם יש אנליסט — ציין בשמו המלא ובית ההשקעות. Camera pull-back: מה זה אומר על הסקטור?{"אם יש ציטוטים ממומחים — חייב לצטט לפחות אחד בשמו ובתוכן הספציפי." if expert_ctx else ""}
+תובנת המומחה (חובה — בסוף הפסקה הזאת): בחר אחת מהתבניות הבאות ויישם על הנתונים:
+  א) דיברגנציה: "המחיר [עלה/ירד] אבל [הרווחים/המכפיל/הגייד] הולכים בכיוון הנגדי — זה יצור מתח."
+  ב) רצף: "מה שקורה בדרך כלל שבועיים-שלושה אחרי [האירוע הזה] זה [X] — זה לא ערובה, אבל זה דפוס שראיתי שוב ושוב."
+  ג) סיבתיות נסתרת: "הסיבה הנראית לעין היא [X]. אבל מה שאני מסתכל עליו זה [Y] — ושם יש משהו מעניין."
+  ד) קונטרה: "כולם מדברים על [X], אבל מי שהיה כאן ב-[שנה] יודע ש[תובנה שנוגדת את הקונצנזוס]."
+פתח ב-"מה שאני רואה כאן —" / "זה מזכיר לי —" / "מה שהרחוב מפספס —".
+
+פסקה {"6" if has_portfolio else "5"} — עוד 3 מניות עם סיפור (2-3 משפטים כל אחת):
+לכל מניה: נרטיב אישי + so-what formula: [עובדה] → [מה זה אומר לגביה] → [מה לעקוב/מה עלול לקרות].
+{"מניות בטרנספורמציה: 'הסיפור הוא לא מה שהחברה הייתה אלא מה שהיא הופכת להיות.'" if transformation_ctx else ""}
+אם יש דוח קרוב (עד שבועיים): תן שני תרחישים — "אם יפתיע לטובה — [מה עלול לקרות]. אם לרעה — [מה לשים לב אליו]."
+RSI קיצוני: "ההיסטוריה אומרת ש-RSI כזה מוביל בדרך כלל ל-X — אבל צריך לראות אם הפונדמנטלים מצדיקים את זה."
+חיבור לחוט הנרטיבי: לפחות פעם אחת בפסקה הזאת — הזכר את השאלה מהפתיחה: "זוכר את השאלה מההתחלה? הנה עוד חלק מהפאזל."
+
+פסקה {"6b" if has_portfolio else "5b"} — שאר המניות בשורה אחת:
+שאר המניות שלא קיבלו סיפור — משפט אחד בלבד: "שאר התיק שלך — [שמות] — זזו פחות מאחוז ללא חדשות מהותיות."
+
+פסקה {"7" if has_portfolio else "6"} — סיום עם תשובה ללולאה (3-4 משפטים):
+ענה על השאלה מהפתיחה — תשובה ישירה, לא מעורפלת. תן תובנה אחת שאתה רוצה שישאיר איתו. אמור מה הוא צריך לעקוב מחר ולמה. סיים בדיוק: "זהו להיום. תודה שהאזנת, ונשמע שוב מחר."
+
+כללים טכניים (חובה):
+- גוף שני בכל רגע: "אתה", "שלך", "התיק שלך" — לא "המשקיע" ולא "אחזקות"
+- ללא markdown: ללא *, **, #, -, קווים מפרידים — טקסט רציף בלבד
+- שמות חברות בעברית: {all_names_heb}
+- מספרים: תמיד בעברית — "שלושה וחצי אחוז", "מאה עשרים דולר" — לא "3.5%", לא "$120"
+- P&L יומי: השינוי היומי הוא כמה דולרים ואחוז קטן (לרוב פחות מאחוז). לעולם אל תערבב עם הרווח הכולל מאז הקנייה.
+- יעדי מחיר: אך ורק ממסעיף "קונצנזוס אנליסטים" — לא ממאמרי חדשות
+- מילים באנגלית מותרות: S&P, VIX, RSI, AI, Reddit, StockTwits, earnings
+- מינימום 600 מילה, מקסימום 900 מילה
+
+דוגמאות קול — הסגנון שאתה שואף אליו:
+❌ לא: "מניית אנבידיה ירדה ב-2.3% כתוצאה מחששות מגמישות הביקוש לשבבי AI."
+✅ כן: "אנבידיה שלך נפלה שתיים ושלוש היום — אבל לפני שאתה מגיב, שאל את עצמך: האם משהו השתנה בביקוש לשבבים? התשובה: לא. זו תנועה טכנית, לא שינוי בסיפור."
+
+❌ לא: "האנליסט הוריד את יעד המחיר ל-150 דולר."
+✅ כן: "ריאן ברינקמן מג'יי פי מורגן הוריד את היעד למאה חמישים — וזה לא מפתיע. הוא כבר היה בדירוג מכירה. מה שכן מעניין זה התזמון: שבועיים לפני דוח. זה אומר שיש לו מידע מהשטח שמדאיג אותו."
+
+❌ לא: "יש לך ריכוז גבוה בסקטור הטכנולוגיה."
+✅ כן: "שים לב — יש לך כמעט שישים אחוז בטק. ביום כזה, כשהריבית דוחקת את המכפילים, זה עובד נגדך. אבל בעונת דוחות טובה — בדיוק אותו ריכוז יכפיל לך את הרווח."
+
+calibration — אמינות:
+כשהנתונים ברורים: "כל הסימנים מצביעים על..." | כשיש אי-ודאות: "אני לא בטוח, אבל..." | כשהקונצנזוס שגוי: "הרחוב חושב X, אבל שים לב ל-Y" — בחר את הרמה הנכונה לכל טענה."""
+
+    script = _llm_chat(
+        [{"role": "user", "content": prompt}],
+        max_tokens=3500,
+        system=(
+            "אתה אנליסט השקעות בכיר עם עשרים שנה של ניסיון בוול סטריט. "
+            "כיסית מאות מחזורי רווחים, עברת את 2008, בועת הטק של 2000, ריבאונד הקורונה, ועידן העלאות הריבית של 2022. "
+            "\n\n"
+            "המסגרות האנליטיות שאתה מפעיל אוטומטית:\n"
+            "• מחיר = רווחים × מכפיל. ריבית עולה → שני הגורמים נפגעים: המכפיל יורד כי כסף עתידי שווה פחות, והרווחים יורדים כי עלות ההון עולה. זה המנגנון מאחורי 80% מהתנועה בטק.\n"
+            "• 'beat and raise' ≠ 'beat and maintain'. השוק מתגמל רק את הראשון. חברה שמכה תחזיות אבל לא מעלה גייד — השוק מעניש אותה.\n"
+            "• אנליסט שמוריד יעד *אחרי* ירידה = covering their ass. אנליסט שמוריד *לפני* ירידה = מידע אמיתי. אתה תמיד מבחין בין השניים.\n"
+            "• RSI < 30 הוא לא 'קנה'. הוא 'שאל מה השתנה פונדמנטלית'. לעיתים קרובות יש סיבה.\n"
+            "• ריכוז סקטוריאלי = leverage רגשי וכלכלי. ביום טוב — מכפיל רווח. ביום רע — מכפיל כאב.\n"
+            "• כשאינסיידר קונה בשוק הפתוח — זה אחד הסיגנלים הכי רציניים שקיימים. הם חתומים על NDAs.\n"
+            "\n"
+            "אתה מדבר לאדם ספציפי על הכסף שלו — לא מציג מצגת. ישיר, חם, מדויק. "
+            "לא מפחיד, אבל לא מסתיר עובדות לא נעימות. "
+            "יודע מתי לומר 'אני לא בטוח' ומתי לומר 'כל הסימנים מצביעים על'. "
+            "תמיד יש לך תובנה אחת שאף כתב חדשות לא יגיד — הקשר שרק מישהו עם ניסיון רואה. "
+            "עברית טבעית ונזילה — כמו שאדם מדבר, לא כמו שכתבה מתורגמת."
+        )
+    )
+
+    for ch in ('**', '*', '## ', '### ', '# ', '[', ']'):
+        script = script.replace(ch, '')
+
+    print(f"  ✅ Podcast script: full LLM, {len(valid_stocks)} stocks, {len(script)} chars")
     return script
 
 
@@ -1243,23 +2278,81 @@ def _add_niqqud(text):
         return text
 
 
-def text_to_speech(text, output_path):
-    """Convert text to speech — Edge TTS with niqqud, falls back to gTTS."""
+def _elevenlabs_tts(text, output_path):
+    """ElevenLabs TTS — premium natural Hebrew voice.
+
+    Set ELEVENLABS_API_KEY in .env to enable.
+    Set ELEVENLABS_VOICE_ID to override (default: multilingual pre-made voices).
+    Best Hebrew voices (multilingual_v2 model):
+      - Adam: pNInz6obpgDQGcFmaJgB   (male, authoritative)
+      - Rachel: 21m00Tcm4TlvDq8ikWAM (female, warm)
+    Or create a custom Hebrew voice in ElevenLabs dashboard.
+    """
+    api_key = os.environ.get('ELEVENLABS_API_KEY', '')
+    if not api_key:
+        return False
+
+    voice_id = os.environ.get('ELEVENLABS_VOICE_ID', 'pNInz6obpgDQGcFmaJgB')  # Adam default
+
+    try:
+        resp = requests.post(
+            f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}',
+            headers={
+                'xi-api-key': api_key,
+                'Content-Type': 'application/json',
+                'Accept': 'audio/mpeg',
+            },
+            json={
+                'text': text,
+                'model_id': 'eleven_multilingual_v2',
+                'voice_settings': {
+                    'stability': 0.45,
+                    'similarity_boost': 0.75,
+                    'style': 0.35,
+                    'use_speaker_boost': True,
+                },
+            },
+            timeout=120,
+        )
+        if resp.status_code == 200:
+            with open(str(output_path), 'wb') as f:
+                f.write(resp.content)
+            size_kb = os.path.getsize(output_path) / 1024
+            print(f"  🎙️  Audio saved (ElevenLabs voice {voice_id}): {Path(output_path).name} ({size_kb:.0f} KB)")
+            return True
+        else:
+            print(f"  ⚠️  ElevenLabs returned {resp.status_code}: {resp.text[:200]}")
+            return False
+    except Exception as e:
+        print(f"  ⚠️  ElevenLabs TTS failed ({e})")
+        return False
+
+
+def text_to_speech(text, output_path, voice=None):
+    """Convert text to speech — ElevenLabs (if key set) → Edge TTS → gTTS.
+
+    Available Hebrew Edge TTS voices:
+      he-IL-AvriNeural  — male, clear and professional
+      he-IL-HilaNeural  — female, warm and natural
+    """
     # Step 1: Preprocess (replace tickers, $, % etc)
     text = _prepare_text_for_tts(text)
 
-    # Step 2: Add niqqud for correct pronunciation
-    text = _add_niqqud(text)
+    # Step 2: Try ElevenLabs first (best quality)
+    if os.environ.get('ELEVENLABS_API_KEY'):
+        if _elevenlabs_tts(text, output_path):
+            return True
+        print("  ↩️  Falling back to Edge TTS")
 
-    # Step 3: Try Edge TTS with plain niqqud text
+    # Step 3: Try Edge TTS
     try:
         import asyncio
         import edge_tts
 
-        voice = "he-IL-AvriNeural"
+        _voice = voice or os.environ.get('PODCAST_VOICE', 'he-IL-HilaNeural')
 
         async def _generate():
-            communicate = edge_tts.Communicate(text, voice, rate="-5%", pitch="-2Hz")
+            communicate = edge_tts.Communicate(text, _voice, rate="-5%", pitch="+0Hz")
             await communicate.save(str(output_path))
 
         try:
@@ -1274,7 +2367,7 @@ def text_to_speech(text, output_path):
             asyncio.run(_generate())
 
         size_kb = os.path.getsize(output_path) / 1024
-        print(f"  🔊 Audio saved (Edge TTS + niqqud): {output_path.name} ({size_kb:.0f} KB)")
+        print(f"  🔊 Audio saved (Edge TTS {_voice}): {output_path.name} ({size_kb:.0f} KB)")
         return True
     except ImportError:
         print("  ⚠️  edge-tts not installed, falling back to gTTS")
@@ -1348,6 +2441,22 @@ def run(portfolio=None):
 
 
 if __name__ == '__main__':
+    # --collect-json OUTPUT_PATH: run collect_all() and write JSON to a file (used by Flask subprocess)
+    if '--collect-json' in sys.argv:
+        _idx = sys.argv.index('--collect-json')
+        _out_path = sys.argv[_idx + 1] if _idx + 1 < len(sys.argv) else None
+        tickers_env = os.environ.get('_BRIEFING_TICKERS', '')
+        if tickers_env:
+            PORTFOLIO = [t.strip() for t in tickers_env.split(',') if t.strip()]  # noqa: PLW0603
+        import json as _json
+        _data = collect_all()
+        if _out_path:
+            with open(_out_path, 'w', encoding='utf-8') as _f:
+                _json.dump(_data, _f, ensure_ascii=False, default=str)
+        else:
+            sys.stdout.write(_json.dumps(_data, ensure_ascii=False, default=str))
+            sys.stdout.flush()
+        sys.exit(0)
     # Allow custom tickers from command line
     if len(sys.argv) > 1:
         tickers = [t.strip() for t in ' '.join(sys.argv[1:]).replace(',', ' ').split()]
