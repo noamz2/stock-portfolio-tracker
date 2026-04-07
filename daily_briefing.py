@@ -1701,8 +1701,32 @@ def _generate_podcast_with_llm(data):
     _day_names = ['שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת', 'ראשון']
     date_str_full = f"יום {_day_names[_dt.weekday()]}, {date_str}"
 
-    # Sort by absolute % change — biggest mover becomes the hot story
-    valid_stocks_sorted = sorted(valid_stocks, key=lambda s: abs(s.get('change_pct', 0)), reverse=True)
+    # Sort by interest score — combines price move, earnings proximity, news volume, and market cap
+    def _interest_score(s):
+        score = abs(s.get('change_pct', 0)) * 3
+        score += min(s.get('news_summary', {}).get('article_count', 0) * 0.4, 8)
+        # Earnings proximity bonus
+        if s.get('earnings_date'):
+            try:
+                from datetime import date as _d2
+                days = (datetime.strptime(s['earnings_date'], '%Y-%m-%d').date() - _d2.today()).days
+                if 1 <= days <= 7:
+                    score += 25
+                elif 1 <= days <= 14:
+                    score += 18
+                elif 1 <= days <= 30:
+                    score += 10
+            except Exception:
+                pass
+        # Large-cap floor — AMZN/META/MSFT etc. never buried
+        mcap = s.get('market_cap') or 0
+        if mcap > 500e9:
+            score = max(score, 18)
+        elif mcap > 100e9:
+            score = max(score, 12)
+        return score
+
+    valid_stocks_sorted = sorted(valid_stocks, key=_interest_score, reverse=True)
     hot_stock = valid_stocks_sorted[0] if valid_stocks_sorted else None
 
     # ── Portfolio P&L (set by generate_text_report before this call) ──
@@ -1874,6 +1898,20 @@ def _generate_podcast_with_llm(data):
         if ns.get('has_news') and ns.get('summary'):
             clean = ns['summary'].strip().replace('**','').replace('*','').replace('#','')
             b.append(f"חדשות ({ns.get('article_count',0)} כתבות):\n{clean}")
+        # Raw top headlines — pass directly so LLM has original signal, not summary-of-summary
+        raw_articles = s.get('news_deep', [])
+        if raw_articles:
+            headlines = []
+            for a in raw_articles[:6]:
+                title = (a.get('title') or '').strip()
+                snippet = (a.get('content') or a.get('summary') or '').strip()[:180]
+                if title:
+                    entry = f"  • {title}"
+                    if snippet and snippet.lower() != title.lower():
+                        entry += f" — {snippet}"
+                    headlines.append(entry)
+            if headlines:
+                b.append("כותרות גולמיות (השתמש בהן ישירות בניתוח):\n" + "\n".join(headlines))
 
         # Social intelligence
         social = s.get('social', {})
@@ -2075,6 +2113,23 @@ def _generate_podcast_with_llm(data):
     has_portfolio = bool(portfolio_ctx)
     all_names_heb = ', '.join(s.get('hebrew', s['ticker']) for s in valid_stocks_sorted)
 
+    # Stocks that MUST get a full paragraph (large-cap or earnings imminent)
+    must_cover_stocks = []
+    for s in valid_stocks_sorted:
+        mcap = s.get('market_cap') or 0
+        is_large = mcap > 100e9
+        has_near_earnings = False
+        if s.get('earnings_date'):
+            try:
+                from datetime import date as _d3
+                days = (datetime.strptime(s['earnings_date'], '%Y-%m-%d').date() - _d3.today()).days
+                has_near_earnings = 1 <= days <= 30
+            except Exception:
+                pass
+        if is_large or has_near_earnings:
+            must_cover_stocks.append(s.get('hebrew', s['ticker']))
+    must_cover_str = ', '.join(must_cover_stocks) if must_cover_stocks else ''
+
     # ── Has cost basis data? ──
     has_cost_basis = any('_entry_price' in s for s in valid_stocks_sorted)
 
@@ -2117,8 +2172,9 @@ def _generate_podcast_with_llm(data):
 RSI קיצוני: "ההיסטוריה אומרת ש-RSI כזה מוביל בדרך כלל ל-X — אבל צריך לראות אם הפונדמנטלים מצדיקים את זה."
 חיבור לחוט הנרטיבי: לפחות פעם אחת בפסקה הזאת — הזכר את השאלה מהפתיחה: "זוכר את השאלה מההתחלה? הנה עוד חלק מהפאזל."
 
-פסקה {"6b" if has_portfolio else "5b"} — שאר המניות בשורה אחת:
-שאר המניות שלא קיבלו סיפור — משפט אחד בלבד: "שאר התיק שלך — [שמות] — זזו פחות מאחוז ללא חדשות מהותיות."
+פסקה {"6b" if has_portfolio else "5b"} — שאר המניות:
+{"המניות הבאות חייבות לקבל לפחות 2 משפטים כל אחת — אסור לשים אותן ב'שאר': " + must_cover_str + "." if must_cover_str else ""}
+מניות שלא קיבלו כיסוי בפסקות הקודמות ואין להן חדשות מהותיות — משפט אחד בלבד לכל קבוצה. אם יש חדשות — תן לפחות 2 משפטים.
 
 פסקה {"7" if has_portfolio else "6"} — סיום עם תשובה ללולאה (3-4 משפטים):
 ענה על השאלה מהפתיחה — תשובה ישירה, לא מעורפלת. תן תובנה אחת שאתה רוצה שישאיר איתו. אמור מה הוא צריך לעקוב מחר ולמה. סיים בדיוק: "זהו להיום. תודה שהאזנת, ונשמע שוב מחר."
@@ -2132,7 +2188,7 @@ RSI קיצוני: "ההיסטוריה אומרת ש-RSI כזה מוביל בדר
 - יעדי מחיר: אך ורק ממסעיף "קונצנזוס אנליסטים" — לא ממאמרי חדשות
 - אסור לכתוב תווים מאנגלית מחוץ לרשימה המותרת. אסור בהחלט: סינית, יפנית, ערבית, או כל שפה שאינה עברית/אנגלית מותרת.
 - מילים באנגלית מותרות בלבד: S&P, AI, Reddit, StockTwits — שאר המונחים תרגם לעברית
-- מינימום 600 מילה, מקסימום 900 מילה
+- מינימום 900 מילה, מקסימום 1300 מילה — כל מניה עם חדשות ראויה לפחות 3 משפטים
 - מגוון לשוני: אל תחזור על אותו מבנה משפט לכל מניה. לא "הדוח בעוד X יום" שלוש פעמים — שנה ניסוח: "תאריך שישראל חייב להיות על הרדאר שלך", "בעוד שלושה שבועות הם יצטרכו לענות", "זה האירוע שיכריע" וכו'.
 
 דוגמאות קול — הסגנון שאתה שואף אליו:
@@ -2150,7 +2206,7 @@ calibration — אמינות:
 
     script = _llm_chat(
         [{"role": "user", "content": prompt}],
-        max_tokens=3500,
+        max_tokens=5500,
         system=(
             "אתה אנליסט השקעות בכיר עם עשרים שנה של ניסיון בוול סטריט. "
             "כיסית מאות מחזורי רווחים, עברת את 2008, בועת הטק של 2000, ריבאונד הקורונה, ועידן העלאות הריבית של 2022. "
@@ -2455,51 +2511,89 @@ def _add_niqqud(text):
         return text
 
 
+_ELEVENLABS_CHUNK_LIMIT = 2400  # eleven_v3 max chars per call (safe margin under 2500)
+
+
+def _elevenlabs_chunk(api_key, voice_id, text):
+    """Send one chunk to ElevenLabs and return raw MP3 bytes, or raise on error."""
+    resp = requests.post(
+        f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}',
+        headers={
+            'xi-api-key': api_key,
+            'Content-Type': 'application/json',
+            'Accept': 'audio/mpeg',
+        },
+        json={
+            'text': text,
+            'model_id': 'eleven_v3',
+            'voice_settings': {
+                'stability': 0.35,
+                'similarity_boost': 0.80,
+                'style': 0.50,
+                'use_speaker_boost': True,
+            },
+            'language_code': 'he',
+        },
+        timeout=180,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"ElevenLabs {resp.status_code}: {resp.text[:200]}")
+    return resp.content
+
+
 def _elevenlabs_tts(text, output_path):
-    """ElevenLabs TTS — Israeli Hebrew female radio presenter voice.
+    """ElevenLabs TTS — splits long scripts into paragraph chunks to avoid cutoff.
 
-    Model: eleven_v3 — the ONLY ElevenLabs model with Hebrew support (74 languages).
-    Voice: קיבוצניקית (6bEf7nSioDi63wP1tgW0) — ישראלית אותנטית בת 25, מבטא ישראלי.
-
-    eleven_v3 is highly expressive and responds to punctuation for natural delivery.
-    Voice settings tuned for warm, energetic female radio presenter feel.
+    Model: eleven_v3 (only ElevenLabs model with Hebrew support, 74 languages).
+    Splits on paragraph boundaries when text > _ELEVENLABS_CHUNK_LIMIT chars.
+    Concatenates MP3 bytes directly (works with all players).
     """
     api_key = os.environ.get('ELEVENLABS_API_KEY', '')
     if not api_key:
         return False
 
-    voice_id = os.environ.get('ELEVENLABS_VOICE_ID', '6bEf7nSioDi63wP1tgW0')  # קיבוצניקית default
+    voice_id = os.environ.get('ELEVENLABS_VOICE_ID', 'EXAVITQu4vr4xnSDxMaL')  # Sarah default
 
     try:
-        resp = requests.post(
-            f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}',
-            headers={
-                'xi-api-key': api_key,
-                'Content-Type': 'application/json',
-                'Accept': 'audio/mpeg',
-            },
-            json={
-                'text': text,
-                'model_id': 'eleven_v3',  # Only model with Hebrew support
-                'voice_settings': {
-                    'stability': 0.35,        # Lower = more expressive, dynamic delivery
-                    'similarity_boost': 0.80, # High = stays true to the voice character
-                    'style': 0.50,            # Moderate style for engaging presenter feel
-                    'use_speaker_boost': True,
-                },
-                'language_code': 'he',        # Explicit Hebrew for eleven_v3
-            },
-            timeout=180,
-        )
-        if resp.status_code == 200:
-            with open(str(output_path), 'wb') as f:
-                f.write(resp.content)
-            size_kb = os.path.getsize(output_path) / 1024
-            print(f"  🎙️  Audio saved (ElevenLabs eleven_v3 / {voice_id}): {Path(output_path).name} ({size_kb:.0f} KB)")
-            return True
+        # Split into paragraph chunks if needed
+        if len(text) <= _ELEVENLABS_CHUNK_LIMIT:
+            chunks = [text]
         else:
-            print(f"  ⚠️  ElevenLabs returned {resp.status_code}: {resp.text[:300]}")
-            return False
+            paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+            chunks = []
+            current = ''
+            for para in paragraphs:
+                # If single paragraph exceeds limit, split on sentence boundaries
+                if len(para) > _ELEVENLABS_CHUNK_LIMIT:
+                    sentences = re.split(r'(?<=[.!?,])\s+', para)
+                    for sent in sentences:
+                        if len(current) + len(sent) + 1 > _ELEVENLABS_CHUNK_LIMIT and current:
+                            chunks.append(current.strip())
+                            current = sent
+                        else:
+                            current = (current + ' ' + sent).strip()
+                elif len(current) + len(para) + 2 > _ELEVENLABS_CHUNK_LIMIT and current:
+                    chunks.append(current.strip())
+                    current = para
+                else:
+                    current = (current + '\n\n' + para).strip() if current else para
+            if current.strip():
+                chunks.append(current.strip())
+
+        print(f"  🎙️  ElevenLabs: {len(chunks)} chunk(s), {len(text)} chars total")
+
+        # Generate audio for each chunk and concatenate bytes
+        all_bytes = b''
+        for i, chunk in enumerate(chunks):
+            print(f"    chunk {i+1}/{len(chunks)} ({len(chunk)} chars)...")
+            all_bytes += _elevenlabs_chunk(api_key, voice_id, chunk)
+
+        with open(str(output_path), 'wb') as f:
+            f.write(all_bytes)
+        size_kb = os.path.getsize(output_path) / 1024
+        print(f"  🎙️  Audio saved (ElevenLabs eleven_v3 / {voice_id}): {Path(output_path).name} ({size_kb:.0f} KB)")
+        return True
+
     except Exception as e:
         print(f"  ⚠️  ElevenLabs TTS failed ({e})")
         return False
