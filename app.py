@@ -2583,12 +2583,15 @@ def _run_briefing_job(user_id, tickers, positions, briefings_dir):
 
         with open(os.path.join(briefings_dir, f'{prefix}.txt'), 'w', encoding='utf-8') as f:
             f.write(report)
-        with open(os.path.join(briefings_dir, f'{prefix}_script.txt'), 'w', encoding='utf-8') as f:
-            f.write(script)
         with open(os.path.join(briefings_dir, f'{prefix}_data.json'), 'w', encoding='utf-8') as f:
             json.dump(all_data, f, ensure_ascii=False, indent=2, default=str)
 
-        # Phase 3: TTS
+        # Phase 3: TTS — preprocess first so script file matches audio exactly
+        from daily_briefing import _prepare_text_for_tts
+        tts_script = _prepare_text_for_tts(script)
+        with open(os.path.join(briefings_dir, f'{prefix}_script.txt'), 'w', encoding='utf-8') as f:
+            f.write(tts_script)
+
         _set({'status': 'generating', 'step': 'tts'})
         audio_path = os.path.join(briefings_dir, f'{prefix}.mp3')
         text_to_speech(script, audio_path)

@@ -202,6 +202,11 @@ def collect_macro():
     except:
         pass
 
+    # Top macro/geopolitical news stories moving markets today (via Tavily)
+    macro['macro_news'] = _collect_macro_news()
+    if macro['macro_news']:
+        print(f"  📰 Macro news: {len(macro['macro_news'])} stories")
+
     return macro
 
 
@@ -599,6 +604,84 @@ def _collect_reddit(ticker, company_name=''):
             seen_titles.add(title_key)
             deduped.append(p)
     return deduped[:5]
+
+
+def _collect_macro_news():
+    """Fetch today's top market-moving macro/geopolitical news — free, no API key.
+
+    Sources (in priority order):
+      1. Google News RSS — dynamic search on 3 topics
+      2. yfinance news for macro proxies (S&P, Oil, Treasury)
+    Returns top 6 stories scored by financial keyword density.
+    Each story: {'title', 'snippet', 'theme'}
+    """
+    _MACRO_KWS = [
+        'market', 'stock', 'oil', 'crude', 'opec', 'fed', 'rate', 'rates',
+        'inflation', 'tariff', 'tariffs', 'sanction', 'war', 'iran', 'israel',
+        'china', 'trade', 'recession', 'gdp', 'jobs', 'cpi', 'earnings',
+        'rally', 'selloff', 'sell-off', 'crash', 'surge', 'plunge', 'spike',
+        'treasury', 'yield', 'dollar', 'gold', 'geopolit', 'conflict',
+    ]
+
+    candidates = []
+    seen = set()
+
+    def _add(title, snippet, theme, boost=0):
+        key = title.lower()[:55]
+        if key in seen or not title:
+            return
+        seen.add(key)
+        text_low = (title + ' ' + (snippet or '')).lower()
+        score = sum(1 for kw in _MACRO_KWS if kw in text_low) + boost
+        if score >= 2:
+            candidates.append({'title': title, 'snippet': snippet or '', 'theme': theme, 'score': score})
+
+    # ── Source 1: Google News RSS (free, no key) ──
+    if feedparser:
+        gnews_queries = [
+            ("geopolitical", "geopolitical+oil+war+sanctions+markets"),
+            ("market_moves", "stock+market+selloff+rally+today+macro"),
+            ("fed_rates",    "Federal+Reserve+inflation+CPI+interest+rates"),
+        ]
+        for theme, q in gnews_queries:
+            try:
+                feed = _run_with_timeout(
+                    lambda u=f"https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en": feedparser.parse(u),
+                    timeout=8, default=None
+                )
+                if not feed:
+                    continue
+                for entry in (feed.entries or [])[:6]:
+                    title = (entry.get('title') or '').strip()
+                    summary = (entry.get('summary') or '').strip()
+                    snippet = _best_news_sentence(summary) if summary else ''
+                    _add(title, snippet, theme, boost=1)
+            except Exception:
+                pass
+
+    # ── Source 2: yfinance news for macro proxies ──
+    macro_proxies = [
+        ('^GSPC', 'market_moves'),   # S&P 500
+        ('CL=F',  'geopolitical'),   # Crude oil
+        ('^TNX',  'fed_rates'),      # 10Y Treasury
+        ('GC=F',  'geopolitical'),   # Gold
+    ]
+    for proxy_ticker, theme in macro_proxies:
+        try:
+            news_items = _run_with_timeout(
+                lambda t=proxy_ticker: yf.Ticker(t).news,
+                timeout=6, default=[]
+            ) or []
+            for item in (news_items or [])[:4]:
+                title = (item.get('title') or '').strip()
+                content = (item.get('summary') or item.get('content') or '').strip()
+                snippet = _best_news_sentence(content) if content else ''
+                _add(title, snippet, theme)
+        except Exception:
+            pass
+
+    candidates.sort(key=lambda x: -x['score'])
+    return candidates[:6]
 
 
 def _collect_expert_tweets(ticker):
@@ -1670,6 +1753,16 @@ def _generate_podcast_with_llm(data):
         rsi_label = 'Oversold — שוק ירוד' if sp['rsi'] < 30 else 'Overbought — שוק חם' if sp['rsi'] > 70 else 'Neutral'
         macro_ctx += f"RSI S&P: {sp['rsi']} ({rsi_label})\n"
 
+    # Macro/geopolitical news stories moving markets today
+    macro_news = m.get('macro_news') or []
+    if macro_news:
+        macro_ctx += "\n=== חדשות מאקרו קריטיות שמניעות את השוק היום ===\n"
+        for story in macro_news:
+            macro_ctx += f"• {story['title']}\n"
+            if story.get('snippet') and story['snippet'] != story['title']:
+                macro_ctx += f"  {story['snippet'][:220]}\n"
+        macro_ctx += "=== סוף חדשות מאקרו ===\n"
+
     def _clean_expert_quote(text):
         """Return clean tweet text, or None if content looks like metadata/garbage."""
         if not text or len(text) < 60:
@@ -2000,8 +2093,11 @@ def _generate_podcast_with_llm(data):
 פסקה 2 — ברכה ו-DISCLAIMER (2-3 משפטים):
 ברך אותו בחום, ציין את התאריך, ואמר בדיוק: "תזכורת חשובה — מה שנאמר כאן אינו ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
 
-פסקה 3 — תמונת שוק כרקע לתיק שלו (3-4 משפטים):
-תאר את מצב השוק — תמיד בחיבור לתיק שלו. לא "השוק ירד X אחוז" אלא "היום השוק הפעיל לחץ על כל תיק צמיחה כמו שלך — וזה הסיבה ש..." אם תשואת האג"ח ל-10 שנים זזה משמעותית — הסבר את המנגנון: "כשהריבית עולה, מכפילי הטק יורדים — זה מה שהכה גם את X וגם את Y בתיק שלך." אם יש נרטיב סקטוריאלי — קשר בין המניות: "שלוש מניות הטק שלך ירדו ביחד — לא במקרה."
+פסקה 3 — תמונת שוק כרקע לתיק שלו (3-5 משפטים):
+תאר את מצב השוק — תמיד בחיבור לתיק שלו. לא "השוק ירד X אחוז" אלא "היום השוק הפעיל לחץ על כל תיק צמיחה כמו שלך — וזה הסיבה ש..."
+אם יש חדשות מאקרו קריטיות (גיאופוליטיקה, נפט, פד, מלחמה, סנקציות, מכסים) — חייב להזכיר אותן ולקשר אותן לתיק: "המתיחות עם איראן מרימה את מחיר הנפט — זה טוב ל-XOM שלך אבל מוסיף אינפלציה שמכבידה על כל שאר המניות."
+אם תשואת האג"ח זזה — הסבר את המנגנון: "כשהריבית עולה, מכפילי הטק יורדים."
+אם יש נרטיב סקטוריאלי — קשר בין המניות: "שלוש מניות הטק שלך ירדו ביחד — לא במקרה."
 
 {"פסקה 4 — עדכון תיק אישי (3-4 משפטים): התחל ב'בוא נדבר על הכסף שלך.' אמור את הסכום המדויק מ'שינוי ב-24 שעות' — משפט אחד פשוט: 'היום התיק שלך עלה/ירד [סכום בדולרים] — זה [האחוז המדויק מ-24 שעות]'. שים לב: אחוז השינוי היומי הוא מאוד קטן (פחות מאחוז). " + (f"בנפרד — ציין את הרווח הכולל מאז הקנייה: 'מאז שקנית, אתה ברווח/הפסד כולל של [סכום] — [אחוז] על ההשקעה המקורית.'" if has_cost_basis else "") + " לעולם אל תערבב בין השינוי היומי לבין הרווח הכולל." if has_portfolio else ""}
 
@@ -2030,12 +2126,14 @@ RSI קיצוני: "ההיסטוריה אומרת ש-RSI כזה מוביל בדר
 כללים טכניים (חובה):
 - גוף שני בכל רגע: "אתה", "שלך", "התיק שלך" — לא "המשקיע" ולא "אחזקות"
 - ללא markdown: ללא *, **, #, -, קווים מפרידים — טקסט רציף בלבד
-- שמות חברות בעברית: {all_names_heb}
+- שמות חברות תמיד בעברית — {all_names_heb} — אל תכתוב שום טיקר באנגלית. "AAPL" → "אפל", "MSFT" → "מייקרוסופט" וכו'. ZERO English tickers.
 - מספרים: תמיד בעברית — "שלושה וחצי אחוז", "מאה עשרים דולר" — לא "3.5%", לא "$120"
 - P&L יומי: השינוי היומי הוא כמה דולרים ואחוז קטן (לרוב פחות מאחוז). לעולם אל תערבב עם הרווח הכולל מאז הקנייה.
 - יעדי מחיר: אך ורק ממסעיף "קונצנזוס אנליסטים" — לא ממאמרי חדשות
-- מילים באנגלית מותרות: S&P, VIX, RSI, AI, Reddit, StockTwits, earnings
+- אסור לכתוב תווים מאנגלית מחוץ לרשימה המותרת. אסור בהחלט: סינית, יפנית, ערבית, או כל שפה שאינה עברית/אנגלית מותרת.
+- מילים באנגלית מותרות בלבד: S&P, AI, Reddit, StockTwits — שאר המונחים תרגם לעברית
 - מינימום 600 מילה, מקסימום 900 מילה
+- מגוון לשוני: אל תחזור על אותו מבנה משפט לכל מניה. לא "הדוח בעוד X יום" שלוש פעמים — שנה ניסוח: "תאריך שישראל חייב להיות על הרדאר שלך", "בעוד שלושה שבועות הם יצטרכו לענות", "זה האירוע שיכריע" וכו'.
 
 דוגמאות קול — הסגנון שאתה שואף אליו:
 ❌ לא: "מניית אנבידיה ירדה ב-2.3% כתוצאה מחששות מגמישות הביקוש לשבבי AI."
@@ -2075,6 +2173,10 @@ calibration — אמינות:
 
     for ch in ('**', '*', '## ', '### ', '# ', '[', ']'):
         script = script.replace(ch, '')
+
+    # Strip any non-Hebrew/non-Latin characters the LLM may have injected (Chinese, Arabic, etc.)
+    script = re.sub(r'[^\u0020-\u007F\u05D0-\u05FF\u05B0-\u05C7\u200F\n\r.,!?;:()\-–—\'\"״׳ ]', ' ', script)
+    script = re.sub(r'  +', ' ', script)
 
     print(f"  ✅ Podcast script: full LLM, {len(valid_stocks)} stocks, {len(script)} chars")
     return script
@@ -2190,53 +2292,128 @@ def _prepare_text_for_tts(text):
     import re
 
     # Stock ticker pronunciation map — how to say them in Hebrew
-    ticker_pronunciation = {
-        'META': 'מטא',
-        'MSFT': 'מייקרוסופט',
-        'SOFI': 'סופי',
-        'ADBE': 'אדובי',
-        'AMZN': 'אמזון',
-        'PANW': 'פאלו אלטו',
-        'ONON': 'און',
-        'IREN': 'אירן',
-        'MELI': 'מרקדו ליברה',
-        'NVDA': 'אנבידיה',
-        'GOOGL': 'גוגל',
-        'S&P 500': 'אס אנד פי חמש מאות',
-        'S&P': 'אס אנד פי',
-        'VIX': 'ויקס',
-        'CNBC': 'סי אן בי סי',
-        'IBM': 'איי בי אם',
-        'AMD': 'איי אם די',
-        'GPU': 'ג\'י פי יו',
-        'AI': 'איי איי',
-        'USD': 'דולר',
-        'ILS': 'שקל',
-    }
+    # Longer matches first to avoid partial replacements (e.g. GOOGL before GOOG)
+    ticker_pronunciation = [
+        # Common portfolio tickers
+        ('AAPL', 'אפל'),
+        ('TSLA', 'טסלה'),
+        ('NVDA', 'אנבידיה'),
+        ('GOOGL', 'גוגל'),
+        ('GOOG', 'גוגל'),
+        ('MSFT', 'מייקרוסופט'),
+        ('AMZN', 'אמזון'),
+        ('META', 'מטא'),
+        ('NFLX', 'נטפליקס'),
+        ('ORCL', 'אורקל'),
+        ('CRM', 'סיילספורס'),
+        ('ADBE', 'אדובי'),
+        ('INTC', 'אינטל'),
+        ('AMD', 'איי אם די'),
+        ('QCOM', 'קוואלקום'),
+        ('AVGO', 'ברודקום'),
+        ('JPM', 'ג\'יי פי מורגן'),
+        ('BAC', 'בנק אוף אמריקה'),
+        ('GS', 'גולדמן זאקס'),
+        ('MS', 'מורגן סטנלי'),
+        ('WFC', 'וולס פארגו'),
+        ('JNJ', 'ג\'ונסון אנד ג\'ונסון'),
+        ('PFE', 'פייזר'),
+        ('UNH', 'יונייטד הלת'),
+        ('LLY', 'אלי לילי'),
+        ('XOM', 'אקסון מוביל'),
+        ('CVX', 'שברון'),
+        ('SOFI', 'סופי'),
+        ('PANW', 'פאלו אלטו'),
+        ('ONON', 'און'),
+        ('IREN', 'אירן'),
+        ('MELI', 'מרקדו ליברה'),
+        ('IBM', 'איי בי אם'),
+        # Indices and terms
+        ('S&P 500', 'אס אנד פי חמש מאות'),
+        ('S&P', 'אס אנד פי'),
+        ('VIX', 'ויקס'),
+        ('RSI', 'מדד חוזק יחסי'),
+        ('CNBC', 'סי אן בי סי'),
+        ('GPU', 'ג\'י פי יו'),
+        ('AI', 'בינה מלאכותית'),
+        ('CEO', 'מנכ"ל'),
+        ('CFO', 'סמנכ"ל כספים'),
+        ('EPS', 'רווח למניה'),
+        ('USD', 'דולר'),
+        ('ILS', 'שקל'),
+        ('IPO', 'הנפקה'),
+        ('ETF', 'תעודת סל'),
+        ('MA200', 'ממוצע מאתיים יום'),
+        ('MA50', 'ממוצע חמישים יום'),
+    ]
 
-    # Replace English tickers/terms with Hebrew pronunciation
-    for eng, heb in ticker_pronunciation.items():
+    # ── Step 1: Strip non-Hebrew/non-Latin/non-punctuation characters (Chinese, Arabic etc.) ──
+    # Keep: Hebrew (0590-05FF), Latin (0020-007F), common punctuation, digits
+    text = re.sub(r'[^\u0020-\u007F\u05D0-\u05FF\u05B0-\u05C7\u200F\n\r.,!?;:()\-–—\'\"״׳ ]', ' ', text)
+    text = re.sub(r'  +', ' ', text)  # collapse multiple spaces
+
+    # ── Step 2: Fix broken spacing around dashes before terms ──
+    # "ב- AI" → "ב-AI", "ל- AI" etc.
+    text = re.sub(r'([בלכמ])-\s+', r'\1-', text)
+
+    # ── Step 3: Replace English tickers/terms with Hebrew pronunciation (longer first) ──
+    # Must come before generic English cleanup so specific terms are caught
+    extra_terms = [
+        ('OpenAI', 'אופן-איי'),
+        ('Azure', "אז'ור"),
+        ('ChatGPT', "צ'ט-ג'י-פי-טי"),
+        ('chatGPT', "צ'ט-ג'י-פי-טי"),
+        ('chatgpt', "צ'ט-ג'י-פי-טי"),
+        ('Copilot', "קו-פיילוט"),
+        ('Stargate', 'סטארגייט'),
+        ('xAI', 'אקס-איי'),
+        ('Grok', "גרוק"),
+        ('Gemini', "ג'מיני"),
+        ('Nvidia', 'אנבידיה'),
+        ('nvidia', 'אנבידיה'),
+    ]
+    for eng, heb in extra_terms:
         text = text.replace(eng, heb)
 
+    for eng, heb in ticker_pronunciation:
+        text = text.replace(eng, heb)
+
+    # ── Step 4: Replace remaining ALL-CAPS English words (3+ letters) with spaced letters ──
+    # e.g. "EMJ" → "א.מ.ג'" — better than letting TTS stumble
+    def _spell_out(m):
+        word = m.group(0)
+        # If already replaced by a known term, skip (won't match since those are Hebrew now)
+        return ' '.join(word)  # "EMJ" → "E M J" — TTS reads each letter separately
+    text = re.sub(r'\b[A-Z]{2,6}\b', _spell_out, text)
+
+    # ── Step 5: Numeric conversions ──
     # Dollar amounts: $34.77 → "34.77 דולר"
-    text = re.sub(r'\$(\d+\.?\d*)', r'\1 דולר', text)
-
-    # Shekel amounts: ₪3.13 → "3.13 שקלים"
-    text = re.sub(r'₪(\d+\.?\d*)', r'\1 שקלים', text)
-
-    # Percentage: +2.0% → "פלוס 2 אחוז"
+    text = re.sub(r'\$(\d[\d,\.]*)', r'\1 דולר', text)
+    # Shekel amounts
+    text = re.sub(r'₪(\d[\d,\.]*)', r'\1 שקלים', text)
+    # Percentages with sign
     text = re.sub(r'\+(\d+\.?\d*)%', r'פלוס \1 אחוז', text)
-    text = re.sub(r'-(\d+\.?\d*)%', r'מינוס \1 אחוז', text)
+    text = re.sub(r'(?<!\d)-(\d+\.?\d*)%', r'מינוס \1 אחוז', text)
     text = re.sub(r'(\d+\.?\d*)%', r'\1 אחוז', text)
+    # Decimal numbers that TTS reads wrong: "4.33" → "4 נקודה 33"
+    text = re.sub(r'(\d+)\.(\d+)', r'\1 נקודה \2', text)
 
-    # Clean up markdown artifacts
+    # ── Step 6: Punctuation / flow fixes for TTS ──
+    # Em-dash and en-dash → comma (avoids long unnatural pauses)
+    # Strip surrounding spaces first so we don't get " , "
+    text = re.sub(r'\s*[—–]\s*', ', ', text)
+    # Ellipsis → period
+    text = text.replace('...', '. ')
+    # Markdown artifacts
     text = text.replace('**', '').replace('*', '').replace('#', '')
     text = text.replace('[', '').replace(']', '')
+    # Double periods
+    text = re.sub(r'\.{2,}', '.', text)
+    # Multiple spaces/commas
+    text = re.sub(r',\s*,', ',', text)
+    text = re.sub(r'  +', ' ', text)
 
-    # Clean up double periods
-    text = text.replace('..', '.')
-
-    return text
+    return text.strip()
 
 
 def _add_niqqud(text):
@@ -2279,20 +2456,19 @@ def _add_niqqud(text):
 
 
 def _elevenlabs_tts(text, output_path):
-    """ElevenLabs TTS — premium natural Hebrew voice.
+    """ElevenLabs TTS — Israeli Hebrew female radio presenter voice.
 
-    Set ELEVENLABS_API_KEY in .env to enable.
-    Set ELEVENLABS_VOICE_ID to override (default: multilingual pre-made voices).
-    Best Hebrew voices (multilingual_v2 model):
-      - Adam: pNInz6obpgDQGcFmaJgB   (male, authoritative)
-      - Rachel: 21m00Tcm4TlvDq8ikWAM (female, warm)
-    Or create a custom Hebrew voice in ElevenLabs dashboard.
+    Model: eleven_v3 — the ONLY ElevenLabs model with Hebrew support (74 languages).
+    Voice: קיבוצניקית (6bEf7nSioDi63wP1tgW0) — ישראלית אותנטית בת 25, מבטא ישראלי.
+
+    eleven_v3 is highly expressive and responds to punctuation for natural delivery.
+    Voice settings tuned for warm, energetic female radio presenter feel.
     """
     api_key = os.environ.get('ELEVENLABS_API_KEY', '')
     if not api_key:
         return False
 
-    voice_id = os.environ.get('ELEVENLABS_VOICE_ID', 'pNInz6obpgDQGcFmaJgB')  # Adam default
+    voice_id = os.environ.get('ELEVENLABS_VOICE_ID', '6bEf7nSioDi63wP1tgW0')  # קיבוצניקית default
 
     try:
         resp = requests.post(
@@ -2304,24 +2480,25 @@ def _elevenlabs_tts(text, output_path):
             },
             json={
                 'text': text,
-                'model_id': 'eleven_multilingual_v2',
+                'model_id': 'eleven_v3',  # Only model with Hebrew support
                 'voice_settings': {
-                    'stability': 0.45,
-                    'similarity_boost': 0.75,
-                    'style': 0.35,
+                    'stability': 0.35,        # Lower = more expressive, dynamic delivery
+                    'similarity_boost': 0.80, # High = stays true to the voice character
+                    'style': 0.50,            # Moderate style for engaging presenter feel
                     'use_speaker_boost': True,
                 },
+                'language_code': 'he',        # Explicit Hebrew for eleven_v3
             },
-            timeout=120,
+            timeout=180,
         )
         if resp.status_code == 200:
             with open(str(output_path), 'wb') as f:
                 f.write(resp.content)
             size_kb = os.path.getsize(output_path) / 1024
-            print(f"  🎙️  Audio saved (ElevenLabs voice {voice_id}): {Path(output_path).name} ({size_kb:.0f} KB)")
+            print(f"  🎙️  Audio saved (ElevenLabs eleven_v3 / {voice_id}): {Path(output_path).name} ({size_kb:.0f} KB)")
             return True
         else:
-            print(f"  ⚠️  ElevenLabs returned {resp.status_code}: {resp.text[:200]}")
+            print(f"  ⚠️  ElevenLabs returned {resp.status_code}: {resp.text[:300]}")
             return False
     except Exception as e:
         print(f"  ⚠️  ElevenLabs TTS failed ({e})")
@@ -2344,30 +2521,78 @@ def text_to_speech(text, output_path, voice=None):
             return True
         print("  ↩️  Falling back to Edge TTS")
 
-    # Step 3: Try Edge TTS
+    # Step 3: Try Edge TTS — split into paragraphs to prevent repetition bug
     try:
         import asyncio
+        import tempfile
         import edge_tts
 
         _voice = voice or os.environ.get('PODCAST_VOICE', 'he-IL-HilaNeural')
 
-        async def _generate():
-            communicate = edge_tts.Communicate(text, _voice, rate="-5%", pitch="+0Hz")
-            await communicate.save(str(output_path))
+        # Split on paragraph breaks to avoid Edge TTS internal chunking (causes repeats)
+        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+        if not paragraphs:
+            paragraphs = [text]
 
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    pool.submit(lambda: asyncio.run(_generate())).result(timeout=120)
-            else:
-                loop.run_until_complete(_generate())
-        except RuntimeError:
-            asyncio.run(_generate())
+        async def _generate_paragraph(para, out_file):
+            communicate = edge_tts.Communicate(para, _voice, rate="-5%", pitch="+0Hz")
+            await communicate.save(out_file)
+
+        def _run_async(coro):
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        return pool.submit(lambda: asyncio.run(coro)).result(timeout=60)
+                else:
+                    return loop.run_until_complete(coro)
+            except RuntimeError:
+                return asyncio.run(coro)
+
+        if len(paragraphs) == 1:
+            # Single chunk — no concat needed
+            _run_async(_generate_paragraph(paragraphs[0], str(output_path)))
+        else:
+            # Generate each paragraph → temp file → ffmpeg concat
+            tmp_files = []
+            try:
+                for i, para in enumerate(paragraphs):
+                    tf = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
+                    tf.close()
+                    tmp_files.append(tf.name)
+                    _run_async(_generate_paragraph(para, tf.name))
+
+                # Concatenate MP3 chunks — try ffmpeg first, fall back to byte concat
+                import subprocess
+                try:
+                    list_file = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
+                    for tf_name in tmp_files:
+                        list_file.write(f"file '{tf_name}'\n")
+                    list_file.close()
+                    result = subprocess.run(
+                        ['ffmpeg', '-y', '-f', 'concat', '-safe', '0',
+                         '-i', list_file.name, '-c', 'copy', str(output_path)],
+                        capture_output=True, timeout=120
+                    )
+                    os.unlink(list_file.name)
+                    if result.returncode != 0:
+                        raise RuntimeError("ffmpeg failed")
+                except (FileNotFoundError, RuntimeError):
+                    # ffmpeg not available — concatenate raw bytes (works for most players)
+                    with open(str(output_path), 'wb') as out_f:
+                        for tf_name in tmp_files:
+                            with open(tf_name, 'rb') as in_f:
+                                out_f.write(in_f.read())
+            finally:
+                for tf_name in tmp_files:
+                    try:
+                        os.unlink(tf_name)
+                    except OSError:
+                        pass
 
         size_kb = os.path.getsize(output_path) / 1024
-        print(f"  🔊 Audio saved (Edge TTS {_voice}): {output_path.name} ({size_kb:.0f} KB)")
+        print(f"  🔊 Audio saved (Edge TTS {_voice}): {Path(output_path).name} ({size_kb:.0f} KB)")
         return True
     except ImportError:
         print("  ⚠️  edge-tts not installed, falling back to gTTS")
