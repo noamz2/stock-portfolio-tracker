@@ -626,15 +626,23 @@ def _collect_macro_news():
     candidates = []
     seen = set()
 
+    def _strip_html(text):
+        """Remove HTML tags and decode basic entities."""
+        text = re.sub(r'<[^>]+>', ' ', text)
+        text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&nbsp;', ' ')
+        return re.sub(r'\s+', ' ', text).strip()
+
     def _add(title, snippet, theme, boost=0):
+        title = _strip_html(title)
+        snippet = _strip_html(snippet) if snippet else ''
         key = title.lower()[:55]
         if key in seen or not title:
             return
         seen.add(key)
-        text_low = (title + ' ' + (snippet or '')).lower()
+        text_low = (title + ' ' + snippet).lower()
         score = sum(1 for kw in _MACRO_KWS if kw in text_low) + boost
         if score >= 2:
-            candidates.append({'title': title, 'snippet': snippet or '', 'theme': theme, 'score': score})
+            candidates.append({'title': title, 'snippet': snippet, 'theme': theme, 'score': score})
 
     # ── Source 1: Google News RSS (free, no key) ──
     if feedparser:
@@ -1781,10 +1789,16 @@ def _generate_podcast_with_llm(data):
     macro_news = m.get('macro_news') or []
     if macro_news:
         macro_ctx += "\n=== חדשות מאקרו קריטיות שמניעות את השוק היום ===\n"
+        _html_re = re.compile(r'<[^>]*>?')  # handles both complete and truncated tags
         for story in macro_news:
-            macro_ctx += f"• {story['title']}\n"
-            if story.get('snippet') and story['snippet'] != story['title']:
-                macro_ctx += f"  {story['snippet'][:220]}\n"
+            title = _html_re.sub('', story['title']).strip()
+            macro_ctx += f"• {title}\n"
+            raw_snip = story.get('snippet', '')
+            # Skip snippet if it looks like raw HTML (starts with <)
+            if raw_snip and not raw_snip.lstrip().startswith('<'):
+                snippet = _html_re.sub('', raw_snip).strip()
+                if snippet and snippet != title:
+                    macro_ctx += f"  {snippet[:220]}\n"
         macro_ctx += "=== סוף חדשות מאקרו ===\n"
 
     def _clean_expert_quote(text):
