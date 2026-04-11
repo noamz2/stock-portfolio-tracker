@@ -2542,7 +2542,7 @@ _briefing_jobs = {}
 _briefing_jobs_lock = __import__('threading').Lock()
 
 
-def _run_briefing_job(user_id, tickers, positions, briefings_dir):
+def _run_briefing_job(user_id, tickers, positions, briefings_dir, user_name=None):
     """Background worker: collect → LLM → TTS → save files."""
     import subprocess, sys as _sys, tempfile, threading
     from daily_briefing import generate_text_report, generate_podcast_script, text_to_speech
@@ -2575,7 +2575,7 @@ def _run_briefing_job(user_id, tickers, positions, briefings_dir):
         # Phase 2: LLM report + script
         _set({'status': 'generating', 'step': 'llm'})
         report = generate_text_report(all_data, positions)
-        script = generate_podcast_script(all_data)
+        script = generate_podcast_script(all_data, user_name=user_name)
 
         today = datetime.now().strftime('%Y-%m-%d')
         os.makedirs(briefings_dir, exist_ok=True)
@@ -2622,6 +2622,9 @@ def generate_briefing():
         return jsonify({'error': 'No tickers provided'}), 400
 
     user_id = session.get('user_id', 'anon')
+    user_email = session.get('username', '')
+    user_name = user_email.split('@')[0].replace('.', ' ').replace('_', ' ').title() if user_email else None
+
     with _briefing_jobs_lock:
         job = _briefing_jobs.get(user_id, {})
         if job.get('status') == 'generating':
@@ -2629,7 +2632,7 @@ def generate_briefing():
         _briefing_jobs[user_id] = {'status': 'generating', 'step': 'collect'}
 
     briefings_dir = os.path.join(os.path.dirname(__file__), 'briefings')
-    t = threading.Thread(target=_run_briefing_job, args=(user_id, tickers, positions, briefings_dir), daemon=True)
+    t = threading.Thread(target=_run_briefing_job, args=(user_id, tickers, positions, briefings_dir, user_name), daemon=True)
     t.start()
     return jsonify({'status': 'generating'})
 

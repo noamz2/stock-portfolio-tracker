@@ -164,7 +164,10 @@ def collect_macro():
     try:
         ta = yf.Ticker('TA35.TA')
         ti = ta.info
-        macro['ta35'] = round(safe_get(ti, 'regularMarketPrice', 'currentPrice') or 0, 2)
+        ta_price = round(safe_get(ti, 'regularMarketPrice', 'currentPrice') or 0, 2)
+        ta_prev = safe_get(ti, 'previousClose') or ta_price
+        ta_chg = round((ta_price - ta_prev) / ta_prev * 100, 2) if ta_prev else 0
+        macro['ta35'] = {'price': ta_price, 'change_pct': ta_chg}
     except:
         macro['ta35'] = None
 
@@ -1036,9 +1039,24 @@ def collect_news_deep(ticker, resolved_ticker, company_name, hebrew_name):
     return articles
 
 
+OPENAI_MODEL = "gpt-4.1-mini"
 DEEPSEEK_MODEL = "deepseek-chat"
 GEMINI_MODEL = "gemini-2.0-flash"
 GROQ_MODEL = "llama-3.3-70b-versatile"
+
+
+def _openai_chat(api_key, messages, max_tokens=1000, system=None):
+    """Call OpenAI API."""
+    from openai import OpenAI
+    client = OpenAI(api_key=api_key)
+
+    if system:
+        messages = [{"role": "system", "content": system}] + messages
+
+    response = client.chat.completions.create(
+        model=OPENAI_MODEL, max_tokens=max_tokens, messages=messages,
+    )
+    return response.choices[0].message.content
 
 
 def _deepseek_chat(api_key, messages, max_tokens=1000, system=None):
@@ -1092,19 +1110,28 @@ def _groq_chat(api_key, messages, max_tokens=1000, system=None):
 
 
 def _llm_chat(messages, max_tokens=1000, system=None):
-    """Call LLM — tries DeepSeek first, then Gemini, then Groq."""
+    """Call LLM — tries OpenAI first, then DeepSeek, then Gemini, then Groq."""
+    openai_key = os.environ.get('OPENAI_API_KEY', '')
     deepseek_key = os.environ.get('DEEPSEEK_API_KEY', '')
     gemini_key = os.environ.get('GEMINI_API_KEY', '')
     groq_key = os.environ.get('GROQ_API_KEY', '')
 
-    # 1. DeepSeek (primary)
+    # 1. OpenAI (primary)
+    if openai_key:
+        try:
+            return _openai_chat(openai_key, messages, max_tokens, system)
+        except Exception as e:
+            print(f"    ⚠️  OpenAI failed: {e}")
+
+    # 2. DeepSeek (fallback)
     if deepseek_key:
         try:
+            print(f"    🔄 Trying DeepSeek...")
             return _deepseek_chat(deepseek_key, messages, max_tokens, system)
         except Exception as e:
             print(f"    ⚠️  DeepSeek failed: {e}")
 
-    # 2. Gemini (fallback)
+    # 3. Gemini (fallback)
     if gemini_key:
         try:
             print(f"    🔄 Trying Gemini...")
@@ -1112,12 +1139,12 @@ def _llm_chat(messages, max_tokens=1000, system=None):
         except Exception as e:
             print(f"    ⚠️  Gemini failed: {e}")
 
-    # 3. Groq (last resort)
+    # 4. Groq (last resort)
     if groq_key:
         print(f"    🔄 Trying Groq...")
         return _groq_chat(groq_key, messages, max_tokens, system)
 
-    raise RuntimeError("No LLM API key configured (set DEEPSEEK_API_KEY, GEMINI_API_KEY, or GROQ_API_KEY)")
+    raise RuntimeError("No LLM API key configured (set OPENAI_API_KEY, DEEPSEEK_API_KEY, GEMINI_API_KEY, or GROQ_API_KEY)")
 
 
 _CAUSAL_WORDS = [
@@ -1494,7 +1521,8 @@ def generate_text_report(data, positions=None):
         lines.append(f"  💱 USD/ILS: ₪{m['usd_ils']:.4f}")
 
     if m.get('ta35'):
-        lines.append(f"  🇮🇱 TA-35: {m['ta35']:,.2f}")
+        ta35 = m['ta35']
+        lines.append(f"  🇮🇱 TA-35: {ta35['price']:,.2f} ({ta35['change_pct']:+.2f}%)")
 
     lines.append("")
 
@@ -1658,36 +1686,155 @@ def generate_text_report(data, positions=None):
     return '\n'.join(lines)
 
 
-BRIEFING_SYSTEM_PROMPT = """אתה יועץ פיננסי אישי — לא כתב חדשות, לא מגיש רדיו. אתה מדבר ישירות אל משקיע אחד, שמחזיק בדיוק את המניות שתיארת, ומחכה לדעת מה המשמעות של היום עבורו ועבור כספו.
-
-הסגנון שלך:
-- תמיד "אתה" — "התיק שלך", "הכסף שלך", "מה זה אומר לך", "שים לב"
-- לא "השוק ירד" — "אתה ירדת X דולר היום, בעיקר בגלל..."
-- פרטים אישיים: אם יש עלות בסיס — "קנית ב-X, היום Y, זה Z% מאז הקנייה"
-- ספר סיפורים עם משמעות אישית, לא דוחות
-- אם יש בשורה טובה — שמח איתו. אם יש הפסד — היה כנה ורגוע, לא מבעית
-
-כללים טכניים:
-- אסור: סוגריים מרובעים, כוכביות, סולמית, מספור, markdown
-- טקסט רציף מוכן להקראה בקול רם
-- אסור: "הכתבה הראשונה", "כתבה נוספת", "לפי כתבה ש..." — שזור את המידע בנרטיב טבעי
-- אל תחזור על אותו רעיון פעמיים"""
 
 
-def generate_podcast_script(data):
+def generate_podcast_script(data, user_name=None):
     """Generate Hebrew podcast script — tries LLM API first, falls back to basic."""
     has_llm = os.environ.get('DEEPSEEK_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '') or os.environ.get('GROQ_API_KEY', '')
 
     if has_llm:
         try:
-            return _generate_podcast_with_llm(data)
+            return _generate_podcast_with_llm(data, user_name=user_name)
         except Exception as e:
             print(f"  ⚠️  LLM API failed for briefing: {e}, using fallback")
 
     return _generate_podcast_fallback(data)
 
 
-def _generate_podcast_with_llm(data):
+def _compute_analytical_signals(valid_stocks, macro):
+    """Pre-compute analytical insights from raw data. Returns dict with market_signals and stock_signals."""
+    market_signals = []
+    stock_signals = {}  # ticker → list of strings
+
+    sp500_change = macro.get('sp500', {}).get('change_pct', 0)
+
+    # ── Signal 3: Fear & Greed momentum ──
+    fg = macro.get('fear_greed', {})
+    fg_now = fg.get('score')
+    fg_week = fg.get('week_ago')
+    fg_month = fg.get('month_ago')
+    if fg_now is not None and fg_week is not None and abs(fg_now - fg_week) > 10:
+        direction = 'ירד' if fg_now < fg_week else 'עלה'
+        market_signals.append(f"סנטימנט השוק {direction} חדות — מ-{fg_week} לפני שבוע ל-{fg_now} היום")
+    elif fg_now is not None and fg_month is not None and abs(fg_now - fg_month) > 20:
+        direction = 'ירד' if fg_now < fg_month else 'עלה'
+        market_signals.append(f"סנטימנט השוק {direction} חדות מאז החודש שעבר — מ-{fg_month} ל-{fg_now}")
+
+    # ── Sector ETF map for stock-vs-sector comparison ──
+    _SECTOR_TO_ETF = {
+        'Technology': 'טק', 'Communication Services': 'טק',
+        'Financial Services': 'פיננסים', 'Financial': 'פיננסים',
+        'Healthcare': 'בריאות',
+        'Energy': 'אנרגיה',
+    }
+    sector_etf_moves = macro.get('sector_etfs', {})
+
+    # ── TA-35 for Israeli stocks ──
+    ta35 = macro.get('ta35')
+    ta35_change = ta35.get('change_pct', 0) if isinstance(ta35, dict) else 0
+
+    for s in valid_stocks:
+        ticker = s['ticker']
+        signals = []
+        change = s.get('change_pct', 0)
+        hebrew = s.get('hebrew', ticker)
+
+        # Signal 1: Stock vs Sector relative performance
+        sector = s.get('sector', '')
+        etf_label = _SECTOR_TO_ETF.get(sector)
+        if etf_label and etf_label in sector_etf_moves:
+            sector_change = sector_etf_moves[etf_label]
+            relative = change - sector_change
+            if abs(relative) > 1.0:
+                perf = 'ביצוע יתר' if relative > 0 else 'ביצוע חסר'
+                signals.append(f"{hebrew} {change:+.1f}% לעומת הסקטור ({etf_label}) {sector_change:+.1f}% — {perf} של {abs(relative):.1f}%")
+
+        # Signal 2: Valuation direction (forward PE vs trailing PE)
+        pe = s.get('pe')
+        fwd_pe = s.get('forward_pe')
+        if pe and fwd_pe and pe > 0 and fwd_pe > 0:
+            if fwd_pe < pe * 0.85:
+                signals.append(f"מכפיל עתידי ({fwd_pe:.0f}) נמוך משמעותית מנוכחי ({pe:.0f}) — השוק מצפה לצמיחת רווחים")
+            elif fwd_pe > pe * 1.15:
+                signals.append(f"מכפיל עתידי ({fwd_pe:.0f}) גבוה מנוכחי ({pe:.0f}) — השוק מצפה להאטה")
+
+        # Signal 4: Analyst target spread (conviction)
+        t_low = s.get('target_low')
+        t_high = s.get('target_high')
+        t_mean = s.get('target_mean')
+        if t_low and t_high and t_mean and t_mean > 0:
+            spread_pct = (t_high - t_low) / t_mean * 100
+            if spread_pct > 60:
+                signals.append(f"פיזור יעדים רחב מאוד (${t_low:.0f}-${t_high:.0f}) — חוסר הסכמה חד בין אנליסטים")
+            elif spread_pct < 20:
+                signals.append(f"קונצנזוס אנליסטים חזק — יעדים בטווח צר (${t_low:.0f}-${t_high:.0f})")
+            # Also flag if price above target
+            price = s.get('price', 0)
+            if price and t_mean and price > t_mean * 1.05:
+                signals.append(f"המחיר (${price:.0f}) מעל יעד הממוצע (${t_mean:.0f}) — האנליסטים חושבים שהמניה יקרה")
+
+        # Signal 5: "Moving with the market" detection
+        if abs(change - sp500_change) < 0.5 and abs(change) < 1.5:
+            signals.append(f"זזה עם השוק ({change:+.1f}% לעומת S&P {sp500_change:+.1f}%) — אין סיפור ספציפי")
+
+        # Signal 6: Earnings countdown
+        if s.get('earnings_date'):
+            try:
+                from datetime import date as _d
+                ed = datetime.strptime(s['earnings_date'], '%Y-%m-%d').date()
+                days = (ed - _d.today()).days
+                if days == 0:
+                    signals.append("דוח רווחים היום! צפי לתנודתיות חריגה")
+                elif 1 <= days <= 7:
+                    eps_note = f" (צפי EPS: ${s['earnings_est_eps']})" if s.get('earnings_est_eps') else ''
+                    signals.append(f"דוח רווחים בעוד {days} ימים{eps_note} — אזור תנודתיות גבוהה")
+                elif 8 <= days <= 14:
+                    signals.append(f"דוח רווחים בעוד {days} יום — סוחרים מתחילים להתמקם")
+            except Exception:
+                pass
+
+        # Signal 7: Israeli stock vs TA-35
+        resolved = s.get('resolved', ticker)
+        if resolved.endswith('.TA') and ta35_change:
+            relative = change - ta35_change
+            if abs(relative) > 1.0:
+                perf = 'ביצוע יתר' if relative > 0 else 'ביצוע חסר'
+                signals.append(f"{hebrew} {change:+.1f}% לעומת ת\"א 35 {ta35_change:+.1f}% — {perf}")
+
+        # Cap at 3 signals per stock (priority: order added)
+        stock_signals[ticker] = signals[:3]
+
+    # ── Signal 8: Dominant macro event detection ──
+    # When geopolitical / macro events are THE story, flag it so the LLM leads with macro
+    macro_news = macro.get('macro_news') or []
+    _GEO_KWS = ['war', 'iran', 'strait', 'hormuz', 'missile', 'attack', 'invasion',
+                 'sanctions', 'tariff', 'embargo', 'ceasefire', 'conflict', 'nuclear',
+                 'nato', 'china', 'taiwan', 'opec', 'oil crisis', 'recession',
+                 'crash', 'bank run', 'default', 'collapse']
+    geo_stories = []
+    for story in macro_news:
+        title_low = story['title'].lower()
+        matched = [kw for kw in _GEO_KWS if kw in title_low]
+        if len(matched) >= 1 and story.get('score', 0) >= 4:
+            geo_stories.append(story['title'])
+
+    dominant_macro = None
+    vix = macro.get('vix', 0) or 0
+    if len(geo_stories) >= 2 or (len(geo_stories) >= 1 and vix >= 25):
+        # Multiple geopolitical stories or geo + high fear = macro is THE story
+        dominant_macro = '\n'.join(f"• {s}" for s in geo_stories[:4])
+        market_signals.insert(0,
+            f"⚠️ אירוע מאקרו/גיאופוליטי דומיננטי — זה הסיפור המרכזי של היום, לא מניה ספציפית!"
+        )
+
+    return {
+        'market_signals': market_signals,
+        'stock_signals': stock_signals,
+        'dominant_macro': dominant_macro,
+    }
+
+
+def _generate_podcast_with_llm(data, user_name=None):
     """Full LLM podcast script — Planet Money meets All-In structure.
 
     Techniques applied (from analysis of top financial podcasts):
@@ -1853,6 +2000,21 @@ def _generate_podcast_with_llm(data):
         if s.get('pct_from_high') and s['pct_from_high'] < -30:
             b.append(f"מרחק מ-52W High: {s['pct_from_high']:+.1f}% — ירידה משמעותית מהשיא")
 
+        # Fundamentals — valuation & growth
+        fund_parts = []
+        if s.get('pe') and s['pe'] > 0:
+            fund_parts.append(f"P/E: {s['pe']:.1f}")
+        if s.get('forward_pe') and s['forward_pe'] > 0:
+            fund_parts.append(f"P/E צפוי: {s['forward_pe']:.1f}")
+        if s.get('revenue_growth') and abs(s['revenue_growth']) > 1:
+            fund_parts.append(f"צמיחת הכנסות: {s['revenue_growth']:+.0f}%")
+        if s.get('earnings_growth') and abs(s['earnings_growth']) > 1:
+            fund_parts.append(f"צמיחת רווח: {s['earnings_growth']:+.0f}%")
+        if s.get('profit_margin') and s['profit_margin'] > 0:
+            fund_parts.append(f"מרווח רווחי: {s['profit_margin']:.0%}")
+        if fund_parts:
+            b.append(' | '.join(fund_parts))
+
         # Analyst consensus
         if s.get('target_mean'):
             upside = round((s['target_mean'] - s['price']) / s['price'] * 100, 1)
@@ -1906,12 +2068,7 @@ def _generate_podcast_with_llm(data):
             except Exception:
                 pass
 
-        # News summary — the core substance
-        ns = s.get('news_summary', {})
-        if ns.get('has_news') and ns.get('summary'):
-            clean = ns['summary'].strip().replace('**','').replace('*','').replace('#','')
-            b.append(f"חדשות ({ns.get('article_count',0)} כתבות):\n{clean}")
-        # Raw top headlines — pass directly so LLM has original signal, not summary-of-summary
+        # News — raw headlines only (avoid summary-of-summary problem)
         raw_articles = s.get('news_deep', [])
         if raw_articles:
             headlines = []
@@ -2065,7 +2222,24 @@ def _generate_podcast_with_llm(data):
         context_parts.append(f"תיק ההשקעות:\n{portfolio_ctx}")
     if concentration_ctx:
         context_parts.append(concentration_ctx)
+    # ── Compute analytical signals ──
+    analytical = _compute_analytical_signals(valid_stocks_sorted, m)
+
+    # Inject per-stock signals into stock blocks
+    for i, s in enumerate(valid_stocks_sorted):
+        ticker_signals = analytical['stock_signals'].get(s['ticker'], [])
+        if ticker_signals:
+            stock_blocks[i] += "\n→ תובנות:\n" + "\n".join(f"  → {sig}" for sig in ticker_signals)
+
     context_parts.append("מניות (מהגדול לקטן לפי תנועה):\n" + "\n\n".join(stock_blocks))
+
+    # Market-level analytical signals
+    if analytical['market_signals']:
+        context_parts.append(
+            "=== תובנות שוק (חובה להשתמש!) ===\n" +
+            "\n".join(f"→ {sig}" for sig in analytical['market_signals'])
+        )
+
     if sector_ctx:
         context_parts.append(f"ניתוח סקטוריאלי — חפש נרטיב מאחד:\n{sector_ctx}")
     if expert_ctx:
@@ -2077,59 +2251,181 @@ def _generate_podcast_with_llm(data):
     has_portfolio = bool(portfolio_ctx)
     all_names_heb = ', '.join(s.get('hebrew', s['ticker']) for s in valid_stocks_sorted)
 
+    _user_greeting = f"היום ננתח את התיק של {user_name}." if user_name else ""
+
+    # ── Emotional tone guidance ──
+    portfolio_dollar = None
+    if has_portfolio:
+        try:
+            total_change = sum(s.get('_dollar_impact', 0) for s in valid_stocks_sorted)
+            portfolio_dollar = total_change
+        except Exception:
+            pass
+
+    if portfolio_dollar is not None and portfolio_dollar < -500:
+        mood = "התיק ירד. פתח ברוגע ובכנות — אל תמעיט, אל תבעית."
+    elif portfolio_dollar is not None and portfolio_dollar > 500:
+        mood = "יום טוב בתיק. אפשר להיות שמח אבל לא נלהב יתר על המידה."
+    else:
+        mood = "יום בלי תנועות גדולות. אל תנפח ואל תייצר דרמה — פשוט ספר מה קרה."
+
+    # ── Determine main story type ──
+    dominant_macro = analytical.get('dominant_macro')
+    if dominant_macro:
+        main_story_instruction = (
+            "4. הסיפור המרכזי — האירוע הגיאופוליטי/מאקרו שמניע את השוק, 60-70% מהפרק.\n"
+            "   הכותרות:\n"
+            f"{dominant_macro}\n"
+            "   ספר מה קורה → למה זה משנה למשקיע → איך זה משפיע על המניות בתיק שלך.\n"
+            "   חבר את האירוע למניות ספציפיות: מי נפגע, מי מרוויח, מי בסיכון.\n"
+            "   אל תסתפק ב'אי-ודאות גיאופוליטית' — תגיד בדיוק מה קורה ומה המשמעות."
+        )
+    else:
+        main_story_instruction = (
+            "4. הסיפור המרכזי — מניה אחת או נושא אחד, 60-70% מהפרק.\n"
+            "   ספר את הסיפור: מה קרה → למה → מה זה אומר לתיק.\n"
+            "   השתמש בנתוני הערכת שווי (PE, צמיחת הכנסות) אם יש — הם מסבירים \"למה\"."
+        )
 
     # ── THE PROMPT ──
     prompt = f"""{full_context}
 
 {'='*60}
 
-אתה חבר שקורה להיות אנליסט. המשקיע הזה שולח לך הודעה כל בוקר ואתה עונה לו קולית — כמו שמדברים לחבר, לא כמו שמגישים דוח.
+=== הנחיות ===
 
-המשימה: ספר לו מה הדבר הכי חשוב שקרה היום בתיק שלו. אחד. לא שבעה.
+אתה מגיש את "אסטרה פייננס" — פודקאסט יומי קצר שמספר למשקיע מה קרה עם הכסף שלו.
+הטון: כמו הודעת קולית ארוכה לחבר שמבין קצת מניות. לא דוח, לא כתבה, לא מצגת.
 
-איך לכתוב:
-• בחר את המניה או הנושא הכי מעניין מכל הנתונים — ועליו תבלה 60-70% מהזמן
-• לשאר המניות — משפט אחד כל אחת, רק אם יש סיבה אמיתית לדבר עליהן
-• אם מניה עשתה אפס ואין לה חדשות — אל תאמר כלום עליה
-• כשאתה מציין נתון — ספציפי: "ארגון בהטיה מוויליאם בלייר הוריד את היעד ממאתיים עשרים למאה שלושים" — לא "האנליסטים הורידו דירוג"
-• כשאין לך insight — אל תמלא מילים. שתיקה עדיפה על ביטויים ריקים
+טון רגשי להיום: {mood}
 
-{f"אם יש נתוני תיק (שינוי יומי בדולרים) — אמור אותם בפשטות בתחילת הברכה." if has_portfolio else ""}
+=== מבנה הפרק (בסדר הזה) ===
 
-מבנה חופשי — אין פסקאות חובה. אתה בוחר את הסדר לפי מה שמספר את הסיפור הכי טוב.
+1. פתיחה מותגית (משפט אחד בלבד):
+   "ברוכים הבאים לפודקאסט התיק האישי שלך, אסטרה פייננס. {_user_greeting}"
 
-חובה:
-1. פתח ב-"שלום" + תאריך + disclaimer בדיוק: "תזכורת — מה שנאמר כאן אינו ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
-2. סיים ב: "זהו להיום. תודה שהאזנת, ונשמע שוב מחר."
-3. גוף שני לאורך כל הדרך: "שלך", "התיק שלך"
-4. שמות חברות בעברית בלבד: {all_names_heb} — אפס טיקרים באנגלית
-5. מספרים בעברית: "שלושה וחצי" לא "3.5%"
-6. ללא markdown, ללא כותרות, ללא קווים — טקסט רציף
-7. אורך: 500-750 מילה — קצר וחד עדיף על ארוך ומדולל"""
+2. תאריך + disclaimer (משפט אחד בלבד):
+   "[תאריך היום בעברית]. תזכורת — מה שנאמר כאן אינו ייעוץ השקעות, אלא סיכום חדשות ומידע בלבד."
+
+3. כותרת התיק ({f"התיק שלך עלה/ירד ב-{abs(portfolio_dollar):,.0f} דולר היום." if portfolio_dollar is not None else "אמור בקצרה איך התיק נראה היום."})
+
+{main_story_instruction}
+
+5. סיכום מהיר — מקסימום 3 מניות נוספות, משפט אחד כל אחת. רק אם יש סיבה אמיתית.
+   אם מניה עשתה אפס ואין לה חדשות — אל תזכיר אותה בכלל.
+   אל תחזור על מניות שכבר הוזכרו בסיפור המרכזי.
+
+6. סגירה: "זהו להיום. תודה שהאזנת, ונשמע שוב מחר."
+
+=== כללי כתיבה ===
+
+מספרים:
+• עגל: "בערך 550 דולר" ולא "547 דולר ו-23 סנט". "כמעט שלושים אחוז" ולא "29.7 אחוז"
+• דולר ואחוז — כתוב כספרות ($550, 30%). ה-TTS יטפל בהקראה
+• כל אחוז חייב הקשר: לא "פוטנציאל של 32%" — אלא "האנליסטים חושבים שהמניה שווה 32% יותר מהמחיר היום"
+
+שמות:
+• חברות בעברית בלבד: {all_names_heb}
+• כל שם של בנק/חברת ניתוח חייב הסבר: "ברקלייז, שמכסה את המניה" — לא סתם "ברקלייז"
+
+סיפור סקטוריאלי, לא רשימת מניות:
+• אל תעבור מניה-מניה עם אחוזים ("סופי עלתה 2.6%, אמזון עלתה 1.4%, מטא ירדה 0.2%"). זה משעמם.
+• במקום: קבץ לפי סקטור או נרטיב. "מניות הטכנולוגיה בתיק ירדו קלות, הבולטת היא פאלו אלטו שהפסידה כמעט אחוז."
+• הזכר שם מניה רק כשיש לה סיפור ספציפי — לא כדי לדווח על אחוז.
+• מותר להזכיר 4-5 מניות בסך הכל בכל הפרק. השאר — קבץ לסקטור.
+
+טון:
+• גוף שני: "שלך", "התיק שלך", "אתה"
+• הכנס 2-3 סמני שיחה טבעיים: "תקשיב", "רגע", "אז ככה", "בוא נגיד"
+• אם אין מה לומר על מניה — "אין חדשות מהותיות" ותעבור הלאה. עדיף משפט קצר וכנה מפסקה ריקה
+• שחרר רגשות: "זה מספר יפה", "זה קצת מדאיג", "אני חושב שזה מעניין"
+
+כלל ברזל — תמיד עובדות קונקרטיות:
+• לא "התיק נראה רגוע / יציב / די יציב" — אלא "התיק עלה ב-$200 היום" או "התיק כמעט לא זז"
+• לא "המניה במצב מעניין" — אלא "המניה עלתה 3% אחרי דוח רווחים"
+• לא "הסקטור יציב" — אלא "אמזון ומרקדו ליברה עלו באחוז, בלי חדשות מיוחדות"
+• אל תתאר — ספר. כל משפט צריך לכלול עובדה, מספר, או אירוע. אם אין — אל תגיד כלום
+
+חזרות:
+• אל תזכיר את אותה מניה יותר מפעמיים בכל הפרק. אם כבר דיברת עליה — אל תחזור.
+• אל תחזור על אותו מספר/אחוז פעמיים. אם אמרת "סופי עלתה 2.6%" — לא צריך לחזור על זה.
+
+ביטויים אסורים — כל ביטוי שלא היית אומר בהודעת וואטסאפ:
+✗ "ניכר כי", "ראוי לציין", "יש לציין", "בהתאם לכך", "הנתונים מצביעים"
+✗ "מתי ההבטחה הופכת לרווח", "פער בין הסיפור לביצוע"
+✗ "שוק שמנסה להבחין", "תמונה גדולה", "המנגנון הבסיסי"
+✗ "מן הראוי", "נראה כי", "בד בבד", "לצד זאת"
+✗ "נראה די יציב", "די יציב", "נראה רגוע", "מורכבות", "דינמיקה", "בריטארטיות"
+✗ כל ביטוי שנשמע כמו כותרת עיתון, מאמר אקדמי, או דוח אנליסטים
+✗ אל תמציא מילים. אם אתה לא בטוח שמילה קיימת בעברית — השתמש במילה פשוטה
+
+כתיב — חשוב מאוד:
+• אתה כותב בעברית לדובר עברית שפת אם. כל ביטוי שבור ישמע מוזר. אם אתה לא בטוח — כתוב משפט קצר ופשוט.
+• אל תרכיב ביטויים חדשים. השתמש רק בביטויים שאתה בטוח שקיימים בעברית.
+• דוגמאות לביטויים שבורים שאסור לכתוב:
+  ✗ "מורידים ספקות" → ✓ "יורדים"
+  ✗ "למתחת לקו דעתם של המשקיעים" → ✓ "מתחת לרדאר של המשקיעים" או פשוט "המשקיעים לא מודאגים"
+  ✗ "הבונוסים שהבנק חטף" → ✓ "הרווחים הגבוהים של הבנק"
+  ✗ "מכפילים ממזערים ציפיות" → ✓ "השוק מצפה לפחות צמיחה"
+  ✗ "תיק הרווחים הרשמי" → ✓ "עונת הדוחות"
+  ✗ "מתקפלות" (בהקשר של חברות) → ✓ "מתפתחות" או "הולכות"
+• כלל אצבע: אם המשפט נשמע כמו תרגום מאנגלית — כתוב אותו מחדש בעברית טבעית.
+
+פורמט:
+• ללא markdown, ללא כותרות, ללא קווים — טקסט רציף בלבד
+• שבור שורה אחרי כל 2-3 משפטים — זה יוצר הפסקות טבעיות באודיו
+• אורך: 400-600 מילה (כ-4 דקות האזנה)
+
+=== חובת ניתוח ===
+
+כשיש שורות שמתחילות ב-→ (תובנות) — חייב להשתמש בהן. הן הניתוח שלך. אל תתעלם מהן.
+הן עונות על "למה" ו"מה זה אומר" — תשלב אותן בסיפור כאילו הן החשיבה שלך.
+
+בפרק, ענה על 3 השאלות האלה (לא כרשימה — בתוך הזרימה הטבעית):
+1. מה הדבר הכי מפתיע היום בתיק? (לא הכי גדול — הכי מפתיע)
+2. למה זה קרה? (חבר נקודות: מאקרו, סקטור, חדשות)
+3. מה לשים לב אליו השבוע? (דוח קרוב, מגמה, סיכון)
+
+דוגמה לשימוש בתובנה:
+• נתון: "סופי עלתה 2.6%"
+• תובנה: "→ ביצוע יתר: סופי +2.6% לעומת סקטור הפיננסים +1.0%"
+• מה לומר: "תקשיב, סופי עלתה 2.6% — אבל מה שמעניין זה שהפיננסים ביחד עלו רק אחוז. סופי רצה לבד, וזה בגלל..."
+
+אל תתאר — נתח. כל משפט צריך לענות על "אז מה?" ולא רק על "מה קרה?"."""
 
     script = _llm_chat(
         [{"role": "user", "content": prompt}],
-        max_tokens=5500,
+        max_tokens=4000,
         system=(
-            "אתה חבר טוב שקורה להיות אנליסט מנוסן. אתה מדבר לאדם ספציפי על הכסף שלו — "
-            "לא מרצה, לא קורא כותרות. מדבר בגובה העיניים, בעברית טבעית.\n\n"
-            "כלל אחד חשוב מאוד: אל תמלא חלל במילים ריקות. "
-            "אם אין לך insight אמיתי על מניה — אמור משפט אחד קצר ועבור הלאה. "
-            "עדיף שתיקה על פני ביטויים גנריים כמו 'הריבית משפיעה על המכפילים' בכל פעם שאין לך מה לומר.\n\n"
-            "כשיש לך insight אמיתי — תן אותו ישירות, בלי הקדמות. "
-            "כשאין — אמור את העובדה הפשוטה ועבור הלאה. "
-            "עברית כמו שאדם מדבר, לא כמו שכתבה מתורגמת."
+            "אתה אנליסט, לא קריין. התפקיד שלך לנתח — לא לתאר.\n"
+            "כשאתה רואה שורות → (תובנות) — זה הניתוח שלך. תשלב אותן בסיפור.\n"
+            "אתה מדבר כמו חבר ישראלי שמבין פיננסים — לא כלכלן, לא עיתונאי.\n"
+            "דוגמה לטון נכון: 'תקשיב, סופי עלתה 2.6% אבל הפיננסים עלו רק אחוז — היא רצה לבד'\n"
+            "דוגמה לטון שגוי: 'ניכר כי סופי מציגה ביצועי יתר ביחס לסקטור'\n"
+            "כל מספר — עם הקשר. כל שם — עם הסבר. אם אין מה לומר — אמור שאין ותעבור הלאה.\n"
+            "עברית של שיחה — לא עברית של כתבה. אל תמציא ביטויים — אם אתה לא בטוח, כתוב משפט פשוט וקצר.\n"
+            "אל תתרגם ביטויים מאנגלית מילה במילה. כתוב כמו שישראלי מדבר."
         )
     )
 
+    # ── Post-processing ──
     for ch in ('**', '*', '## ', '### ', '# ', '[', ']'):
         script = script.replace(ch, '')
 
-    # Strip any non-Hebrew/non-Latin characters the LLM may have injected (Chinese, Arabic, etc.)
+    # Strip non-Hebrew/non-Latin characters
     script = re.sub(r'[^\u0020-\u007F\u05D0-\u05FF\u05B0-\u05C7\u200F\n\r.,!?;:()\-–—\'\"״׳ ]', ' ', script)
     script = re.sub(r'  +', ' ', script)
 
-    print(f"  ✅ Podcast script: full LLM, {len(valid_stocks)} stocks, {len(script)} chars")
+    # ── Validation ──
+    word_count = len(script.split())
+    if word_count < 100:
+        print(f"  ⚠️  Script too short ({word_count} words), using fallback")
+        return _generate_podcast_fallback(data)
+    if not any(c in script for c in 'אבגדהוזחטיכלמנסעפצקרשת'):
+        print(f"  ⚠️  Script not in Hebrew, using fallback")
+        return _generate_podcast_fallback(data)
+
+    print(f"  ✅ Podcast script: full LLM, {len(valid_stocks)} stocks, {len(script)} chars, {word_count} words")
     return script
 
 
@@ -2238,6 +2534,50 @@ def _generate_podcast_fallback(data):
     return script
 
 
+def _number_to_hebrew(n):
+    """Convert an integer (0-999999) to Hebrew words."""
+    if n == 0:
+        return 'אפס'
+    _ones = ['', 'אחד', 'שניים', 'שלושה', 'ארבעה', 'חמישה', 'שישה', 'שבעה', 'שמונה', 'תשעה']
+    _teens = ['עשרה', 'אחד עשר', 'שניים עשר', 'שלושה עשר', 'ארבעה עשר', 'חמישה עשר',
+              'שישה עשר', 'שבעה עשר', 'שמונה עשר', 'תשעה עשר']
+    _tens = ['', 'עשר', 'עשרים', 'שלושים', 'ארבעים', 'חמישים', 'שישים', 'שבעים', 'שמונים', 'תשעים']
+
+    parts = []
+    if n >= 1000:
+        thousands = n // 1000
+        n %= 1000
+        if thousands == 1:
+            parts.append('אלף')
+        elif thousands == 2:
+            parts.append('אלפיים')
+        elif thousands <= 9:
+            parts.append(f'{_ones[thousands]} אלפים')
+        else:
+            parts.append(f'{thousands} אלף')
+
+    if n >= 100:
+        hundreds = n // 100
+        n %= 100
+        if hundreds == 1:
+            parts.append('מאה')
+        elif hundreds == 2:
+            parts.append('מאתיים')
+        else:
+            parts.append(f'{_ones[hundreds]} מאות')
+
+    if n >= 10 and n < 20:
+        parts.append(_teens[n - 10])
+    else:
+        if n >= 20:
+            parts.append(_tens[n // 10])
+            n %= 10
+        if n > 0:
+            parts.append(_ones[n])
+
+    return ' '.join(parts)
+
+
 def _prepare_text_for_tts(text):
     """Prepare text for better Hebrew TTS pronunciation."""
     import re
@@ -2290,6 +2630,7 @@ def _prepare_text_for_tts(text):
         ('CEO', 'מנכ"ל'),
         ('CFO', 'סמנכ"ל כספים'),
         ('EPS', 'רווח למניה'),
+        ('CPI', 'מדד המחירים לצרכן'),
         ('USD', 'דולר'),
         ('ILS', 'שקל'),
         ('IPO', 'הנפקה'),
@@ -2322,6 +2663,14 @@ def _prepare_text_for_tts(text):
         ('Gemini', "ג'מיני"),
         ('Nvidia', 'אנבידיה'),
         ('nvidia', 'אנבידיה'),
+        # Financial terms the LLM might use in English
+        ('Jefferies', "ג'פריז"),
+        ('Barclays', 'ברקליז'),
+        ('Goldman Sachs', 'גולדמן זאקס'),
+        ('Wells Fargo', 'וולס פארגו'),
+        ('William Blair', 'ויליאם בלייר'),
+        ('UBS', 'יו בי אס'),
+        ('JP Morgan', "ג'יי פי מורגן"),
     ]
     for eng, heb in extra_terms:
         text = text.replace(eng, heb)
@@ -2330,28 +2679,74 @@ def _prepare_text_for_tts(text):
         text = text.replace(eng, heb)
 
     # ── Step 4: Replace remaining ALL-CAPS English words (3+ letters) with spaced letters ──
-    # e.g. "EMJ" → "א.מ.ג'" — better than letting TTS stumble
     def _spell_out(m):
         word = m.group(0)
-        # If already replaced by a known term, skip (won't match since those are Hebrew now)
         return ' '.join(word)  # "EMJ" → "E M J" — TTS reads each letter separately
     text = re.sub(r'\b[A-Z]{2,6}\b', _spell_out, text)
 
-    # ── Step 5: Numeric conversions ──
-    # Dollar amounts: $34.77 → "34.77 דולר"
-    text = re.sub(r'\$(\d[\d,\.]*)', r'\1 דולר', text)
-    # Shekel amounts
-    text = re.sub(r'₪(\d[\d,\.]*)', r'\1 שקלים', text)
-    # Percentages with sign
-    text = re.sub(r'\+(\d+\.?\d*)%', r'פלוס \1 אחוז', text)
-    text = re.sub(r'(?<!\d)-(\d+\.?\d*)%', r'מינוס \1 אחוז', text)
-    text = re.sub(r'(\d+\.?\d*)%', r'\1 אחוז', text)
-    # Decimal numbers that TTS reads wrong: "4.33" → "4 נקודה 33"
-    text = re.sub(r'(\d+)\.(\d+)', r'\1 נקודה \2', text)
+    # ── Step 5: Numbers to Hebrew words (BEFORE symbol replacements) ──
+    # This is the single biggest TTS pronunciation improvement.
+
+    # Dollar amounts: $1,234.56 → "אלף מאתיים שלושים וארבעה דולר וחמישים ושישה סנט"
+    def _dollar_to_hebrew(m):
+        raw = m.group(1).replace(',', '')
+        if '.' in raw:
+            whole, frac = raw.split('.', 1)
+        else:
+            whole, frac = raw, ''
+        whole_int = int(whole) if whole else 0
+        heb = _number_to_hebrew(whole_int)
+        if frac and int(frac) > 0:
+            return f'{heb} דולר ו{_number_to_hebrew(int(frac))} סנט'
+        return f'{heb} דולר'
+    text = re.sub(r'\$(\d[\d,]*\.?\d*)', _dollar_to_hebrew, text)
+
+    # Shekel amounts: ₪72.4 → "שבעים ושניים שקל וארבעים אגורות"
+    def _shekel_to_hebrew(m):
+        raw = m.group(1).replace(',', '')
+        if '.' in raw:
+            whole, frac = raw.split('.', 1)
+        else:
+            whole, frac = raw, ''
+        whole_int = int(whole) if whole else 0
+        heb = _number_to_hebrew(whole_int)
+        if frac and int(frac) > 0:
+            return f'{heb} שקל'
+        return f'{heb} שקל'
+    text = re.sub(r'₪(\d[\d,]*\.?\d*)', _shekel_to_hebrew, text)
+
+    # Percentages: +2.6% → "פלוס שתיים נקודה שש אחוז"
+    def _pct_to_hebrew(m):
+        sign = m.group(1) or ''
+        num = m.group(2)
+        prefix = 'פלוס ' if sign == '+' else ('מינוס ' if sign == '-' else '')
+        if '.' in num:
+            whole, frac = num.split('.', 1)
+            whole_heb = _number_to_hebrew(int(whole)) if whole else 'אפס'
+            frac_heb = _number_to_hebrew(int(frac)) if frac else ''
+            return f'{prefix}{whole_heb} נקודה {frac_heb} אחוז'
+        return f'{prefix}{_number_to_hebrew(int(num))} אחוז'
+    text = re.sub(r'([+-])?(\d+\.?\d*)%', _pct_to_hebrew, text)
+
+    # Standalone numbers (e.g. years "2026", counts "35")
+    def _num_to_hebrew(m):
+        raw = m.group(0).replace(',', '')
+        if '.' in raw:
+            whole, frac = raw.split('.', 1)
+            whole_heb = _number_to_hebrew(int(whole))
+            frac_heb = _number_to_hebrew(int(frac)) if frac else ''
+            return f'{whole_heb} נקודה {frac_heb}'
+        n = int(raw)
+        # Years: keep as-is for TTS (2026 is fine)
+        if 1900 < n < 2100:
+            return raw
+        if n > 999999:
+            return raw  # too large, let TTS handle it
+        return _number_to_hebrew(n)
+    text = re.sub(r'\b\d{1,6}(?:,\d{3})*(?:\.\d+)?\b', _num_to_hebrew, text)
 
     # ── Step 6: Punctuation / flow fixes for TTS ──
     # Em-dash and en-dash → comma (avoids long unnatural pauses)
-    # Strip surrounding spaces first so we don't get " , "
     text = re.sub(r'\s*[—–]\s*', ', ', text)
     # Ellipsis → period
     text = text.replace('...', '. ')
@@ -2524,7 +2919,7 @@ def text_to_speech(text, output_path, voice=None):
             paragraphs = [text]
 
         async def _generate_paragraph(para, out_file):
-            communicate = edge_tts.Communicate(para, _voice, rate="-5%", pitch="+0Hz")
+            communicate = edge_tts.Communicate(para, _voice, rate="-10%")
             await communicate.save(out_file)
 
         def _run_async(coro):
