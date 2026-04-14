@@ -863,85 +863,155 @@ def get_historical_pe(ticker_obj, info, years=5):
 # ─── Authentication & Database ───
 app.secret_key = os.environ.get('SECRET_KEY', 'astra_super_secret_key_change_me')
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
 
-if DATABASE_URL:
-    import psycopg2
-    import psycopg2.extras
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    from supabase import create_client as _create_sb
+    _sb = _create_sb(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-    class _PgDB:
-        """Thin wrapper that makes psycopg2 behave like sqlite3 for our usage."""
-        def __init__(self):
-            self._conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    class _SupaDuplicateError(Exception):
+        pass
 
-        def execute(self, sql, params=None):
-            sql = sql.replace('?', '%s')
-            cur = self._conn.cursor()
-            cur.execute(sql, params or ())
-            return cur
+    _DB_INTEGRITY_ERROR = _SupaDuplicateError
 
-        def commit(self):
-            self._conn.commit()
+    def db_get_user(email):
+        r = _sb.table('users').select('*').eq('email', email).execute()
+        return r.data[0] if r.data else None
 
-        def __enter__(self):
-            return self
+    def db_insert_user(email, password_hash, name):
+        try:
+            r = _sb.table('users').insert(
+                {'email': email, 'password': password_hash, 'name': name}
+            ).execute()
+            return r.data[0] if r.data else None
+        except Exception as e:
+            if '23505' in str(e) or 'duplicate' in str(e).lower():
+                raise _SupaDuplicateError()
+            raise
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            if exc_type:
-                self._conn.rollback()
-            else:
-                self._conn.commit()
-            self._conn.close()
-            return False
+    def db_update_user_name(user_id, name):
+        _sb.table('users').update({'name': name}).eq('id', user_id).execute()
 
-    def get_db():
-        return _PgDB()
+    def db_get_portfolio(user_id):
+        r = _sb.table('portfolios').select('ticker,shares,entry_price').eq('user_id', user_id).execute()
+        return r.data
 
-    _DB_INTEGRITY_ERROR = psycopg2.IntegrityError
+    def db_upsert_portfolio(user_id, ticker, shares, entry_price):
+        data = {'user_id': user_id, 'ticker': ticker, 'shares': shares}
+        if entry_price is not None:
+            data['entry_price'] = entry_price
+        _sb.table('portfolios').upsert(data, on_conflict='user_id,ticker').execute()
+
+    def db_delete_portfolio(user_id, ticker):
+        _sb.table('portfolios').delete().eq('user_id', user_id).eq('ticker', ticker).execute()
+
+    def db_update_shares(user_id, ticker, shares):
+        _sb.table('portfolios').update({'shares': shares}).eq('user_id', user_id).eq('ticker', ticker).execute()
+
+    def db_update_entry_price(user_id, ticker, entry_price):
+        _sb.table('portfolios').update({'entry_price': entry_price}).eq('user_id', user_id).eq('ticker', ticker).execute()
+
+    def db_get_watchlist(user_id):
+        r = _sb.table('watchlist').select('ticker').eq('user_id', user_id).execute()
+        return [row['ticker'] for row in r.data]
+
+    def db_add_watchlist(user_id, ticker):
+        try:
+            _sb.table('watchlist').insert({'user_id': user_id, 'ticker': ticker}).execute()
+        except Exception:
+            pass  # ignore duplicate
+
+    def db_remove_watchlist(user_id, ticker):
+        _sb.table('watchlist').delete().eq('user_id', user_id).eq('ticker', ticker).execute()
 
     def init_db():
-        with get_db() as db:
-            db.execute('''CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                name TEXT NOT NULL DEFAULT ''
-            )''')
-            db.execute('''CREATE TABLE IF NOT EXISTS portfolios (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                ticker TEXT NOT NULL,
-                shares REAL NOT NULL DEFAULT 0,
-                entry_price REAL DEFAULT NULL,
-                UNIQUE(user_id, ticker),
-                FOREIGN KEY(user_id) REFERENCES users(id)
-            )''')
-            db.execute('''CREATE TABLE IF NOT EXISTS watchlist (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                ticker TEXT NOT NULL,
-                UNIQUE(user_id, ticker),
-                FOREIGN KEY(user_id) REFERENCES users(id)
-            )''')
-            db.commit()
+        pass  # Tables already exist in Supabase
 
 else:
-    def get_db():
+    # SQLite for local development
+    def _sqlite():
         conn = sqlite3.connect('users.db')
         conn.row_factory = sqlite3.Row
         return conn
 
     _DB_INTEGRITY_ERROR = sqlite3.IntegrityError
 
+    def db_get_user(email):
+        with _sqlite() as c:
+            return c.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+
+    def db_insert_user(email, password_hash, name):
+        with _sqlite() as c:
+            c.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+                      (email, password_hash, name))
+            c.commit()
+            return c.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+
+    def db_update_user_name(user_id, name):
+        with _sqlite() as c:
+            c.execute("UPDATE users SET name = ? WHERE id = ?", (name, user_id))
+            c.commit()
+
+    def db_get_portfolio(user_id):
+        with _sqlite() as c:
+            return c.execute("SELECT ticker, shares, entry_price FROM portfolios WHERE user_id = ?",
+                             (user_id,)).fetchall()
+
+    def db_upsert_portfolio(user_id, ticker, shares, entry_price):
+        with _sqlite() as c:
+            c.execute(
+                "INSERT INTO portfolios (user_id, ticker, shares, entry_price) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(user_id, ticker) DO UPDATE SET shares = excluded.shares, "
+                "entry_price = COALESCE(excluded.entry_price, entry_price)",
+                (user_id, ticker, shares, entry_price)
+            )
+            c.commit()
+
+    def db_delete_portfolio(user_id, ticker):
+        with _sqlite() as c:
+            c.execute("DELETE FROM portfolios WHERE user_id = ? AND ticker = ?", (user_id, ticker))
+            c.commit()
+
+    def db_update_shares(user_id, ticker, shares):
+        with _sqlite() as c:
+            c.execute("UPDATE portfolios SET shares = ? WHERE user_id = ? AND ticker = ?",
+                      (shares, user_id, ticker))
+            c.commit()
+
+    def db_update_entry_price(user_id, ticker, entry_price):
+        with _sqlite() as c:
+            c.execute("UPDATE portfolios SET entry_price = ? WHERE user_id = ? AND ticker = ?",
+                      (entry_price, user_id, ticker))
+            c.commit()
+
+    def db_get_watchlist(user_id):
+        with _sqlite() as c:
+            rows = c.execute("SELECT ticker FROM watchlist WHERE user_id = ?", (user_id,)).fetchall()
+            return [row['ticker'] for row in rows]
+
+    def db_add_watchlist(user_id, ticker):
+        with _sqlite() as c:
+            try:
+                c.execute("INSERT INTO watchlist (user_id, ticker) VALUES (?, ?)", (user_id, ticker))
+                c.commit()
+            except sqlite3.IntegrityError:
+                pass
+
+    def db_remove_watchlist(user_id, ticker):
+        with _sqlite() as c:
+            c.execute("DELETE FROM watchlist WHERE user_id = ? AND ticker = ?", (user_id, ticker))
+            c.commit()
+
     def init_db():
-        with get_db() as db:
-            db.execute('''CREATE TABLE IF NOT EXISTS users (
+        with _sqlite() as c:
+            c.execute('''CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 name TEXT NOT NULL DEFAULT ''
             )''')
-            db.execute('''CREATE TABLE IF NOT EXISTS portfolios (
+            c.execute('''CREATE TABLE IF NOT EXISTS portfolios (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 ticker TEXT NOT NULL,
@@ -951,23 +1021,23 @@ else:
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )''')
             try:
-                db.execute('ALTER TABLE portfolios ADD COLUMN entry_price REAL DEFAULT NULL')
-                db.commit()
+                c.execute('ALTER TABLE portfolios ADD COLUMN entry_price REAL DEFAULT NULL')
+                c.commit()
             except Exception:
                 pass
             try:
-                db.execute("ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''")
-                db.commit()
+                c.execute("ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+                c.commit()
             except Exception:
                 pass
-            db.execute('''CREATE TABLE IF NOT EXISTS watchlist (
+            c.execute('''CREATE TABLE IF NOT EXISTS watchlist (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 ticker TEXT NOT NULL,
                 UNIQUE(user_id, ticker),
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )''')
-            db.commit()
+            c.commit()
 
 init_db()
 
@@ -994,16 +1064,10 @@ def register():
     if not name:
         return jsonify({'error': 'Missing name'}), 400
     try:
-        with get_db() as db:
-            db.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
-                       (email.lower().strip(), generate_password_hash(password, method='pbkdf2:sha256'), name))
-            db.commit()
-
-            # Auto-login after register
-            user = db.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),)).fetchone()
-            session['user_id'] = user['id']
-            session['username'] = user['name'] or user['email']
-
+        email = email.lower().strip()
+        user = db_insert_user(email, generate_password_hash(password, method='pbkdf2:sha256'), name)
+        session['user_id'] = user['id']
+        session['username'] = user['name'] or user['email']
         return jsonify({'success': True})
     except _DB_INTEGRITY_ERROR:
         return jsonify({'error': 'Email already exists'}), 409
@@ -1013,14 +1077,13 @@ def login():
     data = request.json
     email = data.get('email')
     password = data.get('password')
-    with get_db() as db:
-        user = db.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),)).fetchone()
-        if user and check_password_hash(user['password'], password):
-            session['user_id'] = user['id']
-            session['username'] = user['name'] or user['email']
-            if not user['name']:
-                return jsonify({'success': True, 'needs_name': True})
-            return jsonify({'success': True})
+    user = db_get_user(email.lower().strip())
+    if user and check_password_hash(user['password'], password):
+        session['user_id'] = user['id']
+        session['username'] = user['name'] or user['email']
+        if not user['name']:
+            return jsonify({'success': True, 'needs_name': True})
+        return jsonify({'success': True})
     return jsonify({'error': 'Invalid credentials'}), 401
 
 @app.route('/api/auth/set-name', methods=['POST'])
@@ -1030,9 +1093,7 @@ def set_name():
     name = (request.json.get('name') or '').strip()
     if not name:
         return jsonify({'error': 'Missing name'}), 400
-    with get_db() as db:
-        db.execute("UPDATE users SET name = ? WHERE id = ?", (name, session['user_id']))
-        db.commit()
+    db_update_user_name(session['user_id'], name)
     session['username'] = name
     return jsonify({'success': True})
 
@@ -1047,8 +1108,7 @@ def logout():
 def get_portfolio():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    with get_db() as db:
-        rows = db.execute("SELECT ticker, shares, entry_price FROM portfolios WHERE user_id = ?", (session['user_id'],)).fetchall()
+    rows = db_get_portfolio(session['user_id'])
     return jsonify({row['ticker']: {'shares': row['shares'], 'entry_price': row['entry_price']} for row in rows})
 
 @app.route('/api/portfolio', methods=['POST'])
@@ -1062,48 +1122,31 @@ def add_to_portfolio():
     entry_price = float(entry_price_raw) if entry_price_raw else None
     if not ticker:
         return jsonify({'error': 'Missing ticker'}), 400
-    with get_db() as db:
-        db.execute(
-            "INSERT INTO portfolios (user_id, ticker, shares, entry_price) VALUES (?, ?, ?, ?) "
-            "ON CONFLICT(user_id, ticker) DO UPDATE SET shares = excluded.shares, "
-            "entry_price = COALESCE(excluded.entry_price, entry_price)",
-            (session['user_id'], ticker, shares, entry_price)
-        )
-        db.commit()
+    db_upsert_portfolio(session['user_id'], ticker, shares, entry_price)
     return jsonify({'success': True})
 
 @app.route('/api/portfolio/<ticker>', methods=['DELETE'])
 def remove_from_portfolio(ticker):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    with get_db() as db:
-        db.execute("DELETE FROM portfolios WHERE user_id = ? AND ticker = ?", (session['user_id'], ticker.upper()))
-        db.commit()
+    db_delete_portfolio(session['user_id'], ticker.upper())
     return jsonify({'success': True})
 
 @app.route('/api/portfolio/<ticker>/shares', methods=['PATCH'])
 def update_shares(ticker):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    data = request.json
-    shares = float(data.get('shares', 0))
-    with get_db() as db:
-        db.execute("UPDATE portfolios SET shares = ? WHERE user_id = ? AND ticker = ?",
-                   (shares, session['user_id'], ticker.upper()))
-        db.commit()
+    shares = float(request.json.get('shares', 0))
+    db_update_shares(session['user_id'], ticker.upper(), shares)
     return jsonify({'success': True})
 
 @app.route('/api/portfolio/<ticker>/entry', methods=['PATCH'])
 def update_entry_price(ticker):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    data = request.json
-    entry_price_raw = data.get('entry_price') or data.get('entryPrice')
+    entry_price_raw = request.json.get('entry_price') or request.json.get('entryPrice')
     entry_price = float(entry_price_raw) if entry_price_raw else None
-    with get_db() as db:
-        db.execute("UPDATE portfolios SET entry_price = ? WHERE user_id = ? AND ticker = ?",
-                   (entry_price, session['user_id'], ticker.upper()))
-        db.commit()
+    db_update_entry_price(session['user_id'], ticker.upper(), entry_price)
     return jsonify({'success': True})
 
 
@@ -1111,33 +1154,23 @@ def update_entry_price(ticker):
 def get_watchlist():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    with get_db() as db:
-        rows = db.execute("SELECT ticker FROM watchlist WHERE user_id = ?", (session['user_id'],)).fetchall()
-    return jsonify([row['ticker'] for row in rows])
+    return jsonify(db_get_watchlist(session['user_id']))
 
 @app.route('/api/watchlist', methods=['POST'])
 def add_to_watchlist():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    data = request.json
-    ticker = data.get('ticker', '').upper().strip()
+    ticker = request.json.get('ticker', '').upper().strip()
     if not ticker:
         return jsonify({'error': 'Missing ticker'}), 400
-    with get_db() as db:
-        db.execute(
-            "INSERT INTO watchlist (user_id, ticker) VALUES (?, ?) ON CONFLICT DO NOTHING",
-            (session['user_id'], ticker)
-        )
-        db.commit()
+    db_add_watchlist(session['user_id'], ticker)
     return jsonify({'success': True})
 
 @app.route('/api/watchlist/<ticker>', methods=['DELETE'])
 def remove_from_watchlist(ticker):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    with get_db() as db:
-        db.execute("DELETE FROM watchlist WHERE user_id = ? AND ticker = ?", (session['user_id'], ticker.upper()))
-        db.commit()
+    db_remove_watchlist(session['user_id'], ticker.upper())
     return jsonify({'success': True})
 
 
