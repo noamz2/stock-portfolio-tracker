@@ -873,7 +873,8 @@ def init_db():
         db.execute('''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
+            password TEXT NOT NULL,
+            name TEXT NOT NULL DEFAULT ''
         )''')
         db.execute('''CREATE TABLE IF NOT EXISTS portfolios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -887,6 +888,12 @@ def init_db():
         # Migration: add entry_price to existing DBs
         try:
             db.execute('ALTER TABLE portfolios ADD COLUMN entry_price REAL DEFAULT NULL')
+            db.commit()
+        except Exception:
+            pass  # column already exists
+        # Migration: add name to existing users
+        try:
+            db.execute("ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''")
             db.commit()
         except Exception:
             pass  # column already exists
@@ -918,18 +925,21 @@ def register():
     data = request.json
     email = data.get('email')
     password = data.get('password')
+    name = (data.get('name') or '').strip()
     if not email or not password:
         return jsonify({'error': 'Missing email or password'}), 400
+    if not name:
+        return jsonify({'error': 'Missing name'}), 400
     try:
         with get_db() as db:
-            db.execute("INSERT INTO users (email, password) VALUES (?, ?)",
-                       (email.lower().strip(), generate_password_hash(password, method='pbkdf2:sha256')))
+            db.execute("INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+                       (email.lower().strip(), generate_password_hash(password, method='pbkdf2:sha256'), name))
             db.commit()
 
             # Auto-login after register
             user = db.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),)).fetchone()
             session['user_id'] = user['id']
-            session['username'] = user['email']
+            session['username'] = user['name'] or user['email']
 
         return jsonify({'success': True})
     except sqlite3.IntegrityError:
@@ -944,9 +954,24 @@ def login():
         user = db.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),)).fetchone()
         if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
-            session['username'] = user['email']
+            session['username'] = user['name'] or user['email']
+            if not user['name']:
+                return jsonify({'success': True, 'needs_name': True})
             return jsonify({'success': True})
     return jsonify({'error': 'Invalid credentials'}), 401
+
+@app.route('/api/auth/set-name', methods=['POST'])
+def set_name():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    name = (request.json.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Missing name'}), 400
+    with get_db() as db:
+        db.execute("UPDATE users SET name = ? WHERE id = ?", (name, session['user_id']))
+        db.commit()
+    session['username'] = name
+    return jsonify({'success': True})
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -2334,159 +2359,6 @@ def get_intrinsic_data(ticker):
         return jsonify({'error': str(e)}), 500
 
 
-# ─── Podcast Endpoints ───
-
-import subprocess
-import sys
-import threading
-from pathlib import Path
-
-PODCAST_DIR = Path(__file__).parent / "briefings"
-PODCAST_SCRIPT = Path(__file__).parent / "daily_briefing.py"
-
-# Track podcast generation state: {ticker: {status, error, ...}}
-_podcast_jobs = {}
-_podcast_lock = threading.Lock()
-
-
-def _run_podcast_subprocess(ticker, resolved):
-    """Run podcast generation in background thread."""
-    try:
-        env = {**dict(os.environ)}
-        result = subprocess.run(
-            [sys.executable, str(PODCAST_SCRIPT), resolved],
-            capture_output=True, text=True, timeout=300,
-            cwd=str(PODCAST_SCRIPT.parent), env=env,
-        )
-
-        today = datetime.now().strftime("%Y-%m-%d")
-        audio_file = PODCAST_DIR / f"briefing_{today}.mp3"
-        script_file = PODCAST_DIR / f"briefing_{today}_script.txt"
-
-        with _podcast_lock:
-            if not audio_file.exists() and not script_file.exists():
-                _podcast_jobs[ticker] = {
-                    'status': 'error',
-                    'error': result.stderr[-300:] if result.stderr else 'unknown error',
-                }
-            else:
-                _podcast_jobs[ticker] = {'status': 'done'}
-
-    except subprocess.TimeoutExpired:
-        with _podcast_lock:
-            _podcast_jobs[ticker] = {'status': 'error', 'error': 'Podcast generation timed out (5 min)'}
-    except Exception as e:
-        with _podcast_lock:
-            _podcast_jobs[ticker] = {'status': 'error', 'error': str(e)}
-
-
-@app.route('/api/podcast/<ticker>', methods=['POST'])
-def create_podcast(ticker):
-    """Start podcast generation in background."""
-    try:
-        ticker = ticker.upper().strip()
-        resolved = resolve_ticker(ticker)
-
-        # Check if already generating
-        with _podcast_lock:
-            job = _podcast_jobs.get(ticker)
-            if job and job.get('status') == 'generating':
-                return jsonify({'status': 'generating', 'message': 'Podcast is already being generated'})
-
-            _podcast_jobs[ticker] = {'status': 'generating'}
-
-        # Start background thread
-        thread = threading.Thread(target=_run_podcast_subprocess, args=(ticker, resolved), daemon=True)
-        thread.start()
-
-        return jsonify({'status': 'generating', 'message': 'Podcast generation started'})
-
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/podcast/<ticker>/audio')
-def get_podcast_audio(ticker):
-    """Serve the podcast MP3 file."""
-    try:
-        today = datetime.now().strftime("%Y-%m-%d")
-        audio_file = PODCAST_DIR / f"briefing_{today}.mp3"
-
-        if not audio_file.exists():
-            # Try yesterday
-            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-            audio_file = PODCAST_DIR / f"briefing_{yesterday}.mp3"
-
-        if not audio_file.exists():
-            return jsonify({'error': 'No podcast audio found'}), 404
-
-        return send_file(str(audio_file), mimetype='audio/mpeg')
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/podcast/<ticker>/status')
-def podcast_status(ticker):
-    """Check if a podcast exists for today, including generation progress."""
-    try:
-        ticker_upper = ticker.upper().strip()
-        ticker_resolved = resolve_ticker(ticker_upper)
-        today = datetime.now().strftime("%Y-%m-%d")
-
-        audio_file = PODCAST_DIR / f"briefing_{today}.mp3"
-        script_file = PODCAST_DIR / f"briefing_{today}_script.txt"
-        data_file = PODCAST_DIR / f"briefing_{today}_data.json"
-
-        # Check if this ticker is actually in today's podcast
-        ticker_in_podcast = False
-        if data_file.exists():
-            try:
-                pdata = json.loads(data_file.read_text(encoding='utf-8'))
-                podcast_tickers = [s.get('ticker', '').upper() for s in pdata.get('stocks', [])]
-                ticker_in_podcast = ticker_resolved.upper() in podcast_tickers
-            except Exception:
-                pass
-
-        exists = ticker_in_podcast and (audio_file.exists() or script_file.exists())
-
-        # Check if currently generating
-        with _podcast_lock:
-            job = _podcast_jobs.get(ticker_upper, {})
-        job_status = job.get('status')
-
-        if job_status == 'generating':
-            return jsonify({'exists': False, 'generating': True})
-
-        if job_status == 'error':
-            with _podcast_lock:
-                _podcast_jobs.pop(ticker_upper, None)
-            return jsonify({'exists': False, 'generating': False, 'error': job.get('error', 'Unknown error')})
-
-        if job_status == 'done':
-            with _podcast_lock:
-                _podcast_jobs.pop(ticker_upper, None)
-
-        company = ticker
-        try:
-            company = yf_ticker(ticker_resolved).info.get('longName', ticker)
-        except:
-            pass
-
-        script_text = ''
-        if exists and script_file.exists():
-            script_text = script_file.read_text(encoding='utf-8')
-
-        return jsonify({
-            'exists': exists,
-            'generating': False,
-            'has_audio': exists and audio_file.exists(),
-            'company': company,
-            'date': today,
-            'script': script_text,
-        })
-    except Exception as e:
-        return jsonify({'exists': False, 'error': str(e)})
 
 
 # Background crumb refresher — retries with exponential backoff if crumb is missing
@@ -2543,16 +2415,16 @@ _briefing_jobs_lock = __import__('threading').Lock()
 
 
 def _run_briefing_job(user_id, tickers, positions, briefings_dir, user_name=None):
-    """Background worker: collect → LLM → TTS → save files."""
-    import subprocess, sys as _sys, tempfile, threading
-    from daily_briefing import generate_text_report, generate_podcast_script, text_to_speech
+    """Background worker: collect data → text report → NotebookLM podcast."""
+    import subprocess, sys as _sys, tempfile, time as _time
 
     def _set(state):
         with _briefing_jobs_lock:
             _briefing_jobs[user_id] = state
 
     try:
-        # Phase 1: collect data in subprocess (avoids Flask SSL serialization)
+        # Phase 1: collect data in subprocess
+        _set({'status': 'generating', 'step': 'collect'})
         _script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'daily_briefing.py')
         _env = {**os.environ, '_BRIEFING_TICKERS': ','.join(tickers)}
         with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as _tf:
@@ -2572,10 +2444,11 @@ def _run_briefing_job(user_id, tickers, positions, briefings_dir, user_name=None
             except OSError:
                 pass
 
-        # Phase 2: LLM report + script
+        # Phase 2: generate sources for NotebookLM
         _set({'status': 'generating', 'step': 'llm'})
+        from daily_briefing import generate_notebooklm_sources, generate_text_report
+        sources = generate_notebooklm_sources(all_data, positions)
         report = generate_text_report(all_data, positions)
-        script = generate_podcast_script(all_data, user_name=user_name)
 
         today = datetime.now().strftime('%Y-%m-%d')
         os.makedirs(briefings_dir, exist_ok=True)
@@ -2586,29 +2459,57 @@ def _run_briefing_job(user_id, tickers, positions, briefings_dir, user_name=None
         with open(os.path.join(briefings_dir, f'{prefix}_data.json'), 'w', encoding='utf-8') as f:
             json.dump(all_data, f, ensure_ascii=False, indent=2, default=str)
 
-        # Phase 3: TTS — preprocess first so script file matches audio exactly
-        from daily_briefing import _prepare_text_for_tts
-        tts_script = _prepare_text_for_tts(script)
-        with open(os.path.join(briefings_dir, f'{prefix}_script.txt'), 'w', encoding='utf-8') as f:
-            f.write(tts_script)
+        # Phase 3: NotebookLM podcast generation
+        notebook_url = os.environ.get('NOTEBOOKLM_URL', '')
+        if not notebook_url:
+            raise RuntimeError('NOTEBOOKLM_URL not configured in .env')
 
         _set({'status': 'generating', 'step': 'tts'})
+
+        from notebooklm_client import generate_podcast
+        port = int(os.environ.get('NOTEBOOKLM_CHROME_PORT', '9222'))
+
+        def _on_step(step):
+            _set({'status': 'generating', 'step': step})
+
+        audio_bytes = generate_podcast(
+            notebook_url=notebook_url,
+            text_source=sources['text'],
+            url_sources=[],  # NotebookLM searches the web on its own
+            port=port,
+            timeout_minutes=15,
+            on_step=_on_step,
+        )
+
+        if not audio_bytes:
+            raise RuntimeError('NotebookLM podcast generation failed — no audio returned')
+
         audio_path = os.path.join(briefings_dir, f'{prefix}.mp3')
-        text_to_speech(script, audio_path)
+        with open(audio_path, 'wb') as f:
+            f.write(audio_bytes)
+        print(f"🎙️ NotebookLM podcast saved: {audio_path} ({len(audio_bytes)} bytes)")
 
         _set({
             'status': 'done',
             'result': {
                 'date': today,
                 'report': report,
-                'script': script,
+                'script': '',
                 'hasAudio': os.path.exists(audio_path),
                 'stocks': len([s for s in all_data['stocks'] if 'error' not in s]),
             }
         })
     except Exception as e:
         traceback.print_exc()
-        _set({'status': 'error', 'error': str(e)})
+        # Show user-friendly error, not raw Playwright/technical errors
+        msg = str(e)
+        if 'Timeout' in msg or 'timeout' in msg:
+            msg = 'התהליך לקח יותר מדי זמן. נסה שוב.'
+        elif 'NotebookLM' in msg:
+            msg = 'בעיה בחיבור ל-NotebookLM. נסה שוב.'
+        elif len(msg) > 100:
+            msg = 'שגיאה ביצירת הפודקאסט. נסה שוב.'
+        _set({'status': 'error', 'error': msg})
 
 
 @app.route('/api/briefing/generate', methods=['POST'])
@@ -2646,13 +2547,46 @@ def briefing_status():
     return jsonify(job)
 
 
+@app.route('/api/briefings')
+def list_briefings():
+    """List all available briefing dates for the current user."""
+    briefings_dir = os.path.join(os.path.dirname(__file__), 'briefings')
+    user_id = session.get('user_id', 'anon')
+    prefix = f'briefing_{user_id}_'
+    today = datetime.now().strftime('%Y-%m-%d')
+
+    briefings = []
+    if os.path.isdir(briefings_dir):
+        for fname in os.listdir(briefings_dir):
+            if fname.startswith(prefix) and fname.endswith('.txt') and '_script' not in fname:
+                # Extract date: briefing_{user_id}_{YYYY-MM-DD}.txt
+                date_part = fname[len(prefix):-4]  # strip prefix and .txt
+                try:
+                    datetime.strptime(date_part, '%Y-%m-%d')
+                except ValueError:
+                    continue
+                has_audio = any(os.path.exists(os.path.join(briefings_dir, f'{prefix}{date_part}{ext}')) for ext in ('.mp3', '.m4a', '.wav'))
+                briefings.append({'date': date_part, 'hasAudio': has_audio})
+
+    briefings.sort(key=lambda x: x['date'], reverse=True)
+    today_exists = any(b['date'] == today for b in briefings)
+
+    return jsonify({'briefings': briefings, 'todayExists': today_exists})
+
+
 @app.route('/api/briefing/latest')
 def get_latest_briefing():
-    """Get the latest briefing for the current user if it exists."""
+    """Get a briefing for the current user. Accepts ?date= parameter."""
     briefings_dir = os.path.join(os.path.dirname(__file__), 'briefings')
-    today = datetime.now().strftime('%Y-%m-%d')
+    date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    # Validate date format
+    try:
+        datetime.strptime(date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'exists': False, 'error': 'Invalid date format'}), 400
+
     user_id = session.get('user_id', 'anon')
-    prefix = f'briefing_{user_id}_{today}'
+    prefix = f'briefing_{user_id}_{date}'
     report_path = os.path.join(briefings_dir, f'{prefix}.txt')
     script_path = os.path.join(briefings_dir, f'{prefix}_script.txt')
     audio_path  = os.path.join(briefings_dir, f'{prefix}.mp3')
@@ -2668,12 +2602,13 @@ def get_latest_briefing():
         with open(script_path, 'r', encoding='utf-8') as f:
             script = f.read()
 
+    has_audio = any(os.path.exists(os.path.join(briefings_dir, f'{prefix}{ext}')) for ext in ('.mp3', '.m4a', '.wav'))
     return jsonify({
         'exists': True,
-        'date': today,
+        'date': date,
         'report': report,
         'script': script,
-        'hasAudio': os.path.exists(audio_path),
+        'hasAudio': has_audio,
     })
 
 
@@ -2682,9 +2617,11 @@ def serve_briefing_audio():
     """Serve the briefing audio file for the current user."""
     date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
     user_id = session.get('user_id', 'anon')
-    audio_path = os.path.join(os.path.dirname(__file__), 'briefings', f'briefing_{user_id}_{date}.mp3')
-    if os.path.exists(audio_path):
-        return send_file(audio_path, mimetype='audio/mpeg')
+    base = os.path.join(os.path.dirname(__file__), 'briefings', f'briefing_{user_id}_{date}')
+    for ext, mime in [('.mp3', 'audio/mpeg'), ('.m4a', 'audio/mp4'), ('.wav', 'audio/wav')]:
+        path = base + ext
+        if os.path.exists(path):
+            return send_file(path, mimetype=mime)
     return jsonify({'error': 'No audio found'}), 404
 
 

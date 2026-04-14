@@ -745,6 +745,8 @@
     <div class="modal" id="registerModal" style="display:none;">
       <h2>Join Astra Phase-2</h2>
       <form id="registerForm" onsubmit="handleAuth(event, 'register')">
+        <div class="form-group"><label>Name</label><input type="text" id="regName" placeholder="Your name"
+            required></div>
         <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="you@example.com"
             required></div>
         <div class="form-group"><label>Choose Password</label><input type="password" id="regPassword"
@@ -756,6 +758,17 @@
         <div class="modal-footer">Already a member? <a onclick="openModal('login')">Log In</a></div>
       </form>
     </div>
+
+    <div class="modal" id="nameModal" style="display:none;">
+      <h2>Welcome back!</h2>
+      <p style="color:#aaa; margin-bottom:18px;">How should we call you?</p>
+      <form id="nameForm" onsubmit="handleSetName(event)">
+        <div class="form-group"><label>Name</label><input type="text" id="setName" placeholder="Your name" required></div>
+        <div class="error-msg" id="nameError"></div>
+        <button type="submit" class="btn btn-primary"
+          style="width:100%; margin-top:12px; padding:16px; font-size:1.1rem; border-radius:12px;">Continue</button>
+      </form>
+    </div>
   </div>
 
   <script>
@@ -764,6 +777,8 @@
       document.getElementById('authOverlay').classList.add('active');
       document.getElementById('loginModal').style.display = type === 'login' ? 'block' : 'none';
       document.getElementById('registerModal').style.display = type === 'register' ? 'block' : 'none';
+      document.getElementById('nameModal').style.display = type === 'name' ? 'block' : 'none';
+      if (type === 'name') return;
       document.getElementById(type + 'Error').textContent = '';
     }
     function closeModals() { document.getElementById('authOverlay').classList.remove('active'); }
@@ -776,15 +791,35 @@
       const password = document.getElementById(pId).value;
       const errorEl = document.getElementById(action + 'Error');
       errorEl.textContent = 'Authenticating...';
+      const payload = { email, password };
+      if (action === 'register') payload.name = document.getElementById('regName').value;
       try {
         const res = await fetch(`/api/auth/${action}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (data.needs_name) openModal('name');
+          else window.location.href = '/dashboard';
+        }
+        else errorEl.textContent = data.error || 'Authentication rejected';
+      } catch (err) { errorEl.textContent = 'Neural connection failed.'; }
+    }
+
+    async function handleSetName(e) {
+      e.preventDefault();
+      const name = document.getElementById('setName').value;
+      const errorEl = document.getElementById('nameError');
+      try {
+        const res = await fetch('/api/auth/set-name', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
         });
         const data = await res.json();
         if (res.ok && data.success) window.location.href = '/dashboard';
-        else errorEl.textContent = data.error || 'Authentication rejected';
-      } catch (err) { errorEl.textContent = 'Neural connection failed.'; }
+        else errorEl.textContent = data.error || 'Something went wrong';
+      } catch (err) { errorEl.textContent = 'Connection failed.'; }
     }
 
     // Price system: show cached/fallback instantly, then update with live data

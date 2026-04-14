@@ -307,7 +307,7 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 64px;
-  z-index: 99;
+  z-index: 1000;
 }
 .view-nav-btn {
   background: none;
@@ -714,6 +714,9 @@ body {
         </div>
       </div>
       <div id="briefingContent" style="display:none">
+        <!-- Briefing History Chips -->
+        <div id="briefingHistory" style="display:none;margin-bottom:16px;overflow-x:auto;white-space:nowrap;padding:4px 0">
+        </div>
         <!-- Audio Player -->
         <div id="briefingAudioSection" style="display:none;margin-bottom:16px">
           <div style="background:linear-gradient(135deg,#0B1422,#1E293B);border-radius:12px;padding:16px">
@@ -734,11 +737,47 @@ body {
             <audio id="briefingAudio" controls style="width:100%;height:40px;border-radius:8px"></audio>
           </div>
         </div>
-        <!-- Loading -->
-        <div id="briefingLoading" style="display:none;text-align:center;padding:40px">
-          <div class="spinner" style="margin:0 auto 12px"></div>
-          <div style="color:#94A3B8">מייצר סיכום יומי... זה יכול לקחת כ-2 דקות</div>
-          <div id="briefingLoadingProgress" style="color:#00D4FF;font-size:12px;margin-top:8px"></div>
+        <!-- Loading with real progress -->
+        <div id="briefingLoading" style="display:none;padding:32px 24px;direction:rtl">
+          <div style="max-width:420px;margin:0 auto">
+            <h3 style="color:#F8FAFC;text-align:center;margin-bottom:20px">מייצר פודקאסט יומי...</h3>
+            <!-- Progress bar -->
+            <div style="background:#1E293B;border-radius:8px;height:6px;margin-bottom:24px;overflow:hidden">
+              <div id="briefingProgressBar" style="background:linear-gradient(90deg,#00D4FF,#B388FF);height:100%;border-radius:8px;width:5%;transition:width 0.8s ease"></div>
+            </div>
+            <!-- Steps -->
+            <div id="briefingSteps" style="text-align:right">
+              <div class="b-step" data-step="collect" style="display:flex;align-items:center;gap:10px;padding:6px 0">
+                <span class="b-step-icon" style="width:20px;text-align:center;font-size:14px">📊</span>
+                <span class="b-step-text" style="font-size:13px;color:#94A3B8">אוסף נתוני שוק וחדשות</span>
+              </div>
+              <div class="b-step" data-step="llm" style="display:flex;align-items:center;gap:10px;padding:6px 0;opacity:0.3">
+                <span class="b-step-icon" style="width:20px;text-align:center;font-size:14px">📝</span>
+                <span class="b-step-text" style="font-size:13px;color:#94A3B8">מכין דוח נרטיבי</span>
+              </div>
+              <div class="b-step" data-step="upload_text" style="display:flex;align-items:center;gap:10px;padding:6px 0;opacity:0.3">
+                <span class="b-step-icon" style="width:20px;text-align:center;font-size:14px">📤</span>
+                <span class="b-step-text" style="font-size:13px;color:#94A3B8">מעלה דוח ל-NotebookLM</span>
+              </div>
+              <div class="b-step" data-step="upload_urls" style="display:flex;align-items:center;gap:10px;padding:6px 0;opacity:0.3">
+                <span class="b-step-icon" style="width:20px;text-align:center;font-size:14px">🔗</span>
+                <span class="b-step-text" style="font-size:13px;color:#94A3B8">מעלה כתבות חדשות</span>
+              </div>
+              <div class="b-step" data-step="generate" style="display:flex;align-items:center;gap:10px;padding:6px 0;opacity:0.3">
+                <span class="b-step-icon" style="width:20px;text-align:center;font-size:14px">🎙️</span>
+                <span class="b-step-text" style="font-size:13px;color:#94A3B8">NotebookLM מייצר פודקאסט</span>
+              </div>
+              <div class="b-step" data-step="waiting" style="display:flex;align-items:center;gap:10px;padding:6px 0;opacity:0.3">
+                <span class="b-step-icon" style="width:20px;text-align:center;font-size:14px">⏳</span>
+                <span class="b-step-text" style="font-size:13px;color:#94A3B8">ממתין לסיום יצירה...</span>
+              </div>
+              <div class="b-step" data-step="download" style="display:flex;align-items:center;gap:10px;padding:6px 0;opacity:0.3">
+                <span class="b-step-icon" style="width:20px;text-align:center;font-size:14px">💾</span>
+                <span class="b-step-text" style="font-size:13px;color:#94A3B8">מוריד אודיו</span>
+              </div>
+            </div>
+            <p style="color:#475569;font-size:11px;margin-top:16px;text-align:center">התהליך אורך כ-5-10 דקות</p>
+          </div>
         </div>
         <!-- Text Report -->
         <div id="briefingReport" style="display:none;background:#08101A;border-radius:12px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:2;white-space:pre-wrap;direction:rtl;text-align:right;max-height:600px;overflow-y:auto;color:#F8FAFC"></div>
@@ -922,7 +961,6 @@ body {
       <div class="tab" data-tab="fundamentals" onclick="switchTab(this)">Fundamentals</div>
       <div class="tab" data-tab="news" onclick="switchTab(this)">News</div>
       <div class="tab" data-tab="peers" onclick="switchTab(this)">⚖️ Peers</div>
-      <div class="tab" data-tab="podcast" onclick="switchTab(this)">🎙️ Podcast</div>
       </div>
       <div class="time-range-toggle" id="stockTimeToggle">
         <button onclick="setStockYears(5)">5Y</button>
@@ -1347,82 +1385,6 @@ body {
       </div>
     </div>
 
-    <!-- Podcast Tab -->
-    <div id="tab-podcast" class="tab-content hidden" dir="rtl">
-      <div class="card" style="text-align:center;padding:32px">
-        <div id="podcastLoading" class="hidden">
-          <!-- Animated equalizer bars -->
-          <div style="display:flex;justify-content:center;align-items:flex-end;gap:4px;height:64px;margin-bottom:24px">
-            <div class="eq-bar" style="--delay:0s;--h1:20px;--h2:48px"></div>
-            <div class="eq-bar" style="--delay:0.15s;--h1:32px;--h2:56px"></div>
-            <div class="eq-bar" style="--delay:0.3s;--h1:16px;--h2:40px"></div>
-            <div class="eq-bar" style="--delay:0.45s;--h1:28px;--h2:60px"></div>
-            <div class="eq-bar" style="--delay:0.6s;--h1:24px;--h2:44px"></div>
-            <div class="eq-bar" style="--delay:0.2s;--h1:36px;--h2:52px"></div>
-            <div class="eq-bar" style="--delay:0.5s;--h1:18px;--h2:38px"></div>
-          </div>
-          <h3 id="podcastLoadingTitle" style="color:#F8FAFC;margin-bottom:12px;font-size:18px;animation:fadeInOut 2s ease-in-out infinite">יוצר את הפודקאסט שלך...</h3>
-          <!-- Progress steps -->
-          <div id="podcastSteps" style="text-align:right;direction:rtl;max-width:320px;margin:0 auto">
-            <div class="podcast-step active-step" data-step="0" style="display:flex;align-items:center;gap:10px;padding:8px 0;transition:all 0.5s ease">
-              <span class="step-icon">📡</span>
-              <span class="step-text" style="color:#00D4FF;font-size:14px">אוסף חדשות ונתונים...</span>
-            </div>
-            <div class="podcast-step" data-step="1" style="display:flex;align-items:center;gap:10px;padding:8px 0;transition:all 0.5s ease;opacity:0.3">
-              <span class="step-icon">✍️</span>
-              <span class="step-text" style="color:#94A3B8;font-size:14px">כותב תסריט</span>
-            </div>
-            <div class="podcast-step" data-step="2" style="display:flex;align-items:center;gap:10px;padding:8px 0;transition:all 0.5s ease;opacity:0.3">
-              <span class="step-icon">🔤</span>
-              <span class="step-text" style="color:#94A3B8;font-size:14px">מוסיף ניקוד להגייה</span>
-            </div>
-            <div class="podcast-step" data-step="3" style="display:flex;align-items:center;gap:10px;padding:8px 0;transition:all 0.5s ease;opacity:0.3">
-              <span class="step-icon">🔊</span>
-              <span class="step-text" style="color:#94A3B8;font-size:14px">ממיר לאודיו</span>
-            </div>
-          </div>
-          <p style="color:#475569;font-size:12px;margin-top:20px">התהליך אורך כ-2-5 דקות</p>
-        </div>
-        <div id="podcastReady" class="hidden">
-          <div style="font-size:64px;margin-bottom:16px">🎙️</div>
-          <h2 id="podcastTitle" style="color:#F8FAFC;margin-bottom:8px"></h2>
-          <p id="podcastDate" style="color:#94A3B8;margin-bottom:24px"></p>
-          <audio id="podcastAudio" controls style="width:100%;max-width:560px;margin:0 auto 16px;display:block;border-radius:12px">
-            Your browser does not support audio.
-          </audio>
-          <!-- Speed Controls -->
-          <div style="margin-bottom:20px;display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="color:#94A3B8;font-size:13px;margin-left:8px">מהירות:</span>
-            <button class="speed-btn" onclick="setSpeed(0.75)" data-speed="0.75" style="background:#0E1726;color:#94A3B8;border:1px solid #1E293B;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;transition:all 0.2s">0.75x</button>
-            <button class="speed-btn active-speed" onclick="setSpeed(1)" data-speed="1" style="background:#00D4FF;color:#fff;border:1px solid #00D4FF;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;transition:all 0.2s">1x</button>
-            <button class="speed-btn" onclick="setSpeed(1.25)" data-speed="1.25" style="background:#0E1726;color:#94A3B8;border:1px solid #1E293B;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;transition:all 0.2s">1.25x</button>
-            <button class="speed-btn" onclick="setSpeed(1.5)" data-speed="1.5" style="background:#0E1726;color:#94A3B8;border:1px solid #1E293B;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;transition:all 0.2s">1.5x</button>
-            <button class="speed-btn" onclick="setSpeed(2)" data-speed="2" style="background:#0E1726;color:#94A3B8;border:1px solid #1E293B;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;transition:all 0.2s">2x</button>
-          </div>
-          <div style="margin-bottom:24px">
-            <button id="podcastDownload" class="btn" style="background:#00D4FF;color:#fff;padding:10px 24px;border-radius:8px;border:none;cursor:pointer;font-size:14px;margin:0 8px">
-              ⬇️ הורד MP3
-            </button>
-            <button id="podcastRefresh" class="btn" style="background:#1E293B;color:#fff;padding:10px 24px;border-radius:8px;border:none;cursor:pointer;font-size:14px;margin:0 8px">
-              🔄 צור מחדש
-            </button>
-          </div>
-          <details style="text-align:right;direction:rtl;max-width:600px;margin:0 auto">
-            <summary style="cursor:pointer;color:#94A3B8;font-size:14px;padding:8px 0">📄 הצג תסריט</summary>
-            <div id="podcastScript" style="background:#0B1422;padding:24px;border-radius:12px;margin-top:12px;white-space:pre-wrap;line-height:2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;color:#F8FAFC;text-align:right;max-height:500px;overflow-y:auto"></div>
-          </details>
-        </div>
-        <div id="podcastInit">
-          <div style="font-size:64px;margin-bottom:16px">🎙️</div>
-          <h2 style="color:#F8FAFC;margin-bottom:8px">פודקאסט יומי</h2>
-          <p style="color:#94A3B8;margin-bottom:24px">צור פודקאסט AI עם ניתוח פונדמנטלי מעמיק של המניה</p>
-          <button id="podcastGenBtn" onclick="generatePodcast()" style="background:#00D4FF;color:#fff;padding:14px 36px;border-radius:10px;border:none;cursor:pointer;font-size:16px;font-weight:600">
-            🎙️ צור פודקאסט
-          </button>
-          <p style="color:#94A3B8;font-size:12px;margin-top:12px">כולל: למה המניה זזה, חדשות והנהלה, דוחות כספיים, מאקרו והפד, סנטימנט</p>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -1989,12 +1951,6 @@ async function openStock(ticker) {
     ['RSI', d.currentRSI?.toFixed(1) || 'N/A'],
     ['Sector', d.sector],
   ].map(([l, v]) => `<div class="metric"><div class="val">${v}</div><div class="lbl">${l}</div></div>`).join('');
-
-  // Reset podcast tab to init state for the new stock
-  if (_podcastPollTimer) { clearInterval(_podcastPollTimer); _podcastPollTimer = null; }
-  document.getElementById('podcastInit').classList.remove('hidden');
-  document.getElementById('podcastReady').classList.add('hidden');
-  document.getElementById('podcastLoading').classList.add('hidden');
 
   // Reset chart explorer to price on new stock
   activeChartType = 'price';
@@ -3084,15 +3040,87 @@ function toggleBriefing() {
   if (briefingOpen && !_briefingGenerating) loadLatestBriefing();
 }
 
+let _briefingDates = [];
+let _selectedBriefingDate = null;
+
 async function loadLatestBriefing() {
   if (_briefingGenerating) return;
   try {
-    const resp = await fetch(`${API}/api/briefing/latest`);
+    const resp = await fetch(`${API}/api/briefings`);
+    const data = await resp.json();
+    _briefingDates = data.briefings || [];
+
+    // Render date chips
+    const container = document.getElementById('briefingHistory');
+    if (_briefingDates.length > 0) {
+      container.style.display = 'block';
+      container.innerHTML = _briefingDates.map(b => {
+        const d = new Date(b.date + 'T00:00:00');
+        const label = d.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+        const audioIcon = b.hasAudio ? ' 🎧' : '';
+        return `<button onclick="loadBriefingForDate('${b.date}')" data-date="${b.date}" style="display:inline-block;background:#1E293B;color:#94A3B8;border:1px solid #334155;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;margin:0 4px;white-space:nowrap;transition:all 0.2s">${label}${audioIcon}</button>`;
+      }).join('');
+    } else {
+      container.style.display = 'none';
+    }
+
+    // Update generate button
+    const genBtn = document.getElementById('briefingGenBtn');
+    if (data.todayExists) {
+      genBtn.textContent = '🔄 צור מחדש';
+    } else {
+      genBtn.textContent = '🎙️ צור סיכום';
+    }
+
+    // Auto-load most recent
+    if (_briefingDates.length > 0 && !_briefingGenerating) {
+      loadBriefingForDate(_briefingDates[0].date);
+    }
+  } catch(e) { console.error('briefing list error:', e); }
+}
+
+async function loadBriefingForDate(date) {
+  _selectedBriefingDate = date;
+  // Highlight selected chip
+  document.querySelectorAll('#briefingHistory button').forEach(btn => {
+    if (btn.dataset.date === date) {
+      btn.style.background = '#00D4FF'; btn.style.color = '#fff'; btn.style.borderColor = '#00D4FF';
+    } else {
+      btn.style.background = '#1E293B'; btn.style.color = '#94A3B8'; btn.style.borderColor = '#334155';
+    }
+  });
+  try {
+    const resp = await fetch(`${API}/api/briefing/latest?date=${date}`);
     const d = await resp.json();
-    if (d.exists && !_briefingGenerating) {
+    if (d.exists) {
       showBriefingResult(d);
     }
   } catch(e) { console.error('briefing load error:', e); }
+}
+
+const BRIEFING_STEPS = ['collect', 'llm', 'upload_text', 'upload_urls', 'generate', 'waiting', 'download'];
+const BRIEFING_STEP_PCT = { collect: 10, llm: 20, connect: 25, clear: 28, upload_text: 35, upload_urls: 45, generate: 55, waiting: 70, download: 90, done: 100 };
+
+function _updateBriefingStep(currentStep) {
+  const pct = BRIEFING_STEP_PCT[currentStep] || 5;
+  document.getElementById('briefingProgressBar').style.width = pct + '%';
+
+  const currentIdx = BRIEFING_STEPS.indexOf(currentStep);
+  document.querySelectorAll('.b-step').forEach(el => {
+    const stepName = el.dataset.step;
+    const idx = BRIEFING_STEPS.indexOf(stepName);
+    if (idx < currentIdx) {
+      el.style.opacity = '1';
+      el.querySelector('.b-step-icon').textContent = '✅';
+      el.querySelector('.b-step-text').style.color = '#22C55E';
+    } else if (idx === currentIdx || stepName === currentStep) {
+      el.style.opacity = '1';
+      el.querySelector('.b-step-text').style.color = '#00D4FF';
+    } else {
+      el.style.opacity = '0.3';
+      el.querySelector('.b-step-text').style.color = '#94A3B8';
+    }
+  });
 }
 
 async function generateBriefing() {
@@ -3122,21 +3150,9 @@ async function generateBriefing() {
   document.getElementById('briefingGenBtn').disabled = true;
   document.getElementById('briefingGenBtn').textContent = '⏳ מייצר...';
 
-  // Progress label cycling
-  const progressEl = document.getElementById('briefingLoadingProgress');
-  const steps = [
-    '📊 אוסף נתוני מאקרו...',
-    ...tickers.map(t => `📈 מנתח ${t}...`),
-    '📰 אוסף חדשות ורשתות חברתיות...',
-    '✍️ כותב סיכום...',
-    '🎙️ מייצר פודקאסט...',
-  ];
-  let stepIdx = 0;
-  progressEl.textContent = steps[0];
-  const stepInterval = setInterval(() => {
-    stepIdx = (stepIdx + 1) % steps.length;
-    progressEl.textContent = steps[stepIdx];
-  }, 6000);
+  // Reset progress UI
+  _updateBriefingStep('collect');
+  const stepInterval = null; // no longer cycling — real steps from backend
 
   function _stopBriefingLoading(si, pi) {
     if (si) clearInterval(si);
@@ -3169,7 +3185,7 @@ async function generateBriefing() {
   // Poll for completion
   const pollStart = Date.now();
   const pollInterval = setInterval(async () => {
-    if (Date.now() - pollStart > 8 * 60 * 1000) {
+    if (Date.now() - pollStart > 18 * 60 * 1000) {
       _stopBriefingLoading(stepInterval, pollInterval);
       alert('יצירת הסיכום לקחה יותר מדי זמן. נסה שוב.');
       return;
@@ -3178,17 +3194,19 @@ async function generateBriefing() {
       const sr = await fetch(`${API}/api/briefing/status`);
       const sd = await sr.json();
       if (sd.status === 'done') {
-        _stopBriefingLoading(stepInterval, pollInterval);
+        _updateBriefingStep('done');
+        setTimeout(() => _stopBriefingLoading(stepInterval, pollInterval), 600);
         showBriefingResult(sd.result);
+        loadLatestBriefing(); // refresh history chips
       } else if (sd.status === 'error') {
         _stopBriefingLoading(stepInterval, pollInterval);
         alert('שגיאה ביצירת סיכום: ' + sd.error);
       } else if (sd.status === 'idle') {
-        // Server restarted and lost job state — restart generation
         clearInterval(pollInterval);
         generateBriefing();
+      } else if (sd.status === 'generating' && sd.step) {
+        _updateBriefingStep(sd.step);
       }
-      // status === 'generating' → keep polling
     } catch(e) { /* network blip, keep polling */ }
   }, 4000);
 }
@@ -3219,7 +3237,15 @@ function setBriefingSpeed(speed) {
 }
 
 // Auto-load latest briefing on page load
-setTimeout(() => loadLatestBriefing(), 3000);
+setTimeout(async () => {
+  await loadLatestBriefing();
+  // Auto-open if briefings exist
+  if (_briefingDates.length > 0) {
+    briefingOpen = true;
+    document.getElementById('briefingContent').style.display = 'block';
+    document.getElementById('briefingToggle').textContent = '▲';
+  }
+}, 3000);
 
 // ─── P/E Model ───
 
@@ -3540,238 +3566,6 @@ function formatLargeNum(v) {
   return v.toLocaleString('en');
 }
 
-// ─── Podcast ───
-
-let currentPodcastTicker = null;
-
-function setSpeed(speed) {
-  const audio = document.getElementById('podcastAudio');
-  if (audio) audio.playbackRate = speed;
-  document.querySelectorAll('.speed-btn').forEach(btn => {
-    const s = parseFloat(btn.dataset.speed);
-    if (s === speed) {
-      btn.style.background = '#00D4FF';
-      btn.style.color = '#fff';
-      btn.style.borderColor = '#00D4FF';
-    } else {
-      btn.style.background = '#0E1726';
-      btn.style.color = '#94A3B8';
-      btn.style.borderColor = '#1E293B';
-    }
-  });
-}
-
-let _podcastPollTimer = null;
-let _podcastStepTimer = null;
-
-function _startPodcastStepAnimation() {
-  if (_podcastStepTimer) clearInterval(_podcastStepTimer);
-  let currentStep = 0;
-  const steps = document.querySelectorAll('.podcast-step');
-  const titles = ['אוסף חדשות ונתונים...', 'כותב תסריט...', 'מוסיף ניקוד להגייה...', 'ממיר לאודיו...'];
-  const durations = [30000, 60000, 45000, 30000]; // estimated time per step
-
-  // Reset all steps
-  steps.forEach((s, i) => {
-    s.classList.remove('active-step', 'done-step');
-    s.style.opacity = i === 0 ? '1' : '0.3';
-    s.querySelector('.step-text').style.color = i === 0 ? '#00D4FF' : '#94A3B8';
-  });
-  steps[0].classList.add('active-step');
-
-  function advanceStep() {
-    if (currentStep >= steps.length - 1) return;
-    // Mark current as done
-    steps[currentStep].classList.remove('active-step');
-    steps[currentStep].classList.add('done-step');
-    steps[currentStep].style.opacity = '1';
-    steps[currentStep].querySelector('.step-icon').textContent = '✅';
-    // Advance
-    currentStep++;
-    steps[currentStep].classList.add('active-step');
-    steps[currentStep].style.opacity = '1';
-    steps[currentStep].querySelector('.step-text').style.color = '#00D4FF';
-    document.getElementById('podcastLoadingTitle').textContent = titles[currentStep];
-    // Schedule next
-    if (currentStep < steps.length - 1) {
-      _podcastStepTimer = setTimeout(advanceStep, durations[currentStep]);
-    }
-  }
-
-  _podcastStepTimer = setTimeout(advanceStep, durations[0]);
-}
-
-function _stopPodcastStepAnimation() {
-  if (_podcastStepTimer) { clearTimeout(_podcastStepTimer); _podcastStepTimer = null; }
-  // Mark all as done
-  document.querySelectorAll('.podcast-step').forEach(s => {
-    s.classList.remove('active-step');
-    s.classList.add('done-step');
-    s.style.opacity = '1';
-    s.querySelector('.step-icon').textContent = '✅';
-    s.querySelector('.step-text').style.color = '#22C55E';
-  });
-}
-
-async function generatePodcast() {
-  if (!currentStock) return;
-  const ticker = currentStock;
-  currentPodcastTicker = ticker;
-
-  // Show loading with animation
-  document.getElementById('podcastInit').classList.add('hidden');
-  document.getElementById('podcastReady').classList.add('hidden');
-  document.getElementById('podcastLoading').classList.remove('hidden');
-  _startPodcastStepAnimation();
-
-  try {
-    // Start generation (returns immediately)
-    const resp = await fetch(`${API}/api/podcast/${ticker}`, { method: 'POST' });
-    const data = await resp.json();
-
-    if (data.error) {
-      alert('שגיאה: ' + data.error);
-      document.getElementById('podcastLoading').classList.add('hidden');
-      document.getElementById('podcastInit').classList.remove('hidden');
-      return;
-    }
-
-    // Poll for completion
-    _pollPodcastStatus(ticker);
-
-  } catch (e) {
-    console.error('Podcast error:', e);
-    document.getElementById('podcastLoading').classList.add('hidden');
-    document.getElementById('podcastInit').classList.remove('hidden');
-    alert('שגיאה ביצירת הפודקאסט: ' + e.message);
-  }
-}
-
-function _pollPodcastStatus(ticker) {
-  if (_podcastPollTimer) clearInterval(_podcastPollTimer);
-
-  const pollStart = Date.now();
-  const MAX_POLL_TIME = 6 * 60 * 1000; // 6 minutes max (niqqud step takes time)
-  let notReadyCount = 0; // track consecutive not-generating + not-exists
-
-  _podcastPollTimer = setInterval(async () => {
-    // Timeout
-    if (Date.now() - pollStart > MAX_POLL_TIME) {
-      clearInterval(_podcastPollTimer);
-      _podcastPollTimer = null;
-      _stopPodcastStepAnimation();
-      document.getElementById('podcastLoading').classList.add('hidden');
-      document.getElementById('podcastInit').classList.remove('hidden');
-      alert('יצירת הפודקאסט לקחה יותר מדי זמן. נסה שוב.');
-      return;
-    }
-
-    try {
-      const resp = await fetch(`${API}/api/podcast/${ticker}/status`);
-      const data = await resp.json();
-
-      if (data.error && !data.generating) {
-        clearInterval(_podcastPollTimer);
-        _podcastPollTimer = null;
-        _stopPodcastStepAnimation();
-        document.getElementById('podcastLoading').classList.add('hidden');
-        document.getElementById('podcastInit').classList.remove('hidden');
-        alert('שגיאה ביצירת הפודקאסט: ' + data.error);
-        return;
-      }
-
-      if (data.generating) { notReadyCount = 0; return; } // Still working
-
-      if (data.exists) {
-        // Done! Show the player
-        clearInterval(_podcastPollTimer);
-        _podcastPollTimer = null;
-        _showPodcastPlayer(ticker, data);
-        return;
-      }
-
-      // Not generating + not exists + no error = might be between states
-      // Give it a few cycles, then stop
-      notReadyCount++;
-      if (notReadyCount > 3) {
-        clearInterval(_podcastPollTimer);
-        _podcastPollTimer = null;
-        _stopPodcastStepAnimation();
-        document.getElementById('podcastLoading').classList.add('hidden');
-        document.getElementById('podcastInit').classList.remove('hidden');
-      }
-    } catch (e) {
-      console.error('Poll error:', e);
-    }
-  }, 3000);
-}
-
-function _showPodcastPlayer(ticker, data) {
-  _stopPodcastStepAnimation();
-  // Brief delay to show all steps completed before switching
-  setTimeout(() => {
-    document.getElementById('podcastLoading').classList.add('hidden');
-    document.getElementById('podcastReady').classList.remove('hidden');
-  }, 800);
-
-  document.getElementById('podcastTitle').textContent = `${data.company || (stockCache[currentStock]||{}).name || ticker} — פודקאסט יומי`;
-  document.getElementById('podcastDate').textContent = data.date || new Date().toLocaleDateString('he-IL');
-
-  const audio = document.getElementById('podcastAudio');
-  audio.src = `${API}/api/podcast/${ticker}/audio?t=${Date.now()}`;
-  audio.load();
-
-  document.getElementById('podcastScript').textContent = data.script || '';
-
-  document.getElementById('podcastDownload').onclick = () => {
-    const a = document.createElement('a');
-    a.href = audio.src;
-    a.download = `${ticker}_podcast.mp3`;
-    a.click();
-  };
-
-  document.getElementById('podcastRefresh').onclick = () => {
-    generatePodcast();
-  };
-}
-
-// Check if podcast already exists when switching to tab
-function checkExistingPodcast(ticker) {
-  fetch(`${API}/api/podcast/${ticker}/status`)
-    .then(r => r.json())
-    .then(data => {
-      if (data.exists) {
-        document.getElementById('podcastInit').classList.add('hidden');
-        document.getElementById('podcastLoading').classList.add('hidden');
-        document.getElementById('podcastReady').classList.remove('hidden');
-
-        document.getElementById('podcastTitle').textContent = `${data.company || (stockCache[currentStock]||{}).name || ticker} — פודקאסט יומי`;
-        document.getElementById('podcastDate').textContent = data.date || '';
-
-        const audio = document.getElementById('podcastAudio');
-        audio.src = `${API}/api/podcast/${ticker}/audio?t=${Date.now()}`;
-        audio.load();
-
-        document.getElementById('podcastScript').textContent = data.script || '';
-
-        document.getElementById('podcastDownload').onclick = () => {
-          const a = document.createElement('a');
-          a.href = audio.src;
-          a.download = `${ticker}_podcast.mp3`;
-          a.click();
-        };
-        document.getElementById('podcastRefresh').onclick = () => generatePodcast();
-      } else {
-        document.getElementById('podcastInit').classList.remove('hidden');
-        document.getElementById('podcastReady').classList.add('hidden');
-        document.getElementById('podcastLoading').classList.add('hidden');
-      }
-    })
-    .catch(() => {
-      document.getElementById('podcastInit').classList.remove('hidden');
-      document.getElementById('podcastReady').classList.add('hidden');
-    });
-}
 
 // ─── Peer Comparison ───
 let peersData = null;
@@ -4072,9 +3866,6 @@ function renderPeersTable() {
 const _origSwitchTab = switchTab;
 switchTab = function(el) {
   _origSwitchTab(el);
-  if (el.dataset.tab === 'podcast' && currentStock) {
-    checkExistingPodcast(currentStock);
-  }
   if (el.dataset.tab === 'intrinsic' && currentStock) {
     loadIntrinsicData(currentStock);
   }

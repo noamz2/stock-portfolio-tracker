@@ -1688,6 +1688,324 @@ def generate_text_report(data, positions=None):
 
 
 
+def generate_notebooklm_sources(data, positions=None):
+    """Generate narrative source for NotebookLM podcast + article URLs.
+
+    Returns:
+        dict with 'text' (str) and 'urls' (list of str)
+    """
+    m = data['macro']
+    stocks = [s for s in data['stocks'] if 'error' not in s]
+    date_str = datetime.fromisoformat(data['date']).strftime('%d/%m/%Y')
+    article_urls = []
+
+    lines = []
+    lines.append(f"סקירה יומית של שוק ההון — {date_str}")
+    lines.append("")
+
+    # ─── Market Narrative — tone matches the actual data ───
+    sp = m.get('sp500', {})
+    sp_price = sp.get('price', 0)
+    sp_chg = sp.get('change_pct', 0)
+    vix = m.get('vix', 0)
+    fg = m.get('fear_greed', {})
+    fg_val = fg.get('value', 0)
+    fg_label = fg.get('label', '')
+    usd_ils_raw = m.get('usd_ils', 0)
+    usd_ils = usd_ils_raw.get('rate', 0) if isinstance(usd_ils_raw, dict) else usd_ils_raw
+    treasury = m.get('treasury_10y', {})
+
+    # Write the market description in a tone proportional to what actually happened
+    if abs(sp_chg) < 0.3:
+        lines.append(f"יום רגוע יחסית בוול סטריט. ה-S&P 500 סגר כמעט ללא שינוי, {'עלייה' if sp_chg >= 0 else 'ירידה'} של {abs(sp_chg):.1f}% בלבד, על {sp_price:,.0f} נקודות. אין פה דרמה מיוחדת במדדים הראשיים.")
+    elif sp_chg > 1.5:
+        lines.append(f"יום ראלי חזק בשוק. ה-S&P 500 זינק ב-{sp_chg:.1f}% ל-{sp_price:,.0f} נקודות. המשקיעים באופוריה.")
+    elif sp_chg > 0.3:
+        lines.append(f"יום חיובי בשוק. ה-S&P 500 עלה ב-{sp_chg:.1f}% ל-{sp_price:,.0f} נקודות.")
+    elif sp_chg < -1.5:
+        lines.append(f"יום ירידות חזקות בשוק. ה-S&P 500 נפל ב-{abs(sp_chg):.1f}% ל-{sp_price:,.0f} נקודות. המשקיעים מודאגים.")
+    else:
+        lines.append(f"יום שלילי מתון בשוק. ה-S&P 500 ירד ב-{abs(sp_chg):.1f}% ל-{sp_price:,.0f} נקודות. ירידה לא דרמטית, אבל שווה לשים לב למגמה.")
+
+    if vix > 30:
+        lines.append(f"ה-VIX ברמה של {vix:.0f}. השוק מתנהג כמו נהג שרואה אורות אדומים בכל צומת — כולם דורכים על הברקס.")
+    elif vix > 25:
+        lines.append(f"ה-VIX ברמה גבוהה של {vix:.0f}. סוחרי האופציות קונים הגנות באגרסיביות — מישהו מריח בעיה.")
+    elif vix > 18:
+        lines.append(f"ה-VIX ברמה של {vix:.0f}. לא פאניקה, אבל גם לא שאננות. השוק על המשמר.")
+    else:
+        lines.append(f"ה-VIX ברמה נמוכה של {vix:.0f}. המשקיעים ישנים טוב בלילה — לפחות בינתיים.")
+
+    if fg_val:
+        if fg_val < 20:
+            lines.append(f"מדד הפחד והחמדנות צנח ל-{fg_val:.0f}. וורן באפט אוהב לומר: תהיה חמדן כשאחרים פוחדים. אנחנו שם עכשיו.")
+        elif fg_val < 35:
+            lines.append(f"מדד הפחד והחמדנות ברמה נמוכה של {fg_val:.0f} — פחד. היסטורית, רגעים כאלה היו הזדמנויות קנייה.")
+        elif fg_val > 80:
+            lines.append(f"מדד הפחד והחמדנות ב-{fg_val:.0f} — חמדנות קיצונית. כשכולם בטוחים שהם גאונים, בדרך כלל מגיע התיקון.")
+        elif fg_val > 65:
+            lines.append(f"מדד הפחד והחמדנות ב-{fg_val:.0f} — חמדנות. האופטימיות גבוהה, אבל שווה לזכור שהשוק לא עולה לנצח.")
+
+    if treasury.get('yield_pct'):
+        y = treasury['yield_pct']
+        lines.append(f"תשואת האג\"ח ל-10 שנים עומדת על {y:.2f}%. {'תשואה גבוהה שלוחצת על מניות צמיחה.' if y > 4.5 else ''}")
+
+    if usd_ils:
+        lines.append(f"שער הדולר-שקל: {usd_ils:.2f}.")
+
+    # Macro news — filter out headlines that contradict the actual data
+    macro_news = m.get('macro_news', [])
+    if macro_news:
+        crash_words = ['crash', 'plunge', 'collapse', 'meltdown', 'bloodbath', 'tank', 'crater']
+        rally_words = ['soar', 'surge', 'skyrocket', 'boom', 'explode']
+        filtered_news = []
+        for n in macro_news[:6]:
+            title = n.get('title', '')
+            if not title:
+                continue
+            title_lower = title.lower()
+            # Don't include "market crash" headlines on a flat day
+            if abs(sp_chg) < 1.0 and any(w in title_lower for w in crash_words + rally_words):
+                continue
+            filtered_news.append(title)
+        if filtered_news:
+            lines.append("")
+            lines.append("כותרות מהעולם:")
+            for title in filtered_news[:4]:
+                lines.append(f"- {title}")
+    lines.append("")
+
+    # ─── Find connections between stocks ───
+    tickers_str = ', '.join(s.get('hebrew') or s.get('name', s.get('ticker', '')) for s in stocks)
+    lines.append(f"המניות שנסקור היום: {tickers_str}.")
+    lines.append("")
+
+    # Check if all are approaching earnings
+    earnings_stocks = []
+    for s in stocks:
+        ed = s.get('earnings_date', '')
+        if ed:
+            try:
+                days = (datetime.strptime(str(ed)[:10], '%Y-%m-%d') - datetime.now()).days
+                if 0 < days <= 30:
+                    earnings_stocks.append((s.get('hebrew') or s.get('name', ''), days))
+            except Exception:
+                pass
+    if len(earnings_stocks) >= 2:
+        names = ' ו-'.join(e[0] for e in earnings_stocks)
+        min_days = min(e[1] for e in earnings_stocks)
+        if min_days <= 7:
+            lines.append(f"עונת הדוחות מתחילה בעוד ימים ספורים. {names} עומדות לחשוף את הקלפים. השבועות הקרובים יגדירו את כיוון התיק לשארית השנה.")
+        else:
+            lines.append(f"{names} מדווחות על רווחים בקרוב. בעוד {min_days} יום מתחילה עונת האמת — הרגע שבו הסיפורים נגמרים והמספרים מדברים.")
+        lines.append("")
+
+    # ─── Per-Stock Rich Narrative ───
+    for s in stocks:
+        t = s.get('ticker', '')
+        name = s.get('hebrew') or s.get('name', t)
+        price = s.get('price', 0) or 0
+        change = s.get('change_pct', 0) or 0
+        pe = s.get('pe')
+        fwd_pe = s.get('forward_pe')
+        target = s.get('target_mean')
+        rec = s.get('recommendation', '')
+        pct_from_high = s.get('pct_from_high')
+        earnings_date = s.get('earnings_date', '')
+        rev_growth = s.get('revenue_growth')
+        earn_growth = s.get('earnings_growth')
+        profit_margin = s.get('profit_margin')
+        sector = s.get('sector', '')
+
+        lines.append(f"=== {name} ({t}) ===")
+        lines.append("")
+
+        # Opening narrative — what happened and context
+        if abs(change) > 3:
+            lines.append(f"{name} זזה בצורה חדה היום — {'עלייה' if change > 0 else 'ירידה'} של {abs(change):.1f}%. המניה נסחרת ב-{price:.0f} דולר.")
+        elif abs(change) > 0.5:
+            lines.append(f"{name} {'עלתה' if change > 0 else 'ירדה'} ב-{abs(change):.1f}% ל-{price:.0f} דולר.")
+        else:
+            lines.append(f"{name} כמעט לא זזה היום ונסחרת ב-{price:.0f} דולר.")
+
+        # Where the stock stands — distance from high
+        if pct_from_high and pct_from_high < -40:
+            lines.append(f"המניה איבדה {abs(pct_from_high):.0f}% מהשיא. מחצית מהערך נמחקה. השאלה: האם זו חברה שבורה, או מניה במבצע?")
+        elif pct_from_high and pct_from_high < -20:
+            lines.append(f"המניה נמצאת {abs(pct_from_high):.0f}% מתחת לשיא. ירידה רצינית — אבל לפעמים דווקא משם מגיעות ההזדמנויות הגדולות.")
+        elif pct_from_high and pct_from_high > -5:
+            lines.append(f"המניה קרובה לשיא שלה — רק {abs(pct_from_high):.0f}% מתחת. מי שהחזיק, מחייך.")
+
+        # Valuation narrative
+        if pe and fwd_pe:
+            if fwd_pe < pe * 0.7:
+                lines.append(f"נתון שקופץ לעיניים: מכפיל הרווח הנוכחי הוא {pe:.0f}, אבל העתידי יורד ל-{fwd_pe:.0f}. השוק מתמחר קפיצה רצינית ברווחים — אם זה יקרה, המניה זולה. אם לא, היא מלכודת.")
+            elif fwd_pe > pe * 1.2:
+                lines.append(f"מכפיל הרווח עומד על {pe:.0f}, אבל העתידי עולה ל-{fwd_pe:.0f}. השוק מצפה לירידה ברווחים — סימן שצריך לשים לב.")
+            else:
+                lines.append(f"מכפיל הרווח עומד על {pe:.0f} (עתידי: {fwd_pe:.0f}).")
+
+        # Growth
+        if rev_growth and rev_growth > 20:
+            lines.append(f"החברה צומחת מהר — הכנסות עלו ב-{rev_growth:.0f}%{'.' if not earn_growth else f', ורווחים ב-{earn_growth:.0f}%.'}")
+        elif rev_growth:
+            lines.append(f"צמיחת הכנסות: {rev_growth:.0f}%.")
+
+        if profit_margin and profit_margin > 30:
+            lines.append(f"מרווח רווח של {profit_margin:.0f}% — רווחיות גבוהה מאוד.")
+
+        # Analyst opinion — this is key content
+        if target and price:
+            upside = ((target - price) / price * 100)
+            if upside > 80:
+                lines.append(f"האנליסטים חושבים שהמניה שווה {target:.0f} דולר — {upside:.0f}% מעל המחיר הנוכחי. או שכל וול סטריט טועה, או שזו אחת ההזדמנויות של השנה. המלצה: {rec}.")
+            elif upside > 40:
+                lines.append(f"פער חריג בין המחיר ליעד: האנליסטים רואים {target:.0f} דולר ({upside:.0f}% upside). כסף חכם או אופטימיות מופרזת? המלצה: {rec}.")
+            elif upside > 20:
+                lines.append(f"יעד אנליסטים: {target:.0f} דולר ({upside:.0f}% upside). פוטנציאל סולידי. המלצה: {rec}.")
+            elif upside > 0:
+                lines.append(f"יעד אנליסטים: {target:.0f} דולר ({upside:.0f}% upside). המלצה: {rec}.")
+
+        # Recent analyst actions
+        actions = s.get('recent_analyst_actions', [])
+        if actions:
+            for a in actions[:2]:
+                firm = a.get('firm', '')
+                to_grade = a.get('to_grade', '')
+                a_target = a.get('target', '')
+                if firm and to_grade:
+                    target_str = f" עם יעד מחיר של {a_target} דולר" if a_target else ""
+                    lines.append(f"לאחרונה, {firm} נתנו דירוג {to_grade}{target_str}.")
+
+        # Earnings countdown with context
+        if earnings_date:
+            try:
+                ed = datetime.strptime(str(earnings_date)[:10], '%Y-%m-%d')
+                days_to = (ed - datetime.now()).days
+                if 0 < days_to <= 30:
+                    est_eps = s.get('earnings_est_eps')
+                    if days_to <= 7:
+                        lines.append(f"ספירה לאחור: דוח רווחים בעוד {days_to} ימים בלבד ({ed.strftime('%d/%m')}). {'EPS צפוי: ' + str(est_eps) + '.' if est_eps else ''} הרגע הזה יגדיר את הכיוון לחודשים הקרובים.")
+                    elif days_to <= 21:
+                        lines.append(f"דוח רווחים בעוד {days_to} יום ({ed.strftime('%d/%m')}). {'הקונצנזוס: EPS של ' + str(est_eps) + '.' if est_eps else ''} המספרים ידברו בקרוב — ואז נדע אם האופטימיות מוצדקת.")
+                    else:
+                        lines.append(f"דוח רווחים בעוד {days_to} יום ({ed.strftime('%d/%m')}). {'EPS צפוי: ' + str(est_eps) + '.' if est_eps else ''}")
+            except Exception:
+                pass
+
+        # Short interest
+        short_pct = s.get('short_pct')
+        if short_pct and short_pct > 15:
+            lines.append(f"{short_pct:.0f}% מהמניות בשורט. כל חמישית מניה מהולכת נגדה. מישהו מאוד בטוח שהמניה הזו תיפול — אבל אם הם טועים, ה-short squeeze יהיה אדיר.")
+        elif short_pct and short_pct > 8:
+            lines.append(f"שורט של {short_pct:.0f}%. יש קבוצה רצינית שמהמרת נגד המניה הזו. מה הם יודעים שאנחנו לא?")
+        elif short_pct and short_pct > 5:
+            lines.append(f"שורט של {short_pct:.0f}%. לחץ מוכרים בחסר על המניה.")
+
+        # Insider activity
+        insiders = s.get('insider_activity', [])
+        if insiders:
+            buys = [i for i in insiders if 'buy' in str(i.get('type', '')).lower() or 'purchase' in str(i.get('type', '')).lower()]
+            sells = [i for i in insiders if 'sell' in str(i.get('type', '')).lower() or 'sale' in str(i.get('type', '')).lower()]
+            if buys and not sells:
+                lines.append(f"סימן חזק: אינסיידרים קנו {len(buys)} פעמים ב-3 חודשים האחרונים. כשהמנכ\"ל שם את הכסף שלו — זה אומר משהו שאף דוח אנליסט לא יכול.")
+            elif sells and not buys:
+                lines.append(f"אינסיידרים מוכרים: {len(sells)} מכירות ב-90 יום. לא בהכרח שלילי — לפעמים מוכרים כדי לממן בית חדש — אבל כשזה קורה לצד ירידות, שווה לשים לב.")
+
+        # Social sentiment
+        social = s.get('social', {})
+        st_sentiment = social.get('stocktwits_sentiment', {})
+        if st_sentiment.get('bullish_pct'):
+            bp = st_sentiment['bullish_pct']
+            bearp = st_sentiment.get('bearish_pct', 0)
+            if bp > 70:
+                lines.append(f"הסנטימנט ברשתות החברתיות מאוד שורי: {bp:.0f}% אופטימיים ב-StockTwits.")
+            elif bearp > 50:
+                lines.append(f"הסנטימנט ברשתות דובי: רק {bp:.0f}% אופטימיים ב-StockTwits.")
+            else:
+                lines.append(f"סנטימנט מעורב ב-StockTwits: {bp:.0f}% שוריים, {bearp:.0f}% דוביים.")
+
+        reddit = social.get('reddit', [])
+        if reddit:
+            top = reddit[0]
+            upvotes = top.get('upvotes', 0) or top.get('score', 0) or 0
+            if upvotes > 100:
+                lines.append(f"פוסט פופולרי ברדיט ({upvotes} upvotes): \"{top.get('title', '')}\".")
+
+        # News — filter for relevance and add narrative
+        news = s.get('news_deep', [])
+        relevant_news = []
+        for n in news:
+            title = (n.get('title', '') or '').lower()
+            # Filter: title should mention the ticker or company name
+            name_lower = name.lower()
+            ticker_lower = t.lower()
+            company_name = (s.get('name', '') or '').lower()
+            if ticker_lower in title or name_lower in title or company_name in title:
+                relevant_news.append(n)
+
+        if relevant_news:
+            lines.append("")
+            lines.append("חדשות עיקריות:")
+            for n in relevant_news[:3]:
+                title = n.get('title', '')
+                content = n.get('content', '')
+                if title:
+                    lines.append(f"- {title}")
+                    # Add first meaningful sentence of content if available
+                    if content and len(content) > 50:
+                        first_sentence = content.split('.')[0].strip()
+                        if len(first_sentence) > 30 and len(first_sentence) < 200:
+                            lines.append(f"  ({first_sentence}.)")
+
+                url = n.get('url', '')
+                if url and url.startswith('http') and 'google.com/rss' not in url:
+                    article_urls.append(url)
+        elif news:
+            # Fallback: show top news even if not perfectly filtered
+            lines.append("")
+            lines.append("חדשות קשורות:")
+            for n in news[:2]:
+                title = n.get('title', '')
+                if title:
+                    lines.append(f"- {title}")
+                url = n.get('url', '')
+                if url and url.startswith('http') and 'google.com/rss' not in url:
+                    article_urls.append(url)
+
+        lines.append("")
+
+    # ─── Discussion Points ───
+    lines.append("נקודות מעניינות לדיון:")
+    lines.append("")
+    for s in stocks:
+        t = s.get('ticker', '')
+        name = s.get('hebrew') or s.get('name', t)
+        change = s.get('change_pct', 0) or 0
+        pct_from_high = s.get('pct_from_high')
+        target = s.get('target_mean')
+        price = s.get('price', 0) or 0
+        short_pct = s.get('short_pct')
+
+        if target and price:
+            upside = ((target - price) / price * 100)
+            if upside > 50:
+                lines.append(f"- פער חריג בין המחיר ליעד של {name}: האנליסטים רואים {upside:.0f}% upside. האם השוק טועה, או שהאנליסטים לא מעדכנים את היעדים?")
+        if pct_from_high and pct_from_high < -30:
+            lines.append(f"- {name} ירדה {abs(pct_from_high):.0f}% מהשיא. זו הזדמנות קנייה עם מרווח ביטחון, או סימן שמשהו השתנה מהותית?")
+        if short_pct and short_pct > 10:
+            lines.append(f"- {short_pct:.0f}% שורט ב-{name}. מה יודעים המוכרים בחסר שהשוק לא?")
+        if abs(change) > 4:
+            lines.append(f"- {name} זזה {abs(change):.1f}% ביום אחד. מהלך חריג — האם זה מוצדק?")
+
+    lines.append("")
+
+    return {
+        'text': '\n'.join(lines),
+        'urls': article_urls[:9],
+    }
+
+
 def generate_podcast_script(data, user_name=None):
     """Generate Hebrew podcast script — tries LLM API first, falls back to basic."""
     has_llm = os.environ.get('DEEPSEEK_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '') or os.environ.get('GROQ_API_KEY', '')
@@ -3066,9 +3384,28 @@ if __name__ == '__main__':
             sys.stdout.write(_json.dumps(_data, ensure_ascii=False, default=str))
             sys.stdout.flush()
         sys.exit(0)
+    # --report-only: collect data + generate text report only (no script/TTS)
+    _report_only = '--report-only' in sys.argv
+    _args = [a for a in sys.argv[1:] if a != '--report-only']
     # Allow custom tickers from command line
-    if len(sys.argv) > 1:
-        tickers = [t.strip() for t in ' '.join(sys.argv[1:]).replace(',', ' ').split()]
-        run(tickers)
+    if _args:
+        tickers = [t.strip() for t in ' '.join(_args).replace(',', ' ').split()]
     else:
-        run()
+        tickers = None
+    if _report_only:
+        if tickers:
+            PORTFOLIO = tickers
+        today = datetime.now().strftime('%Y-%m-%d')
+        data = collect_all()
+        data_path = OUTPUT_DIR / f'briefing_{today}_data.json'
+        with open(data_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+        print(f"\n💾 Data: {data_path}")
+        report = generate_text_report(data)
+        report_path = OUTPUT_DIR / f'briefing_{today}.txt'
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write(report)
+        print(f"📄 Report: {report_path}")
+        print(report)
+    else:
+        run(tickers)
