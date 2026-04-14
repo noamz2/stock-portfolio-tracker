@@ -861,50 +861,113 @@ def get_historical_pe(ticker_obj, info, years=5):
 
 
 # ─── Authentication & Database ───
-app.secret_key = 'astra_super_secret_key_change_me'
+app.secret_key = os.environ.get('SECRET_KEY', 'astra_super_secret_key_change_me')
 
-def get_db():
-    conn = sqlite3.connect('users.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-def init_db():
-    with get_db() as db:
-        db.execute('''CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            name TEXT NOT NULL DEFAULT ''
-        )''')
-        db.execute('''CREATE TABLE IF NOT EXISTS portfolios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            ticker TEXT NOT NULL,
-            shares REAL NOT NULL DEFAULT 0,
-            entry_price REAL DEFAULT NULL,
-            UNIQUE(user_id, ticker),
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        )''')
-        # Migration: add entry_price to existing DBs
-        try:
-            db.execute('ALTER TABLE portfolios ADD COLUMN entry_price REAL DEFAULT NULL')
+if DATABASE_URL:
+    import psycopg2
+    import psycopg2.extras
+
+    class _PgDB:
+        """Thin wrapper that makes psycopg2 behave like sqlite3 for our usage."""
+        def __init__(self):
+            self._conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+
+        def execute(self, sql, params=None):
+            sql = sql.replace('?', '%s')
+            cur = self._conn.cursor()
+            cur.execute(sql, params or ())
+            return cur
+
+        def commit(self):
+            self._conn.commit()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            if exc_type:
+                self._conn.rollback()
+            else:
+                self._conn.commit()
+            self._conn.close()
+            return False
+
+    def get_db():
+        return _PgDB()
+
+    _DB_INTEGRITY_ERROR = psycopg2.IntegrityError
+
+    def init_db():
+        with get_db() as db:
+            db.execute('''CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                name TEXT NOT NULL DEFAULT ''
+            )''')
+            db.execute('''CREATE TABLE IF NOT EXISTS portfolios (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                ticker TEXT NOT NULL,
+                shares REAL NOT NULL DEFAULT 0,
+                entry_price REAL DEFAULT NULL,
+                UNIQUE(user_id, ticker),
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )''')
+            db.execute('''CREATE TABLE IF NOT EXISTS watchlist (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                ticker TEXT NOT NULL,
+                UNIQUE(user_id, ticker),
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )''')
             db.commit()
-        except Exception:
-            pass  # column already exists
-        # Migration: add name to existing users
-        try:
-            db.execute("ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+
+else:
+    def get_db():
+        conn = sqlite3.connect('users.db')
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    _DB_INTEGRITY_ERROR = sqlite3.IntegrityError
+
+    def init_db():
+        with get_db() as db:
+            db.execute('''CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                name TEXT NOT NULL DEFAULT ''
+            )''')
+            db.execute('''CREATE TABLE IF NOT EXISTS portfolios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                ticker TEXT NOT NULL,
+                shares REAL NOT NULL DEFAULT 0,
+                entry_price REAL DEFAULT NULL,
+                UNIQUE(user_id, ticker),
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )''')
+            try:
+                db.execute('ALTER TABLE portfolios ADD COLUMN entry_price REAL DEFAULT NULL')
+                db.commit()
+            except Exception:
+                pass
+            try:
+                db.execute("ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+                db.commit()
+            except Exception:
+                pass
+            db.execute('''CREATE TABLE IF NOT EXISTS watchlist (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                ticker TEXT NOT NULL,
+                UNIQUE(user_id, ticker),
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )''')
             db.commit()
-        except Exception:
-            pass  # column already exists
-        db.execute('''CREATE TABLE IF NOT EXISTS watchlist (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            ticker TEXT NOT NULL,
-            UNIQUE(user_id, ticker),
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        )''')
-        db.commit()
 
 init_db()
 
@@ -942,7 +1005,7 @@ def register():
             session['username'] = user['name'] or user['email']
 
         return jsonify({'success': True})
-    except sqlite3.IntegrityError:
+    except _DB_INTEGRITY_ERROR:
         return jsonify({'error': 'Email already exists'}), 409
 
 @app.route('/api/auth/login', methods=['POST'])
@@ -1062,7 +1125,7 @@ def add_to_watchlist():
         return jsonify({'error': 'Missing ticker'}), 400
     with get_db() as db:
         db.execute(
-            "INSERT OR IGNORE INTO watchlist (user_id, ticker) VALUES (?, ?)",
+            "INSERT INTO watchlist (user_id, ticker) VALUES (?, ?) ON CONFLICT DO NOTHING",
             (session['user_id'], ticker)
         )
         db.commit()
