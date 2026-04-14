@@ -305,10 +305,13 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cur
   padding: 0 24px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  position: sticky;
+  position: fixed;
   top: 64px;
+  left: 0;
+  right: 0;
   z-index: 1000;
 }
+.view-nav-spacer { height: 53px; }
 .view-nav-btn {
   background: none;
   border: none;
@@ -655,10 +658,11 @@ body {
 </header>
 
 <!-- View Navigation -->
-<nav class="view-nav">
+<nav class="view-nav" id="viewNav">
   <button class="view-nav-btn active" data-view="portfolio" onclick="switchView('portfolio')">📈 תיק השקעות</button>
   <button class="view-nav-btn" data-view="watchlist" onclick="switchView('watchlist')">👁️ רשימת מעקב <span id="watchlistBadge" class="nav-badge" style="display:none">0</span></button>
 </nav>
+<div class="view-nav-spacer"></div>
 
 <div class="container">
   <!-- Portfolio Dashboard -->
@@ -3951,7 +3955,20 @@ function closeNewsPanel() {
 </div>
 
 <script>
+function positionNav() {
+  const header = document.querySelector('header.main-header');
+  const nav = document.getElementById('viewNav');
+  const spacer = document.querySelector('.view-nav-spacer');
+  if (!header || !nav) return;
+  const h = header.getBoundingClientRect().height;
+  nav.style.top = h + 'px';
+  if (spacer) spacer.style.height = nav.getBoundingClientRect().height + 'px';
+}
+window.addEventListener('load', positionNav);
+window.addEventListener('resize', positionNav);
+
 document.addEventListener('DOMContentLoaded', () => {
+  positionNav();
   if (typeof gsap !== 'undefined') {
     gsap.registerPlugin(ScrollTrigger);
 
