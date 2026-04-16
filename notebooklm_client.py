@@ -23,17 +23,54 @@ PROMPT_HE = (
     "דגש על חדשות, סנטימנט שוק, ודעות אנליסטים. ניתוח טכני קצר ולעניין."
 )
 
+# Supabase Storage path where the auth JSON is stored
+_SUPABASE_BUCKET = "app-config"
+_SUPABASE_OBJECT = "notebooklm_storage_state.json"
+
+
+def _fetch_auth_from_supabase() -> Optional[str]:
+    """Download notebooklm auth JSON from Supabase Storage (avoids huge env var)."""
+    supabase_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not supabase_url or not supabase_key:
+        return None
+    try:
+        import requests as _requests
+        url = f"{supabase_url}/storage/v1/object/{_SUPABASE_BUCKET}/{_SUPABASE_OBJECT}"
+        resp = _requests.get(url, headers={"Authorization": f"Bearer {supabase_key}", "apikey": supabase_key}, timeout=30)
+        if resp.status_code == 200:
+            logger.info(f"Fetched auth JSON from Supabase Storage ({len(resp.text):,} chars)")
+            return resp.text
+        logger.warning(f"Supabase Storage returned {resp.status_code}: {resp.text[:200]}")
+    except Exception as e:
+        logger.warning(f"Failed to fetch auth from Supabase: {e}")
+    return None
+
 
 def _ensure_storage_state():
-    """Write NOTEBOOKLM_AUTH_JSON env var to storage file if it exists (for Render/cloud)."""
-    auth_json = os.environ.get("NOTEBOOKLM_AUTH_JSON", "").strip()
-    if not auth_json:
-        return
+    """Write auth JSON to storage file — tries Supabase Storage first, falls back to env var."""
     storage_path = os.path.expanduser("~/.notebooklm/storage_state.json")
+
+    # If file already exists locally (dev environment), skip
+    if os.path.exists(storage_path):
+        logger.info(f"Using existing storage state at {storage_path}")
+        return
+
+    # Try Supabase Storage (production path — avoids huge env var in build)
+    auth_json = _fetch_auth_from_supabase()
+
+    # Fallback: legacy env var (kept for backward compat but no longer set on Render)
+    if not auth_json:
+        auth_json = os.environ.get("NOTEBOOKLM_AUTH_JSON", "").strip()
+
+    if not auth_json:
+        logger.warning("No NotebookLM auth JSON found (Supabase Storage or env var)")
+        return
+
     os.makedirs(os.path.dirname(storage_path), exist_ok=True)
     with open(storage_path, "w") as f:
         f.write(auth_json)
-    logger.info(f"Wrote NOTEBOOKLM_AUTH_JSON to {storage_path} ({len(auth_json):,} chars)")
+    logger.info(f"Wrote auth JSON to {storage_path} ({len(auth_json):,} chars)")
 
 
 async def _generate_podcast_async(
