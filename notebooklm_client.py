@@ -1,6 +1,10 @@
 """NotebookLM client — generates audio briefings via notebooklm-py API.
 
-No Chrome required. Uses stored Google auth cookies.
+Auth flow (no Playwright required after initial login):
+  1. Local dev: reads ~/.notebooklm/storage_state.json (created once by notebooklm_login.py).
+  2. Render / production: downloads cookies from Supabase Storage on every cold start.
+  3. Cookies are valid for ~6 months. When expired, run notebooklm_login.py once on Mac
+     to refresh and re-upload to Supabase automatically.
 """
 
 import asyncio
@@ -23,55 +27,78 @@ PROMPT_HE = (
     "דגש על חדשות, סנטימנט שוק, ודעות אנליסטים. ניתוח טכני קצר ולעניין."
 )
 
-# Supabase Storage path where the auth JSON is stored
 _SUPABASE_BUCKET = "app-config"
 _SUPABASE_OBJECT = "notebooklm_storage_state.json"
+_STORAGE_PATH    = os.path.expanduser("~/.notebooklm/storage_state.json")
 
+
+# ── Supabase Storage helpers ────────────────────────────────────────────────
 
 def _fetch_auth_from_supabase() -> Optional[str]:
-    """Download notebooklm auth JSON from Supabase Storage (avoids huge env var)."""
-    supabase_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
-    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
-    if not supabase_url or not supabase_key:
+    """Download notebooklm auth JSON from Supabase Storage."""
+    url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not url or not key:
         return None
     try:
-        import requests as _requests
-        url = f"{supabase_url}/storage/v1/object/{_SUPABASE_BUCKET}/{_SUPABASE_OBJECT}"
-        resp = _requests.get(url, headers={"Authorization": f"Bearer {supabase_key}", "apikey": supabase_key}, timeout=30)
+        import requests as _req
+        obj_url = f"{url}/storage/v1/object/{_SUPABASE_BUCKET}/{_SUPABASE_OBJECT}"
+        resp = _req.get(obj_url, headers={"Authorization": f"Bearer {key}", "apikey": key}, timeout=30)
         if resp.status_code == 200:
-            logger.info(f"Fetched auth JSON from Supabase Storage ({len(resp.text):,} chars)")
+            logger.info(f"Fetched auth JSON from Supabase ({len(resp.text):,} chars)")
             return resp.text
-        logger.warning(f"Supabase Storage returned {resp.status_code}: {resp.text[:200]}")
+        logger.warning(f"Supabase returned {resp.status_code}: {resp.text[:200]}")
     except Exception as e:
-        logger.warning(f"Failed to fetch auth from Supabase: {e}")
+        logger.warning(f"Failed to fetch from Supabase: {e}")
     return None
 
 
-def _ensure_storage_state():
-    """Write auth JSON to storage file — tries Supabase Storage first, falls back to env var."""
-    storage_path = os.path.expanduser("~/.notebooklm/storage_state.json")
+def upload_auth_to_supabase(auth_json: str) -> bool:
+    """Upload/overwrite auth JSON in Supabase Storage (called by notebooklm_login.py)."""
+    url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not url or not key:
+        return False
+    try:
+        import requests as _req
+        obj_url = f"{url}/storage/v1/object/{_SUPABASE_BUCKET}/{_SUPABASE_OBJECT}"
+        headers = {"Authorization": f"Bearer {key}", "apikey": key, "Content-Type": "application/json"}
+        resp = _req.put(obj_url, headers=headers, data=auth_json.encode(), timeout=60)
+        if resp.status_code in (200, 201):
+            logger.info(f"Uploaded fresh auth to Supabase ({len(auth_json):,} chars)")
+            return True
+        logger.warning(f"Supabase upload returned {resp.status_code}: {resp.text[:200]}")
+    except Exception as e:
+        logger.warning(f"Failed to upload to Supabase: {e}")
+    return False
 
-    # If file already exists locally (dev environment), skip
-    if os.path.exists(storage_path):
-        logger.info(f"Using existing storage state at {storage_path}")
+
+# ── Ensure storage state is ready ──────────────────────────────────────────
+
+def _ensure_storage_state():
+    """Populate ~/.notebooklm/storage_state.json from Supabase if not present locally."""
+    if os.path.exists(_STORAGE_PATH):
+        logger.info(f"Using existing storage state at {_STORAGE_PATH}")
         return
 
-    # Try Supabase Storage (production path — avoids huge env var in build)
+    # Download from Supabase (production / new machine)
     auth_json = _fetch_auth_from_supabase()
 
-    # Fallback: legacy env var (kept for backward compat but no longer set on Render)
+    # Legacy fallback: env var (kept for compat, no longer set on Render)
     if not auth_json:
         auth_json = os.environ.get("NOTEBOOKLM_AUTH_JSON", "").strip()
 
     if not auth_json:
-        logger.warning("No NotebookLM auth JSON found (Supabase Storage or env var)")
+        logger.warning("No NotebookLM auth JSON found (Supabase or env var)")
         return
 
-    os.makedirs(os.path.dirname(storage_path), exist_ok=True)
-    with open(storage_path, "w") as f:
+    os.makedirs(os.path.dirname(_STORAGE_PATH), exist_ok=True)
+    with open(_STORAGE_PATH, "w") as f:
         f.write(auth_json)
-    logger.info(f"Wrote auth JSON to {storage_path} ({len(auth_json):,} chars)")
+    logger.info(f"Wrote auth JSON to {_STORAGE_PATH} ({len(auth_json):,} chars)")
 
+
+# ── Main async pipeline ─────────────────────────────────────────────────────
 
 async def _generate_podcast_async(
     notebook_id: str,
@@ -80,13 +107,23 @@ async def _generate_podcast_async(
     timeout_minutes: int = 20,
     on_step=None,
 ) -> Optional[bytes]:
-    """Async implementation of the full pipeline."""
     _step = on_step or (lambda s: None)
 
     _step("connect")
     logger.info("Authenticating with NotebookLM API...")
     _ensure_storage_state()
-    auth = await AuthTokens.from_storage()
+
+    try:
+        auth = await AuthTokens.from_storage()
+    except ValueError as e:
+        err = str(e)
+        if "expired" in err.lower() or "missing" in err.lower() or "redirect" in err.lower():
+            raise RuntimeError(
+                "NotebookLM authentication expired.\n"
+                "Run 'python3 notebooklm_login.py' on your Mac to refresh cookies. "
+                "Takes ~1 minute and is valid for the next ~6 months."
+            ) from e
+        raise
 
     async with NotebookLMClient(auth) as client:
 
@@ -149,9 +186,8 @@ async def _generate_podcast_async(
                 artifacts = await client.artifacts.list(notebook_id)
                 audio = [a for a in artifacts if a.artifact_type == StudioContentType.AUDIO.value]
 
-                # NEW artifact = one that didn't exist before
-                new_artifacts = [a for a in audio if a.id not in existing_ids]
-                new_ready = [a for a in new_artifacts if a.status == 3]
+                new_artifacts  = [a for a in audio if a.id not in existing_ids]
+                new_ready      = [a for a in new_artifacts if a.status == 3]
                 new_generating = [a for a in new_artifacts if a.status == 1]
 
                 elapsed = int(time.time() - start)
@@ -200,22 +236,12 @@ def generate_podcast(
     timeout_minutes: int = 20,
     on_step=None,
 ) -> Optional[bytes]:
-    """Generate a podcast via NotebookLM API (no Chrome required).
+    """Generate a podcast via NotebookLM API (pure API, no browser required).
 
-    Args:
-        notebook_url: Full NotebookLM notebook URL (notebook ID is extracted).
-        text_source: Hebrew briefing text to upload as source.
-        url_sources: Ignored — NotebookLM searches the web on its own.
-        port: Ignored — no Chrome used.
-        prompt: Custom instructions for the podcast hosts.
-        timeout_minutes: Max wait for generation to complete.
-        on_step: Optional callback called with step name strings.
-
-    Returns:
-        Audio bytes (m4a) or None on failure.
+    Cookies are fetched automatically from Supabase Storage on first use.
+    Valid for ~6 months. Refresh with: python3 notebooklm_login.py
     """
-    del url_sources, port  # kept in signature for API compatibility; not used
-    # Extract notebook ID from URL
+    del url_sources, port
     notebook_id = notebook_url.rstrip("/").split("/")[-1].split("?")[0]
     logger.info(f"Notebook ID: {notebook_id}")
 
