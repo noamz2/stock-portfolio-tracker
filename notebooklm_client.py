@@ -24,6 +24,18 @@ PROMPT_HE = (
 )
 
 
+def _ensure_storage_state():
+    """Write NOTEBOOKLM_AUTH_JSON env var to storage file if it exists (for Render/cloud)."""
+    auth_json = os.environ.get("NOTEBOOKLM_AUTH_JSON", "").strip()
+    if not auth_json:
+        return
+    storage_path = os.path.expanduser("~/.notebooklm/storage_state.json")
+    os.makedirs(os.path.dirname(storage_path), exist_ok=True)
+    with open(storage_path, "w") as f:
+        f.write(auth_json)
+    logger.info(f"Wrote NOTEBOOKLM_AUTH_JSON to {storage_path} ({len(auth_json):,} chars)")
+
+
 async def _generate_podcast_async(
     notebook_id: str,
     text_source: str,
@@ -36,6 +48,7 @@ async def _generate_podcast_async(
 
     _step("connect")
     logger.info("Authenticating with NotebookLM API...")
+    _ensure_storage_state()
     auth = await AuthTokens.from_storage()
 
     async with NotebookLMClient(auth) as client:

@@ -37,6 +37,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-padding-top: 120px; }
 body {
   font-family: 'Assistant', 'Inter', system-ui, sans-serif;
   background: var(--bg);
@@ -669,7 +670,7 @@ body {
           <span id="portfolioValue" style="font-size:1.2rem;font-weight:700;direction:ltr">$0</span>
         </div>
       </div>
-      <div style="overflow-x:auto">
+      <div style="overflow-x:auto;overflow-y:visible">
         <table>
           <thead>
             <tr>
@@ -1803,8 +1804,8 @@ async function loadPortfolio() {
     }));
   }
 
-  hideLoading();
   renderPortfolioTable();
+  hideLoading();
 }
 
 function renderPortfolioTable() {

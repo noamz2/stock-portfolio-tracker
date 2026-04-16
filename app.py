@@ -746,11 +746,11 @@ def get_historical_pe(ticker_obj, info, years=5):
     try:
         hist = ticker_obj.history(period=f"{years}y", interval="1mo")
         if hist.empty or 'Close' not in hist.columns:
-            return [], []
+            return [], [], []
 
         eps_ttm_current = safe(info, 'trailingEps', 0)
         if not eps_ttm_current or eps_ttm_current <= 0:
-            return [], []
+            return [], [], []
 
         dates = [d.strftime('%Y-%m') for d in hist.index]
         prices = hist['Close'].tolist()
