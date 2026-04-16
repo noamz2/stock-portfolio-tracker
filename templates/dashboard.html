@@ -65,6 +65,14 @@ body {
 .flash-green { animation: flashGreen 1.2s ease-out; }
 .flash-red { animation: flashRed 1.2s ease-out; }
 
+@keyframes priceFlashUp   { 0% { background: rgba(0,230,118,.35); } 100% { background: transparent; } }
+@keyframes priceFlashDown { 0% { background: rgba(255,23,68,.35);  } 100% { background: transparent; } }
+.price-flash-up   { animation: priceFlashUp   1s ease-out; }
+.price-flash-down { animation: priceFlashDown 1s ease-out; }
+#livePriceDot { width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block;
+  margin-left:6px; vertical-align:middle; box-shadow:0 0 6px var(--green); transition:background .3s; }
+#livePriceDot.dot-closed { background:var(--muted); box-shadow:none; }
+
 a { color: var(--cyan); text-decoration: none; transition: all 0.2s var(--transition-smooth); }
 a:hover { color: #fff; text-shadow: 0 0 8px var(--cyan-glow); }
 
@@ -654,6 +662,7 @@ body {
 <nav class="view-nav" id="viewNav">
   <button class="view-nav-btn active" data-view="portfolio" onclick="switchView('portfolio')">📈 תיק השקעות</button>
   <button class="view-nav-btn" data-view="watchlist" onclick="switchView('watchlist')">👁️ רשימת מעקב <span id="watchlistBadge" class="nav-badge" style="display:none">0</span></button>
+  <span id="livePriceDot" title="עדכון מחירים חי" class="dot-closed"></span>
 </nav>
 </div>
 <div class="view-nav-spacer"></div>
@@ -1558,8 +1567,8 @@ function renderWatchlistTable() {
       <td><button class="remove-btn" onclick="event.stopPropagation();removeFromWatchlist('${ticker}')">✕</button></td>
       <td><div class='ticker-cell'>${getLogoHtml(ticker)}<strong>${ticker}</strong></div></td>
       <td style="font-size:13px">${d.name || ''}</td>
-      <td dir="ltr">${fmtPrice(d.price, d)}</td>
-      <td dir="ltr" class="${changeClass}">${changeSign}${d.changePct?.toFixed(2)}%</td>
+      <td dir="ltr" data-price-ticker="${ticker}">${fmtPrice(d.price, d)}</td>
+      <td dir="ltr" class="${changeClass}" data-change-ticker="${ticker}">${changeSign}${d.changePct?.toFixed(2)}%</td>
       <td class="${rsiClass}">${d.currentRSI?.toFixed(0) || 'N/A'}</td>
       <td dir="ltr">${d.valuation?.trailingPE?.toFixed(1) || 'N/A'}x</td>
       <td dir="ltr">${d.marketCap ? '$' + formatLarge(d.marketCap) : 'N/A'}</td>
@@ -1846,8 +1855,8 @@ function renderPortfolioTable() {
       <td><button class="remove-btn" onclick="event.stopPropagation();removeTicker('${ticker}')">✕</button></td>
       <td><div class='ticker-cell'>${getLogoHtml(ticker)}<strong>${ticker}</strong></div></td>
       <td style="font-size:13px">${d.name || ''}</td>
-      <td dir="ltr">${fmtPrice(d.price, d)}</td>
-      <td dir="ltr" class="${changeClass}">${changeSign}${d.changePct?.toFixed(2)}%</td>
+      <td dir="ltr" data-price-ticker="${ticker}">${fmtPrice(d.price, d)}</td>
+      <td dir="ltr" class="${changeClass}" data-change-ticker="${ticker}">${changeSign}${d.changePct?.toFixed(2)}%</td>
       <td class="${rsiClass}">${d.currentRSI?.toFixed(0) || 'N/A'}</td>
       <td dir="ltr">${d.valuation.trailingPE?.toFixed(1) || 'N/A'}x</td>
       <td class="${peVsClass}">${peVsHist}</td>
@@ -1856,8 +1865,8 @@ function renderPortfolioTable() {
            onclick="event.stopPropagation()" onchange="updateShares('${ticker}',this.value)" dir="ltr"></td>
       <td><input class="portfolio-shares" type="number" placeholder="avg cost" value="${entryPrice || ''}" min="0" step="0.01"
            onclick="event.stopPropagation()" onchange="updateEntryPrice('${ticker}',this.value)" dir="ltr" title="Average purchase price"></td>
-      <td dir="ltr">${shares ? '$' + value.toLocaleString('en',{maximumFractionDigits:0}) : '-'}</td>
-      <td dir="ltr" class="${pnlClass}">${unrealizedPnl !== null ? pnlSign + '$' + Math.abs(unrealizedPnl).toLocaleString('en',{maximumFractionDigits:0}) + ' (' + pnlSign + unrealizedPct.toFixed(1) + '%)' : '-'}</td>
+      <td dir="ltr" data-value-ticker="${ticker}">${shares ? '$' + value.toLocaleString('en',{maximumFractionDigits:0}) : '-'}</td>
+      <td dir="ltr" class="${pnlClass}" data-pnl-ticker="${ticker}">${unrealizedPnl !== null ? pnlSign + '$' + Math.abs(unrealizedPnl).toLocaleString('en',{maximumFractionDigits:0}) + ' (' + pnlSign + unrealizedPct.toFixed(1) + '%)' : '-'}</td>
       <td><button class="news-btn" onclick="event.stopPropagation();openNewsPanel('${ticker}')" title="חדשות">📰</button></td>
     </tr>`);
   });
@@ -3009,6 +3018,119 @@ function renderMacroCharts(d) {
 // Auto-load macro on page load
 setTimeout(() => loadMacroData(), 2000);
 
+// ─── Live Price Ticker ────────────────────────────────────────────────────
+let _priceTickerTimer = null;
+
+function _isMarketOpen() {
+  const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const day = et.getDay();
+  if (day === 0 || day === 6) return false;
+  const mins = et.getHours() * 60 + et.getMinutes();
+  return mins >= 570 && mins < 960; // 09:30–16:00
+}
+
+function _flashCell(el, dir) {
+  if (!el) return;
+  el.classList.remove('price-flash-up', 'price-flash-down');
+  void el.offsetWidth;
+  el.classList.add(dir === 'up' ? 'price-flash-up' : 'price-flash-down');
+}
+
+async function _runPriceTick() {
+  const allTickers = [...new Set([...Object.keys(portfolio), ...watchlist])];
+  if (!allTickers.length) return;
+  const dot = document.getElementById('livePriceDot');
+  try {
+    const res = await fetch(`${API}/api/prices?tickers=${allTickers.join(',')}`);
+    if (!res.ok) return;
+    const prices = await res.json();
+    let anyUpdate = false;
+
+    Object.entries(prices).forEach(([t, { price, changePct }]) => {
+      const inPortfolio = !!stockCache[t];
+      const inWatchlist = !!watchlistCache[t];
+      if (!inPortfolio && !inWatchlist) return;
+
+      const cache = inPortfolio ? stockCache[t] : watchlistCache[t];
+      const oldPrice = cache.price;
+      const dir = price > oldPrice ? 'up' : price < oldPrice ? 'down' : null;
+
+      // Update both caches
+      if (inPortfolio) { stockCache[t].price = price; stockCache[t].changePct = changePct; }
+      if (inWatchlist) { watchlistCache[t].price = price; watchlistCache[t].changePct = changePct; }
+      anyUpdate = true;
+
+      // Price cell
+      const priceEl = document.querySelector(`[data-price-ticker="${t}"]`);
+      if (priceEl) {
+        priceEl.textContent = fmtPrice(price, cache);
+        if (dir) _flashCell(priceEl, dir);
+      }
+
+      // Change% cell
+      const changeEl = document.querySelector(`[data-change-ticker="${t}"]`);
+      if (changeEl) {
+        const sign = changePct >= 0 ? '+' : '';
+        changeEl.className = changePct >= 0 ? 'text-green' : 'text-red';
+        changeEl.setAttribute('data-change-ticker', t);
+        changeEl.textContent = `${sign}${changePct?.toFixed(2)}%`;
+      }
+
+      // Portfolio-only: value + P&L cells
+      if (inPortfolio && portfolio[t]) {
+        const shares = portfolio[t].shares || 0;
+        const entry  = portfolio[t].entry_price || null;
+
+        const valueEl = document.querySelector(`[data-value-ticker="${t}"]`);
+        if (valueEl) valueEl.textContent = shares ? '$' + (shares * price).toLocaleString('en', {maximumFractionDigits: 0}) : '-';
+
+        const pnlEl = document.querySelector(`[data-pnl-ticker="${t}"]`);
+        if (pnlEl && entry && shares) {
+          const pnl  = (price - entry) * shares;
+          const pct  = (price - entry) / entry * 100;
+          const sign = pnl >= 0 ? '+' : '';
+          pnlEl.className = pnl >= 0 ? 'text-green' : 'text-red';
+          pnlEl.setAttribute('data-pnl-ticker', t);
+          pnlEl.textContent = `${sign}$${Math.abs(pnl).toLocaleString('en',{maximumFractionDigits:0})} (${sign}${pct.toFixed(1)}%)`;
+        }
+      }
+
+      // Detail panel (if this stock is open)
+      if (currentStock === t) {
+        const d = stockCache[t] || watchlistCache[t];
+        if (d) {
+          const cur = getCur(d);
+          const changeVal = (d.change || 0) / (d.agorotDivisor || 1);
+          const sign = changePct >= 0 ? '+' : '';
+          const color = changePct >= 0 ? 'var(--green)' : 'var(--red)';
+          document.getElementById('detailPrice').textContent = fmtPrice(price, d);
+          document.getElementById('detailChange').innerHTML =
+            `<span style="color:${color}">${sign}${cur}${changeVal.toFixed(2)} (${sign}${changePct?.toFixed(2)}%)</span>`;
+        }
+      }
+    });
+
+    if (anyUpdate) updatePortfolioValue();
+    if (dot) dot.classList.toggle('dot-closed', !_isMarketOpen());
+  } catch (e) {
+    if (dot) dot.classList.add('dot-closed');
+  }
+}
+
+let _lastMarketOpen = null;
+function startPriceTicker() {
+  if (_priceTickerTimer) clearInterval(_priceTickerTimer);
+  const open = _isMarketOpen();
+  _lastMarketOpen = open;
+  const interval = open ? 30000 : 300000;
+  _runPriceTick();
+  _priceTickerTimer = setInterval(() => {
+    const nowOpen = _isMarketOpen();
+    _runPriceTick();
+    if (nowOpen !== _lastMarketOpen) { _lastMarketOpen = nowOpen; startPriceTicker(); }
+  }, interval);
+}
+
 // Auto-refresh: stocks + macro every hour
 let _autoRefreshTimer = null;
 function startAutoRefresh() {
@@ -3926,7 +4048,7 @@ function closeNewsPanel() {
       portfolio = await res.json();
     }
   } catch (e) {}
-  loadPortfolio();
+  await loadPortfolio();
   // Also load watchlist on startup
   try {
     const wlRes = await fetch(`${API}/api/watchlist`);
@@ -3935,6 +4057,7 @@ function closeNewsPanel() {
       updateWatchlistBadge();
     }
   } catch (e) {}
+  startPriceTicker();
 })();
 </script>
 

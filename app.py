@@ -1336,8 +1336,8 @@ def get_prices():
     if not tickers:
         return jsonify({}), 400
 
-    # Return server cache if fresh (5 min)
-    if _prices_cache and (_t.time() - _prices_cache_ts) < 300:
+    # Return server cache if fresh (15 s — frontend polls every 30 s)
+    if _prices_cache and (_t.time() - _prices_cache_ts) < 15:
         result = {t: _prices_cache[t] for t in tickers if t in _prices_cache}
         if len(result) == len(tickers):
             return jsonify(result)
